@@ -8,7 +8,10 @@ import {
 vi.mock('firebase/firestore', () => ({
   addDoc: vi.fn(),
   collection: vi.fn(),
+  doc: vi.fn(),
+  getDoc: vi.fn(),
   serverTimestamp: vi.fn(),
+  updateDoc: vi.fn(),
 }));
 
 vi.mock('../../src/firebase', () => ({

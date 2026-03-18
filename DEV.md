@@ -46,14 +46,50 @@ El archivo `src/firebase.ts` lee estas variables y monta la app de Firebase:
 
 ## 3. Colecciones en Firestore
 
-- **`respuestas`**: guarda las respuestas a los premios.
-- **`palabrasClave`**: guarda las palabras clave asociadas a cada usuario.
+- **`codigos`**: cada documento representa a una persona invitada.
+  - **ID del documento**: es la **palabra secreta** que le das a esa persona (ej. `galaxia-2025`).
+  - `nombre` (string): nombre de la persona tal y como quieres mostrarlo en la bienvenida.
+  - `usado` (boolean): indica si esa palabra secreta ya se ha utilizado para contestar la encuesta.
+  - Opcionalmente puedes añadir otros campos (por ejemplo, grupo, rol, etc.).
+
+- **`respuestas`**: guarda las respuestas a las preguntas de la encuesta.
+  - `usuario` (string): nombre de la persona (copiado del documento de `codigos`).
+  - `premios` (map): claves = IDs de preguntas, valores = texto libre de la respuesta.
+  - `createdAt`: marca de tiempo del servidor.
+
+- **`palabrasClave`** (opcional, ya preparada): guarda palabras clave asociadas a cada usuario, por si quieres reutilizar esa funcionalidad.
+  - `usuario` (string)
+  - `palabrasClave` (array de strings)
+  - `createdAt`: marca de tiempo
 
 Todo el acceso está encapsulado en `src/services/premiosService.ts`.  
 Si quieres añadir nuevas colecciones o nuevos campos:
 
 1. Crea nuevas funciones en ese servicio (por ejemplo, `guardarVotosExtra`, `listarRespuestas`, etc.).
 2. Usa `addDoc`, `getDocs`, `query`, etc. de `firebase/firestore` según tus necesidades.
+
+### 3.1. Cómo crear los códigos con palabra secreta
+
+En la consola de Firebase, en la colección `codigos`:
+
+- Crea un documento por persona.
+- Usa como **ID del documento** la palabra secreta que vas a enviarle (ej. `mvp-sergio-2025`).
+- Añade al menos:
+  - `nombre`: `"Sergio"` (o el nombre que quieras mostrar).
+  - `usado`: `false` (tipo boolean).
+
+La app hará:
+
+- Primer paso: pide la **palabra secreta**.
+- Comprueba si existe un documento en `codigos` con ese ID:
+  - Si **no existe** → alerta de palabra incorrecta.
+  - Si existe y `usado === true` → alerta de que ya ha respondido.
+  - Si existe y `usado === false` → entra en la encuesta para ese participante.
+
+Al terminar todas las preguntas:
+
+- Guarda las respuestas en la colección `respuestas`.
+- Llama a `marcarCodigoComoUsado`, que pone `usado = true` en el documento de `codigos`.
 
 ## 4. Levantar el proyecto en local
 
@@ -169,7 +205,9 @@ Con esto:
 ## 9. Dónde tocar para nuevas funcionalidades
 
 - **Nuevos premios, campos o lógica de formulario**:
-  - Modifica `src/App.vue`.
+  - Modifica `src/App.vue`, especialmente:
+    - El array `preguntas` (lista de preguntas que se muestran una a una).
+    - El flujo de pasos (`pasoActual`, `questions`, etc.).
   - Mantén la lógica de guardado desacoplada en `src/services/premiosService.ts` cuando sea algo relacionado con datos.
 
 - **Nuevas colecciones o consultas a Firestore**:
@@ -178,6 +216,40 @@ Con esto:
 - **Cambios de estilo / UI**:
   - Ajusta `src/style.css`.
   - Divide `App.vue` en componentes más pequeños en `src/components/` cuando la UI crezca.
+
+### 9.1. Cambiar la imagen del header
+
+En el header de la aplicación hay un avatar circular a la izquierda del título `MentiPremios`.
+
+- El elemento HTML está en `src/App.vue`, clase `avatar-circle`.
+- El estilo está en `src/style.css`, también con la clase `.avatar-circle`.
+
+Tienes dos opciones:
+
+1. **Usar una imagen local**:
+
+   - Copia tu imagen (por ejemplo `avatar.png`) dentro de `src/assets/`.
+   - En `src/App.vue`, cambia el `div` de `avatar-circle` por algo como:
+
+   ```vue
+   <div
+     class="avatar-circle"
+     style="background-image: url('/src/assets/avatar.png')"
+   />
+   ```
+
+2. **Usar una URL externa**:
+
+   - En `src/App.vue`, pon:
+
+   ```vue
+   <div
+     class="avatar-circle"
+     style="background-image: url('https://ruta.de/tu/imagen.jpg')"
+   />
+   ```
+
+El resto de estilos (borde circular, sombra, tamaño) ya están definidos en `.avatar-circle` y no necesitas tocarlos si solo quieres cambiar la foto.
 
 - **Nuevos tests**:
   - Crea nuevos archivos en `tests/unit/` y monta los componentes con `@vue/test-utils`.
