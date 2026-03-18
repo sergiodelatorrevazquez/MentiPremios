@@ -55,6 +55,8 @@ const enviando = ref(false);
 const mensaje = ref<string | null>(null);
 const error = ref<string | null>(null);
 
+const visorFotoAbierto = ref(false);
+
 const puedeContinuarLogin = computed(() => palabraSecreta.value.trim().length > 0 && !enviando.value);
 const preguntaActual = computed(() => preguntas[indicePreguntaActual.value]);
 const puedeContinuarPregunta = computed(
@@ -133,6 +135,14 @@ async function responderYPasarSiguiente() {
     enviando.value = false;
   }
 }
+
+function abrirVisorFoto() {
+  visorFotoAbierto.value = true;
+}
+
+function cerrarVisorFoto() {
+  visorFotoAbierto.value = false;
+}
 </script>
 
 <template>
@@ -140,16 +150,38 @@ async function responderYPasarSiguiente() {
     <header class="app-header">
       <div class="app-header-inner">
         <div class="app-header-left">
-          <div class="avatar-circle" />
+          <button
+            type="button"
+            class="avatar-circle avatar-button"
+            aria-label="Ver foto en grande"
+            @click="abrirVisorFoto"
+          />
           <div class="app-title">MentiPremios</div>
         </div>
       </div>
     </header>
 
+    <div
+      v-if="visorFotoAbierto"
+      class="photo-modal"
+      role="dialog"
+      aria-modal="true"
+      @click="cerrarVisorFoto"
+    >
+      <div class="photo-modal-inner">
+        <img
+          class="photo-modal-image"
+          src="./assets/foto-amigos.jpg"
+          alt="Foto de amigos"
+          @click.stop
+        />
+      </div>
+    </div>
+
     <main class="app-content">
-      <div class="card">
       <section v-if="pasoActual === 'login'">
-        <h1 class="hero-title">Bienvenido a los premios de Sin Mentirosas no hay Traidores</h1>
+        <h3 class="hero-kicker">Bienvenido a los premios de</h3>
+        <h1 class="hero-title">Sin Mentirosas no hay Traidores</h1>
         <p class="section-description">
           El rey del grupo (sergiodltv) te ha mandado tu palabra secreta por privado, metela aquí para poder acceder al
           cuestionario, y acuerdate de que solo puedes responderlo una vez, así que piensa bien.
@@ -157,8 +189,7 @@ async function responderYPasarSiguiente() {
 
         <div class="field">
           <div class="field-label">
-            <span>Palabra secreta</span>
-            <span class="field-hint">Respeta mayúsculas, minúsculas y tildes si las hubiera.</span>
+            <span>Clave</span>
           </div>
           <input
             v-model="palabraSecreta"
@@ -261,7 +292,6 @@ async function responderYPasarSiguiente() {
           {{ error }}
         </div>
       </section>
-      </div>
     </main>
   </div>
 </template>

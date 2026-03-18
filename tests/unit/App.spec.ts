@@ -28,6 +28,18 @@ describe('App', () => {
 
     expect(wrapper.html()).toContain('Hola, Sergio');
   });
+
+  it('abre y cierra el visor de foto al hacer click', async () => {
+    const wrapper = mount(App);
+
+    expect(wrapper.find('.photo-modal').exists()).toBe(false);
+
+    await wrapper.get('button.avatar-button').trigger('click');
+    expect(wrapper.find('.photo-modal').exists()).toBe(true);
+
+    await wrapper.get('.photo-modal').trigger('click');
+    expect(wrapper.find('.photo-modal').exists()).toBe(false);
+  });
 });
 
 

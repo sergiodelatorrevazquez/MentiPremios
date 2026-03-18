@@ -57,7 +57,7 @@ body {
   width: 100%;
   max-width: 1040px;
   margin: 0 auto;
-  padding: 22px 24px 28px;
+  padding: 28px 24px 36px;
 }
 
 .avatar-circle {
@@ -67,9 +67,49 @@ body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  background-image: url('./assets/foto-amigos.jpg');
   background-color: rgba(255, 255, 255, 0.55);
   border: 2px solid rgba(11, 61, 11, 0.25);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+
+.avatar-button {
+  cursor: pointer;
+  padding: 0;
+  border: 2px solid rgba(11, 61, 11, 0.25);
+}
+
+.avatar-button:hover {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55), 0 10px 24px rgba(11, 61, 11, 0.18);
+}
+
+.avatar-button:active {
+  transform: translateY(0.5px);
+}
+
+.photo-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.photo-modal-inner {
+  max-width: min(960px, 100%);
+  max-height: min(720px, 100%);
+}
+
+.photo-modal-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 16px;
+  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .app-title {
@@ -80,15 +120,16 @@ body {
   color: #0b3d0b;
 }
 
+/* Ya no usamos formato "tarjeta" principal: el contenido va a pantalla. */
 .card {
   width: 100%;
   max-width: 960px;
-  background: #ffffff;
-  border-radius: 24px;
-  box-shadow: 0 24px 80px rgba(11, 61, 11, 0.12);
-  padding: 32px 32px 24px;
-  border: 1px solid rgba(11, 61, 11, 0.12);
-  backdrop-filter: blur(18px);
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  border: none;
+  backdrop-filter: none;
   margin: 0 auto;
 }
 
@@ -144,10 +185,10 @@ body {
 }
 
 .field {
-  background: #f2fff2;
-  border-radius: 18px;
+  background: #ffffff;
+  border-radius: 14px;
   padding: 16px 16px 12px;
-  border: 1px solid rgba(11, 61, 11, 0.14);
+  border: 1px solid rgba(11, 61, 11, 0.16);
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.05s ease, background 0.18s ease;
 }
 
@@ -198,18 +239,21 @@ body {
 
 .footer {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
   margin-top: 24px;
   border-top: 1px solid rgba(11, 61, 11, 0.12);
-  padding-top: 16px;
+  padding-top: 18px;
   gap: 12px;
   flex-wrap: wrap;
+  text-align: center;
 }
 
 .footer-text {
   font-size: 12px;
   color: rgba(11, 61, 11, 0.75);
+  max-width: 760px;
 }
 
 .footer-text strong {
@@ -308,15 +352,27 @@ body {
 
 .hero-title {
   margin: 0 0 10px;
-  font-size: 22px;
+  font-size: 40px;
   line-height: 1.25;
   letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.hero-kicker {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(11, 61, 11, 0.8);
+  text-align: center;
 }
 
 .section-description {
   margin: 0 0 18px;
   color: rgba(11, 61, 11, 0.8);
   font-size: 14px;
+  text-align: center;
 }
 
 .input-inline {
@@ -341,6 +397,10 @@ body {
 
   .app-content {
     padding: 18px 14px 22px;
+  }
+
+  .hero-title {
+    font-size: 28px;
   }
 
   .card-header {
