@@ -5,6 +5,7 @@ import {
   getDoc,
   serverTimestamp,
   updateDoc,
+  FirestoreError,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -23,49 +24,91 @@ export interface CodigoInvitacion {
   usado: boolean;
 }
 
+export class FirestoreServiceError extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+  ) {
+    super(message);
+    this.name = 'FirestoreServiceError';
+  }
+}
+
 const RESPUESTAS_COLLECTION = 'respuestas';
 const PALABRAS_CLAVE_COLLECTION = 'palabrasClave';
 const CODIGOS_COLLECTION = 'codigos';
 
-export async function guardarRespuestaUsuario(payload: PremioRespuesta): Promise<void> {
-  await addDoc(collection(db, RESPUESTAS_COLLECTION), {
-    ...payload,
-    createdAt: serverTimestamp(),
-  });
-}
-
-export async function guardarPalabrasClaveUsuario(payload: PalabraClavePayload): Promise<void> {
-  await addDoc(collection(db, PALABRAS_CLAVE_COLLECTION), {
-    ...payload,
-    createdAt: serverTimestamp(),
-  });
-}
-
-export async function obtenerCodigoPorPalabraSecreta(
-  palabraSecreta: string,
-): Promise<(CodigoInvitacion & { id: string }) | null> {
-  const ref = doc(db, CODIGOS_COLLECTION, palabraSecreta);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) {
-    return null;
+function handleFirestoreError(error: unknown): never {
+  if (error instanceof FirestoreError) {
+    throw new FirestoreServiceError(
+      `Firestore error: ${error.message}`,
+      error.code,
+    );
   }
-
-  const data = snap.data() as CodigoInvitacion;
-
-  return {
-    id: snap.id,
-    nombre: data.nombre,
-    usado: Boolean(data.usado),
-  };
+  if (error instanceof Error) {
+    throw new FirestoreServiceError(error.message);
+  }
+  throw new FirestoreServiceError('An unknown error occurred');
 }
 
-export async function marcarCodigoComoUsado(palabraSecreta: string): Promise<void> {
-  const ref = doc(db, CODIGOS_COLLECTION, palabraSecreta);
-  await updateDoc(ref, {
-    usado: true,
-    usadoEn: serverTimestamp(),
-  });
+export async function saveUserAnswer(payload: PremioRespuesta): Promise<void> {
+  try {
+    await addDoc(collection(db, RESPUESTAS_COLLECTION), {
+      ...payload,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error);
+  }
 }
 
+export async function saveUserKeywords(payload: PalabraClavePayload): Promise<void> {
+  try {
+    await addDoc(collection(db, PALABRAS_CLAVE_COLLECTION), {
+      ...payload,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error);
+  }
+}
 
+export async function getCodeBySecretWord(
+  secretWord: string,
+): Promise<(CodigoInvitacion & { id: string }) | null> {
+  try {
+    const ref = doc(db, CODIGOS_COLLECTION, secretWord);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      return null;
+    }
+
+    const data = snap.data() as CodigoInvitacion;
+
+    return {
+      id: snap.id,
+      nombre: data.nombre,
+      usado: Boolean(data.usado),
+    };
+  } catch (error) {
+    handleFirestoreError(error);
+  }
+}
+
+export async function markCodeAsUsed(secretWord: string): Promise<void> {
+  try {
+    const ref = doc(db, CODIGOS_COLLECTION, secretWord);
+    await updateDoc(ref, {
+      usado: true,
+      usadoEn: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error);
+  }
+}
+
+export const guardarRespuestaUsuario = saveUserAnswer;
+export const guardarPalabrasClaveUsuario = saveUserKeywords;
+export const obtenerCodigoPorPalabraSecreta = getCodeBySecretWord;
+export const marcarCodigoComoUsado = markCodeAsUsed;
