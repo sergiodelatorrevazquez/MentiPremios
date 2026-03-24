@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
+
+const multimediaAssets = import.meta.glob('./assets/{mensaje,foto,video}-*.{jpg,mp4}', { eager: true, query: '?url', import: 'default' });
 import {
   guardarRespuestaUsuario,
   marcarCodigoComoUsado,
@@ -9,9 +11,16 @@ import {
 
 type Paso = 'login' | 'welcome' | 'questions' | 'done';
 
+interface Multimedia {
+  tipo: 'imagen' | 'video';
+  src: string;
+  alt?: string;
+}
+
 interface Opcion {
   id: string;
   texto: string;
+  multimedia?: Multimedia;
 }
 
 interface Pregunta {
@@ -27,83 +36,113 @@ const loginError = ref<string | null>(null);
 
 const preguntas = reactive<Pregunta[]>([
   {
-    id: 'mvp',
-    titulo: '¿Quién ha sido el MVP del grupo este año?',
+    id: 'tonto',
+    titulo: 'Tonto del Año',
     opciones: [
-      { id: 'mvp-1', texto: 'Miguel' },
-      { id: 'mvp-2', texto: 'Sergio' },
-      { id: 'mvp-3', texto: 'David' },
-      { id: 'mvp-4', texto: 'Javi' },
+      { id: 'tonto-1', texto: 'Miguel' },
+      { id: 'tonto-2', texto: 'Pablo' },
+      { id: 'tonto-3', texto: 'Dani' },
+      { id: 'tonto-4', texto: 'Maroto' },
     ],
   },
   {
-    id: 'mejor-meme',
-    titulo: '¿Cuál ha sido el mejor meme interno del grupo?',
+    id: 'casper',
+    titulo: 'Casper del Año',
     opciones: [
-      { id: 'meme-1', texto: 'El de la chiamo' },
-      { id: 'meme-2', texto: 'El del ubico' },
-      { id: 'meme-3', texto: 'El del pringao' },
-      { id: 'meme-4', texto: 'El del telegram' },
-      { id: 'meme-5', texto: 'El del wasap' },
-      { id: 'meme-6', texto: 'Otro' },
+      { id: 'casper-1', texto: 'Raúl' },
+      { id: 'casper-2', texto: 'Jorge' },
+      { id: 'casper-3', texto: 'Dani' },
+      { id: 'casper-4', texto: 'Jose Álvaro' },
+      { id: 'casper-5', texto: 'Pablo' },
+      { id: 'casper-6', texto: 'Víctor' },
     ],
   },
   {
-    id: 'puntual',
-    titulo: '¿Quién es la persona más puntual del grupo?',
+    id: 'comefeas',
+    titulo: 'Comefeas del Año',
     opciones: [
-      { id: 'puntual-1', texto: 'Miguel' },
-      { id: 'puntual-2', texto: 'Sergio' },
-      { id: 'puntual-3', texto: 'David' },
-      { id: 'puntual-4', texto: 'Javi' },
+      { id: 'comefeas-1', texto: 'Fran' },
+      { id: 'comefeas-2', texto: 'Maroto' },
+      { id: 'comefeas-3', texto: 'Dani' },
+      { id: 'comefeas-4', texto: 'Enrique' },
     ],
   },
   {
-    id: 'tarde',
-    titulo: '¿Quién siempre llega tarde pero le queremos igual?',
+    id: 'soltero',
+    titulo: 'Soltero del Año',
     opciones: [
-      { id: 'tarde-1', texto: 'Miguel' },
-      { id: 'tarde-2', texto: 'Sergio' },
-      { id: 'tarde-3', texto: 'David' },
-      { id: 'tarde-4', texto: 'Javi' },
+      { id: 'soltero-1', texto: 'Sergio Reyes' },
+      { id: 'soltero-2', texto: 'Ale' },
+      { id: 'soltero-3', texto: 'Maroto' },
+      { id: 'soltero-4', texto: 'Dani' },
     ],
   },
   {
     id: 'anecdota',
-    titulo: '¿Cuál ha sido el mejor momento del año?',
+    titulo: 'Anécdota del Año',
     opciones: [
-      { id: 'momento-1', texto: 'La quedada de verano' },
-      { id: 'momento-2', texto: 'La cena de Navidad' },
-      { id: 'momento-3', texto: 'El finde en el pueblo' },
-      { id: 'momento-4', texto: 'El viaje de cumpleaños' },
-      { id: 'momento-5', texto: 'Las quedadas de平时的' },
-      { id: 'momento-6', texto: 'Otro momento' },
+      { id: 'anecdota-1', texto: 'La quedada de verano' },
+      { id: 'anecdota-2', texto: 'La cena de Navidad' },
+      { id: 'anecdota-3', texto: 'El finde en el pueblo' },
+      { id: 'anecdota-4', texto: 'El viaje de cumpleaños' },
+      { id: 'anecdota-5', texto: 'Las quedadas de平时的' },
+      { id: 'anecdota-6', texto: 'Otro momento' },
     ],
   },
   {
-    id: 'plot-twist',
-    titulo: '¿Cuál ha sido el plot twist del año en el grupo?',
+    id: 'meme',
+    titulo: 'Meme del Año',
     opciones: [
-      { id: 'twist-1', texto: 'Cuando apareció el nuevo miembro' },
-      { id: 'twist-2', texto: 'La drama de wasap' },
-      { id: 'twist-3', texto: 'El cambio de grupo' },
-      { id: 'twist-4', texto: 'La nueva normativa' },
-      { id: 'twist-5', texto: 'El secreto que se reveló' },
-      { id: 'twist-6', texto: 'La sorpresa organizada' },
-      { id: 'twist-7', texto: 'El cambio de líder' },
-      { id: 'twist-8', texto: 'Otro' },
+      { id: 'meme-1', texto: 'Cuando apareció el nuevo miembro' },
+      { id: 'meme-2', texto: 'La drama de wasap' },
+      { id: 'meme-3', texto: 'El cambio de grupo' },
+      { id: 'meme-4', texto: 'La nueva normativa' },
+      { id: 'meme-5', texto: 'El secreto que se reveló' },
+      { id: 'meme-6', texto: 'La sorpresa organizada' },
+      { id: 'meme-7', texto: 'El cambio de líder' },
+      { id: 'meme-8', texto: 'Otro' },
     ],
   },
   {
-    id: 'mas-trippy',
-    titulo: '¿Quién es el más trippy del grupo?',
+    id: 'mensaje',
+    titulo: 'Mensaje del Año',
     opciones: [
-      { id: 'trippy-1', texto: 'Miguel' },
-      { id: 'trippy-2', texto: 'Sergio' },
-      { id: 'trippy-3', texto: 'David' },
-      { id: 'trippy-4', texto: 'Javi' },
+      { id: 'mensaje-1', texto: '1', multimedia: { tipo: 'imagen', src: multimediaAssets['./assets/mensaje-1.jpg'] as string, alt: 'Mensaje 1' } },
+      { id: 'mensaje-2', texto: '2', multimedia: { tipo: 'imagen', src: multimediaAssets['./assets/mensaje-2.jpg'] as string, alt: 'Mensaje 2' } },
+      { id: 'mensaje-3', texto: '3', multimedia: { tipo: 'imagen', src: multimediaAssets['./assets/mensaje-3.jpg'] as string, alt: 'Mensaje 3' } },
+      { id: 'mensaje-4', texto: '4', multimedia: { tipo: 'imagen', src: multimediaAssets['./assets/mensaje-4.jpg'] as string, alt: 'Mensaje 4' } },
     ],
   },
+  {
+    id: 'foto',
+    titulo: 'Foto del Año',
+    opciones: [
+      { id: 'foto-1', texto: '1', multimedia: { tipo: 'imagen', src: multimediaAssets['./assets/foto-1.jpg'] as string, alt: 'Foto 1' } },
+      { id: 'foto-2', texto: '2', multimedia: { tipo: 'imagen', src: multimediaAssets['./assets/foto-2.jpg'] as string, alt: 'Foto 2' } },
+      { id: 'foto-3', texto: '3', multimedia: { tipo: 'imagen', src: multimediaAssets['./assets/foto-3.jpg'] as string, alt: 'Foto 3' } },
+      { id: 'foto-4', texto: '4', multimedia: { tipo: 'imagen', src: multimediaAssets['./assets/foto-4.jpg'] as string, alt: 'Foto 4' } },
+    ],
+  },
+  {
+    id: 'video',
+    titulo: 'Video del Año',
+    opciones: [
+      { id: 'video-1', texto: '1', multimedia: { tipo: 'video', src: multimediaAssets['./assets/video-1.mp4'] as string, alt: 'Video 1' } },
+      { id: 'video-2', texto: '2', multimedia: { tipo: 'video', src: multimediaAssets['./assets/video-2.mp4'] as string, alt: 'Video 2' } },
+      { id: 'video-3', texto: '3', multimedia: { tipo: 'video', src: multimediaAssets['./assets/video-3.mp4'] as string, alt: 'Video 3' } },
+      { id: 'video-4', texto: '4', multimedia: { tipo: 'video', src: multimediaAssets['./assets/video-4.mp4'] as string, alt: 'Video 4' } },
+    ],
+  },
+  {
+    id: 'correa',
+    titulo: 'Correa del Año',
+    opciones: [
+      { id: 'correa-1', texto: 'Miguel' },
+      { id: 'correa-2', texto: 'Miguel' },
+      { id: 'correa-3', texto: 'Miguel' },
+      { id: 'correa-4', texto: 'Miguel' },
+    ],
+  }
 ]);
 
 const respuestas = reactive<Record<string, string>>({});
@@ -115,6 +154,46 @@ const enviando = ref(false);
 const mensaje = ref<string | null>(null);
 const error = ref<string | null>(null);
 const visorFotoAbierto = ref(false);
+
+const visorMultimediaAbierto = ref(false);
+const multimediaActual = ref<Multimedia | null>(null);
+let pressTimer: ReturnType<typeof setTimeout> | null = null;
+let longPressTriggered = false;
+
+function iniciarVisor(multimedia: Multimedia) {
+  multimediaActual.value = multimedia;
+  visorMultimediaAbierto.value = true;
+  longPressTriggered = true;
+}
+
+function cerrarVisorMultimedia() {
+  visorMultimediaAbierto.value = false;
+  multimediaActual.value = null;
+}
+
+function handlePressStart(multimedia: Multimedia, event: MouseEvent | TouchEvent) {
+  longPressTriggered = false;
+  pressTimer = setTimeout(() => {
+    iniciarVisor(multimedia);
+  }, 300);
+}
+
+function handlePressEnd(event: MouseEvent | TouchEvent) {
+  if (pressTimer) {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  }
+  setTimeout(() => { longPressTriggered = false; }, 10);
+}
+
+function handleClick(opcionId: string, event: MouseEvent | TouchEvent) {
+  if (longPressTriggered) return;
+  respuestaSeleccionada.value = opcionId;
+}
+
+function handleMultimediaKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') cerrarVisorMultimedia();
+}
 
 const puedeContinuarLogin = computed(() => palabraSecreta.value.trim().length > 0 && !enviando.value);
 const preguntaActual = computed(() => preguntas[indicePreguntaActual.value]);
@@ -261,6 +340,45 @@ function handleModalKeydown(e: KeyboardEvent) {
       </div>
     </div>
 
+    <div
+      v-if="visorMultimediaAbierto && multimediaActual"
+      class="photo-modal"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      @click="cerrarVisorMultimedia"
+      @keydown="handleMultimediaKeydown"
+    >
+      <div
+        class="photo-modal-inner"
+        @click.stop
+      >
+        <button
+          type="button"
+          class="modal-close-btn"
+          aria-label="Cerrar"
+          @click="cerrarVisorMultimedia"
+        >
+          ✕
+        </button>
+        <img
+          v-if="multimediaActual.tipo === 'imagen'"
+          class="photo-modal-image"
+          :src="multimediaActual.src"
+          :alt="multimediaActual.alt"
+        >
+        <video
+          v-else
+          class="photo-modal-video"
+          :src="multimediaActual.src"
+          :alt="multimediaActual.alt"
+          controls
+          autoplay
+          playsinline
+        />
+      </div>
+    </div>
+
     <main class="app-content">
       <template v-if="pasoActual === 'login'">
         <h3 class="hero-kicker">
@@ -352,17 +470,35 @@ function handleModalKeydown(e: KeyboardEvent) {
             :key="opcion.id"
             type="button"
             class="option-card"
-            :class="{ 'option-card--selected': respuestaSeleccionada === opcion.id }"
-            @click="respuestaSeleccionada = opcion.id"
+            :class="{ 'option-card--selected': respuestaSeleccionada === opcion.id, 'option-card--with-media': opcion.multimedia }"
+            @click="handleClick(opcion.id, $event)"
+            @mousedown="opcion.multimedia && handlePressStart(opcion.multimedia, $event)"
+            @mouseup="handlePressEnd($event)"
+            @mouseleave="handlePressEnd($event)"
+            @touchstart="opcion.multimedia && handlePressStart(opcion.multimedia, $event)"
+            @touchend="handlePressEnd($event)"
           >
-            {{ opcion.texto }}
+            <div v-if="opcion.multimedia" class="option-media">
+              <img
+                v-if="opcion.multimedia.tipo === 'imagen'"
+                class="option-media-thumbnail"
+                :src="opcion.multimedia.src"
+                :alt="opcion.multimedia.alt"
+              >
+              <video
+                v-else
+                class="option-media-thumbnail"
+                :src="opcion.multimedia.src"
+                :alt="opcion.multimedia.alt"
+                muted
+                preload="metadata"
+              />
+            </div>
+            <span class="option-text">{{ opcion.texto }}</span>
           </button>
         </div>
 
         <div class="footer">
-          <div class="footer-text">
-            Respondiendo como: <strong>{{ codigo.nombre }}</strong>
-          </div>
           <div class="footer-actions">
             <button
               type="button"
@@ -807,6 +943,39 @@ body {
 .option-card--selected:hover {
   background: var(--color-primary-dark);
   transform: translateY(-2px);
+}
+
+.option-card--with-media {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-media {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(11, 61, 11, 0.08);
+}
+
+.option-media-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.option-text {
+  display: block;
+}
+
+.photo-modal-video {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 36px);
+  border-radius: 16px;
+  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.55);
 }
 
 @media (max-width: 640px) {
