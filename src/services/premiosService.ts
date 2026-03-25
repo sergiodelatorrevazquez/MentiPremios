@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   serverTimestamp,
+  setDoc,
   updateDoc,
   FirestoreError,
 } from 'firebase/firestore';
@@ -53,10 +54,8 @@ function handleFirestoreError(error: unknown): never {
 
 export async function saveUserAnswer(payload: PremioRespuesta): Promise<void> {
   try {
-    await addDoc(collection(db, RESPUESTAS_COLLECTION), {
-      ...payload,
-      createdAt: serverTimestamp(),
-    });
+    const docRef = doc(db, RESPUESTAS_COLLECTION, payload.usuario);
+    await setDoc(docRef, payload.premios);
   } catch (error) {
     handleFirestoreError(error);
   }

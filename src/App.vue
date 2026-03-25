@@ -257,7 +257,7 @@ async function responderYPasarSiguiente() {
   error.value = null;
 
   try {
-    await guardarRespuestaUsuario({ usuario: codigo.value.nombre, premios: { ...respuestas } });
+    await guardarRespuestaUsuario({ usuario: codigo.value.id, premios: { ...respuestas } });
     await marcarCodigoComoUsado(codigo.value.id);
     mensaje.value = '¡Respuestas guardadas correctamente en MentiPremios!';
     pasoActual.value = 'done';
