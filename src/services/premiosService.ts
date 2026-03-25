@@ -100,7 +100,6 @@ export async function markCodeAsUsed(secretWord: string): Promise<void> {
     const ref = doc(db, CODIGOS_COLLECTION, secretWord);
     await updateDoc(ref, {
       usado: true,
-      usadoEn: serverTimestamp(),
     });
   } catch (error) {
     handleFirestoreError(error);

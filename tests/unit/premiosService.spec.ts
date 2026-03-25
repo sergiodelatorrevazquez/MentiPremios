@@ -1,17 +1,19 @@
-import { addDoc, collection } from 'firebase/firestore';
+import { vi } from 'vitest';
+import { doc, setDoc, getDoc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../src/firebase';
 import {
-  guardarPalabrasClaveUsuario,
   guardarRespuestaUsuario,
+  obtenerCodigoPorPalabraSecreta,
+  marcarCodigoComoUsado,
 } from '../../src/services/premiosService';
 
 vi.mock('firebase/firestore', () => ({
-  addDoc: vi.fn(),
-  collection: vi.fn(),
-  doc: vi.fn(),
+  doc: vi.fn(() => ({})),
+  setDoc: vi.fn(),
   getDoc: vi.fn(),
-  serverTimestamp: vi.fn(),
   updateDoc: vi.fn(),
+  collection: vi.fn(),
+  serverTimestamp: vi.fn(),
 }));
 
 vi.mock('../../src/firebase', () => ({
@@ -23,28 +25,39 @@ describe('premiosService', () => {
     vi.clearAllMocks();
   });
 
-  it('guarda una respuesta de usuario en la colección correspondiente', async () => {
-    (addDoc as unknown as vi.Mock).mockResolvedValueOnce({});
+  it('guarda respuestas usando setDoc con el usuario como ID', async () => {
+    (setDoc as unknown as vi.Mock).mockResolvedValueOnce({});
 
     await guardarRespuestaUsuario({
-      usuario: 'Sergio',
-      premios: { test: 'valor' },
+      usuario: 'SERGIO2024',
+      premios: { pregunta1: 'opcionA', pregunta2: 'opcionB' },
     });
 
-    expect(collection).toHaveBeenCalledWith(db, 'respuestas');
-    expect(addDoc).toHaveBeenCalled();
+    expect(doc).toHaveBeenCalledWith(expect.anything(), 'respuestas', 'SERGIO2024');
+    expect(setDoc).toHaveBeenCalled();
   });
 
-  it('guarda palabras clave en la colección correspondiente', async () => {
-    (addDoc as unknown as vi.Mock).mockResolvedValueOnce({});
-
-    await guardarPalabrasClaveUsuario({
-      usuario: 'Sergio',
-      palabrasClave: ['memes', 'after'],
+  it('obtiene código por palabra secreta', async () => {
+    (getDoc as unknown as vi.Mock).mockResolvedValueOnce({
+      exists: () => true,
+      id: 'secreta123',
+      data: () => ({ nombre: 'Sergio', usado: false }),
     });
 
-    expect(collection).toHaveBeenCalledWith(db, 'palabrasClave');
-    expect(addDoc).toHaveBeenCalled();
+    const result = await obtenerCodigoPorPalabraSecreta('secreta123');
+
+    expect(result).toEqual({
+      id: 'secreta123',
+      nombre: 'Sergio',
+      usado: false,
+    });
+  });
+
+  it('marca código como usado', async () => {
+    (updateDoc as unknown as vi.Mock).mockResolvedValueOnce({});
+
+    await marcarCodigoComoUsado('secreta123');
+
+    expect(updateDoc).toHaveBeenCalled();
   });
 });
-
