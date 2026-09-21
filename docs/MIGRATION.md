@@ -65,7 +65,7 @@ Corregir los errores actuales de `vi.Mock` en los tests.
 
 Resultado: se anadio el script `typecheck` y se corrigieron los tipos de los mocks de Vitest en `tests/unit/premiosService.spec.ts`. `npm run typecheck` pasa correctamente.
 
-## TODO-003. Anadir validacion completa a CI
+## TODO-003. Anadir validacion completa a CI [COMPLETADO]
 
 Incorporar a GitHub Actions:
 
@@ -77,6 +77,8 @@ npm run build
 ```
 
 **Condicion:** ningun cambio arquitectonico podra integrarse si rompe una de estas validaciones.
+
+Resultado: el workflow `.github/workflows/tests.yml` ejecuta `typecheck`, `lint`, tests y build en cada push o pull request contra `main`.
 
 ## TODO-004. Definir criterios de compatibilidad
 
