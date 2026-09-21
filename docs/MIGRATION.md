@@ -32,7 +32,7 @@ anadir nueva implementacion
 
 # Fase 0: proteccion del comportamiento actual
 
-## TODO-001. Crear una linea base funcional
+## TODO-001. Crear una linea base funcional [COMPLETADO]
 
 Documentar y probar el flujo actual completo:
 
@@ -48,6 +48,8 @@ Documentar y probar el flujo actual completo:
 - Visores de imagen y video.
 
 **Condicion:** no modificar la logica existente durante este paso.
+
+Resultado: se documentaron los escenarios en `docs/MIGRATION_BASELINE.md` y se ampliaron las pruebas de `tests/unit/App.spec.ts` para cubrir el flujo completo, la restauracion de respuestas y el visor multimedia.
 
 ## TODO-002. Corregir el chequeo de tipos
 

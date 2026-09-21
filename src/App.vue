@@ -148,7 +148,6 @@ const preguntas = reactive<Pregunta[]>([
 const respuestas = reactive<Record<string, string>>({});
 const indicePreguntaActual = ref(0);
 const respuestaSeleccionada = ref<string | null>(null);
-const respuestasAnteriores = ref<Record<string, string>>({});
 
 const enviando = ref(false);
 const mensaje = ref<string | null>(null);
@@ -279,13 +278,12 @@ function cerrarVisorFoto() {
 
 function volverAtras() {
   if (!puedeVolverAtras.value) return;
-  
-  const pregunta = preguntaActual.value;
-  if (pregunta) {
-    respuestasAnteriores.value[pregunta.id] = respuestaSeleccionada.value || '';
-    respuestaSeleccionada.value = respuestasAnteriores.value[preguntas[indicePreguntaActual.value - 1].id] || null;
-  }
+
   indicePreguntaActual.value -= 1;
+  const preguntaAnterior = preguntas[indicePreguntaActual.value];
+  respuestaSeleccionada.value = preguntaAnterior
+    ? respuestas[preguntaAnterior.id] || null
+    : null;
 }
 
 function handleModalKeydown(e: KeyboardEvent) {
