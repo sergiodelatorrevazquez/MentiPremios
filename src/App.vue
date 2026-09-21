@@ -1,37 +1,22 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
+import type {
+  CodigoInvitacionIdentificado,
+  Multimedia,
+  Paso,
+  Pregunta,
+} from './features/survey/domain/survey.types';
 
 const multimediaAssets = import.meta.glob('./assets/{mensaje,foto,video}-*.{jpg,mp4}', { eager: true, query: '?url', import: 'default' });
 import {
   guardarRespuestaUsuario,
   marcarCodigoComoUsado,
   obtenerCodigoPorPalabraSecreta,
-  type CodigoInvitacion,
 } from './services/premiosService';
-
-type Paso = 'login' | 'welcome' | 'questions' | 'done';
-
-interface Multimedia {
-  tipo: 'imagen' | 'video';
-  src: string;
-  alt?: string;
-}
-
-interface Opcion {
-  id: string;
-  texto: string;
-  multimedia?: Multimedia;
-}
-
-interface Pregunta {
-  id: string;
-  titulo: string;
-  opciones: Opcion[];
-}
 
 const pasoActual = ref<Paso>('login');
 const palabraSecreta = ref('');
-const codigo = ref<(CodigoInvitacion & { id: string }) | null>(null);
+const codigo = ref<CodigoInvitacionIdentificado | null>(null);
 const loginError = ref<string | null>(null);
 
 const preguntas = reactive<Pregunta[]>([

@@ -144,7 +144,7 @@ Un bloque de migracion es compatible cuando:
 
 # Fase 1: contratos y modelo de dominio
 
-## TODO-005. Crear los tipos del dominio
+## TODO-005. Crear los tipos del dominio [COMPLETADO]
 
 Mover desde `App.vue`:
 
@@ -163,6 +163,8 @@ src/features/survey/domain/survey.types.ts
 ```
 
 **Condicion:** `App.vue` debe seguir funcionando importando los tipos nuevos.
+
+Resultado: se creo `src/features/survey/domain/survey.types.ts`, `App.vue` consume sus tipos y `premiosService.ts` los reexporta temporalmente para mantener compatibilidad con sus consumidores actuales.
 
 ## TODO-006. Extraer el catalogo de preguntas
 
