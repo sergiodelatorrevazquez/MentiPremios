@@ -203,7 +203,7 @@ Crear tipos o constantes para preguntas y opciones.
 
 Resultado: se anadieron `QUESTION_IDS`, `QuestionId` y `OptionId` en `src/features/survey/domain/survey.types.ts`. El catalogo usa las constantes de preguntas y el mapa de respuestas conserva los mismos valores persistidos.
 
-## TODO-008. Definir reglas del cuestionario
+## TODO-008. Definir reglas del cuestionario [COMPLETADO]
 
 Crear funciones puras para validar:
 
@@ -217,6 +217,8 @@ Ubicacion propuesta:
 ```text
 src/features/survey/domain/survey.rules.ts
 ```
+
+Resultado: se creo `validateSurveyAnswers` con errores de dominio tipados para respuestas faltantes, preguntas desconocidas, opciones invalidas y cantidad incorrecta. Sus casos principales estan cubiertos en `tests/unit/survey.rules.spec.ts`.
 
 ## TODO-009. Definir el DTO canonico de respuestas
 
