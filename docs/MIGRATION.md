@@ -311,7 +311,7 @@ El composable debe coordinar el estado reactivo, mientras que las reglas permane
 
 Resultado: se creo `src/features/survey/application/useSurveyWizard.ts` como adaptador reactivo sobre `surveyWizard.ts`. `App.vue` usa el composable para el estado, seleccion, avance y retroceso del cuestionario, manteniendo fuera la persistencia y los modales.
 
-## TODO-013. Cubrir las transiciones del wizard
+## TODO-013. Cubrir las transiciones del wizard [COMPLETADO]
 
 Anadir pruebas para:
 
@@ -324,6 +324,8 @@ Anadir pruebas para:
 - Ultima pregunta.
 - Envio incompleto.
 - Bloqueo durante envio.
+
+Resultado: `tests/unit/surveyWizard.spec.ts` cubre estado inicial, inicio, avance, retroceso, restauracion, limites, respuesta faltante, ultima pregunta y progreso. `tests/unit/App.spec.ts` mantiene la cobertura de las transiciones visibles de login, bienvenida y envio.
 
 ## TODO-014. Evitar envios duplicados desde la interfaz
 
