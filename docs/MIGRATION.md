@@ -80,7 +80,7 @@ npm run build
 
 Resultado: el workflow `.github/workflows/tests.yml` ejecuta `typecheck`, `lint`, tests y build en cada push o pull request contra `main`.
 
-## TODO-004. Definir criterios de compatibilidad
+## TODO-004. Definir criterios de compatibilidad [COMPLETADO]
 
 Documentar que durante la migracion deben conservarse:
 
@@ -91,6 +91,54 @@ Documentar que durante la migracion deben conservarse:
 - El flujo de cuatro pasos.
 - El comportamiento de las invitaciones.
 - El contrato de despliegue actual.
+
+Resultado: los criterios quedan definidos en la seccion `Contrato de compatibilidad` de este documento.
+
+## Contrato de compatibilidad
+
+Durante la migracion se pueden cambiar la organizacion interna, los nombres de modulos y la implementacion tecnica siempre que se mantengan estos limites:
+
+### Interfaz y navegacion
+
+- La aplicacion sigue siendo una SPA servida desde la ruta `/`.
+- El flujo mantiene cuatro estados visibles: login, bienvenida, preguntas y confirmacion.
+- Se conservan los textos funcionales actuales, salvo cambio aprobado expresamente.
+- Se conservan los controles actuales: entrada de palabra secreta, avance, retroceso, seleccion de opciones y envio final.
+- Se conserva el comportamiento de los visores de foto y multimedia, incluido cierre y pulsacion larga.
+- No se introduce una URL publica nueva como requisito para completar una encuesta.
+
+### Encuesta y datos de usuario
+
+- Se mantienen las diez preguntas, sus IDs, el orden y los IDs de sus opciones.
+- Los valores almacenados de preguntas y opciones no se renombran durante una migracion estructural.
+- Una invitacion valida permite acceder una vez al cuestionario.
+- Una invitacion inexistente o ya utilizada sigue mostrando un estado de error comprensible y no permite continuar.
+- Una respuesta completada sigue mostrando una confirmacion de exito.
+
+### Persistencia
+
+- Los documentos existentes deben seguir pudiendo leerse mientras se migra el modelo.
+- Ningun cambio de esquema puede eliminar o reinterpretar datos existentes sin una estrategia de migracion documentada.
+- El contrato legado actual del envio es `{ usuario, premios }` y no se modifica hasta definir un DTO versionado y su adaptacion retrocompatible.
+- La migracion no debe cambiar silenciosamente la identificacion de una invitacion ni el significado de `usado`.
+
+### Configuracion y despliegue
+
+- Se mantiene el despliegue como una unica aplicacion.
+- Se mantienen Vite, Vue 3, TypeScript y Firebase mientras no exista una decision explicita de sustitucion.
+- Se conservan los nombres de las variables `VITE_FIREBASE_*` existentes o se proporciona una migracion compatible.
+- Los comandos `npm run dev`, `npm run build`, `npm test -- --run` y `npm run typecheck` deben seguir funcionando.
+- La CI debe ejecutar typecheck, lint, tests y build antes de aceptar cambios.
+
+### Criterio de aceptacion por bloque
+
+Un bloque de migracion es compatible cuando:
+
+1. Las pruebas de `docs/MIGRATION_BASELINE.md` siguen pasando.
+2. El flujo manual completo conserva sus pantallas y transiciones.
+3. Los documentos existentes no requieren una migracion destructiva.
+4. Los comandos de validacion definidos en TODO-003 pasan.
+5. La documentacion refleja cualquier cambio intencionado de contrato.
 
 ---
 
