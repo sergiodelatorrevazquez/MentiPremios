@@ -259,7 +259,7 @@ La decision de esquema para la futura persistencia es conservar conceptualmente 
 
 # Fase 2: estado y flujo del wizard
 
-## TODO-010. Crear un estado puro del wizard
+## TODO-010. Crear un estado puro del wizard [COMPLETADO]
 
 Extraer la logica de:
 
@@ -279,7 +279,9 @@ src/features/survey/application/surveyWizard.ts
 
 Debe ser una funcion o modulo testeable sin Vue.
 
-## TODO-011. Eliminar el estado duplicado de respuestas
+Resultado: se creo `src/features/survey/application/surveyWizard.ts` con estado y transiciones puras para iniciar, seleccionar, avanzar, retroceder, consultar la pregunta actual y calcular el progreso. Sus transiciones estan cubiertas en `tests/unit/surveyWizard.spec.ts`.
+
+## TODO-011. Eliminar el estado duplicado de respuestas [COMPLETADO]
 
 Eliminar gradualmente:
 
@@ -295,7 +297,9 @@ respuestas[preguntaActual.id]
 
 **Condicion:** volver atras debe restaurar exactamente la seleccion anterior.
 
-## TODO-012. Crear el composable del wizard
+Resultado: `respuestasAnteriores` ya no existe. `App.vue` usa `respuestas` como unica fuente de verdad y restaura la seleccion desde el ID de la pregunta anterior. La misma transicion esta cubierta en `tests/unit/surveyWizard.spec.ts` y en la linea base de `tests/unit/App.spec.ts`.
+
+## TODO-012. Crear el composable del wizard [COMPLETADO]
 
 Crear:
 
@@ -305,7 +309,9 @@ src/features/survey/application/useSurveyWizard.ts
 
 El composable debe coordinar el estado reactivo, mientras que las reglas permanecen en funciones puras.
 
-## TODO-013. Cubrir las transiciones del wizard
+Resultado: se creo `src/features/survey/application/useSurveyWizard.ts` como adaptador reactivo sobre `surveyWizard.ts`. `App.vue` usa el composable para el estado, seleccion, avance y retroceso del cuestionario, manteniendo fuera la persistencia y los modales.
+
+## TODO-013. Cubrir las transiciones del wizard [COMPLETADO]
 
 Anadir pruebas para:
 
@@ -319,7 +325,9 @@ Anadir pruebas para:
 - Envio incompleto.
 - Bloqueo durante envio.
 
-## TODO-014. Evitar envios duplicados desde la interfaz
+Resultado: `tests/unit/surveyWizard.spec.ts` cubre estado inicial, inicio, avance, retroceso, restauracion, limites, respuesta faltante, ultima pregunta y progreso. `tests/unit/App.spec.ts` mantiene la cobertura de las transiciones visibles de login, bienvenida y envio.
+
+## TODO-014. Evitar envios duplicados desde la interfaz [COMPLETADO]
 
 Garantizar que un doble click no ejecute dos envios simultaneos.
 
@@ -327,6 +335,8 @@ Resolverlo en dos niveles:
 
 - Bloqueo visual mediante `enviando`.
 - Proteccion real en backend o transaccion.
+
+Resultado: `App.vue` mantiene el boton deshabilitado mediante `enviando` y añade una guarda dentro del handler para rechazar eventos duplicados aunque lleguen antes de actualizar la interfaz. La prueba de `App.spec.ts` verifica que un doble envio durante una persistencia pendiente solo ejecuta una escritura. La proteccion server-side/transaccional queda pendiente de TODO-033 a TODO-037, ya que el proyecto actual no incluye backend.
 
 ---
 
