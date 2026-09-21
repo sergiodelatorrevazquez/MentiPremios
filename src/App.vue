@@ -4,11 +4,10 @@ import type {
   CodigoInvitacionIdentificado,
   Multimedia,
   OptionId,
-  Paso,
   Pregunta,
-  RespuestasEncuesta,
 } from './features/survey/domain/survey.types';
 import { preguntas as catalogoPreguntas } from './features/survey/domain/questions';
+import { useSurveyWizard } from './features/survey/application/useSurveyWizard';
 
 import {
   guardarRespuestaUsuario,
@@ -16,16 +15,22 @@ import {
   obtenerCodigoPorPalabraSecreta,
 } from './services/premiosService';
 
-const pasoActual = ref<Paso>('login');
 const palabraSecreta = ref('');
 const codigo = ref<CodigoInvitacionIdentificado | null>(null);
 const loginError = ref<string | null>(null);
 
 const preguntas = reactive<Pregunta[]>(catalogoPreguntas);
-
-const respuestas = reactive<RespuestasEncuesta>({});
-const indicePreguntaActual = ref(0);
-const respuestaSeleccionada = ref<OptionId | null>(null);
+const {
+  pasoActual,
+  indicePreguntaActual,
+  respuestaSeleccionada,
+  respuestas,
+  cambiarPaso,
+  iniciarEncuesta,
+  seleccionarRespuesta,
+  registrarRespuestaActual,
+  volverPregunta,
+} = useSurveyWizard(preguntas);
 
 const enviando = ref(false);
 const mensaje = ref<string | null>(null);
@@ -65,7 +70,7 @@ function handlePressEnd(event: MouseEvent | TouchEvent) {
 
 function handleClick(opcionId: OptionId, event: MouseEvent | TouchEvent) {
   if (longPressTriggered) return;
-  respuestaSeleccionada.value = opcionId;
+  seleccionarRespuesta(opcionId);
 }
 
 function handleMultimediaKeydown(e: KeyboardEvent) {
@@ -102,7 +107,7 @@ async function validarPalabraSecreta() {
     }
 
     codigo.value = encontrado;
-    pasoActual.value = 'welcome';
+    cambiarPaso('welcome');
   } catch (e) {
     console.error(e);
     error.value = 'Ha ocurrido un error al comprobar la palabra secreta. Inténtalo de nuevo.';
@@ -112,20 +117,16 @@ async function validarPalabraSecreta() {
 }
 
 function avanzarDesdeBienvenida() {
-  indicePreguntaActual.value = 0;
-  respuestaSeleccionada.value = null;
-  pasoActual.value = 'questions';
+  iniciarEncuesta();
 }
 
 async function responderYPasarSiguiente() {
   if (!puedeContinuarPregunta.value || !preguntaActual.value || !codigo.value) return;
 
-  const actual = preguntaActual.value;
-  respuestas[actual.id] = respuestaSeleccionada.value!;
-  respuestaSeleccionada.value = null;
+  const esUltimaPregunta = indicePreguntaActual.value === preguntas.length - 1;
+  registrarRespuestaActual();
 
-  if (indicePreguntaActual.value < preguntas.length - 1) {
-    indicePreguntaActual.value += 1;
+  if (!esUltimaPregunta) {
     return;
   }
 
@@ -137,7 +138,7 @@ async function responderYPasarSiguiente() {
     await guardarRespuestaUsuario({ usuario: codigo.value.id, premios: { ...respuestas } });
     await marcarCodigoComoUsado(codigo.value.id);
     mensaje.value = '¡Respuestas guardadas correctamente en MentiPremios!';
-    pasoActual.value = 'done';
+    cambiarPaso('done');
   } catch (e) {
     console.error(e);
     error.value = 'Ha ocurrido un error al guardar tus respuestas. Inténtalo de nuevo.';
@@ -156,12 +157,7 @@ function cerrarVisorFoto() {
 
 function volverAtras() {
   if (!puedeVolverAtras.value) return;
-
-  indicePreguntaActual.value -= 1;
-  const preguntaAnterior = preguntas[indicePreguntaActual.value];
-  respuestaSeleccionada.value = preguntaAnterior
-    ? respuestas[preguntaAnterior.id] || null
-    : null;
+  volverPregunta();
 }
 
 function handleModalKeydown(e: KeyboardEvent) {

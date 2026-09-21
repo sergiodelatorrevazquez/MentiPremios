@@ -299,7 +299,7 @@ respuestas[preguntaActual.id]
 
 Resultado: `respuestasAnteriores` ya no existe. `App.vue` usa `respuestas` como unica fuente de verdad y restaura la seleccion desde el ID de la pregunta anterior. La misma transicion esta cubierta en `tests/unit/surveyWizard.spec.ts` y en la linea base de `tests/unit/App.spec.ts`.
 
-## TODO-012. Crear el composable del wizard
+## TODO-012. Crear el composable del wizard [COMPLETADO]
 
 Crear:
 
@@ -308,6 +308,8 @@ src/features/survey/application/useSurveyWizard.ts
 ```
 
 El composable debe coordinar el estado reactivo, mientras que las reglas permanecen en funciones puras.
+
+Resultado: se creo `src/features/survey/application/useSurveyWizard.ts` como adaptador reactivo sobre `surveyWizard.ts`. `App.vue` usa el composable para el estado, seleccion, avance y retroceso del cuestionario, manteniendo fuera la persistencia y los modales.
 
 ## TODO-013. Cubrir las transiciones del wizard
 

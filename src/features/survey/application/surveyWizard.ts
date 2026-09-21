@@ -21,12 +21,19 @@ export function createSurveyWizardState(): SurveyWizardState {
   };
 }
 
-export function startSurvey(state: SurveyWizardState): SurveyWizardState {
+export function startSurvey(
+  state: SurveyWizardState,
+  preguntas: readonly Pregunta[] = [],
+): SurveyWizardState {
+  const primeraPregunta = preguntas[0];
+
   return {
     ...state,
     paso: 'questions',
     indicePregunta: 0,
-    respuestaSeleccionada: state.respuestas.tonto ?? null,
+    respuestaSeleccionada: primeraPregunta
+      ? state.respuestas[primeraPregunta.id] ?? null
+      : null,
   };
 }
 
