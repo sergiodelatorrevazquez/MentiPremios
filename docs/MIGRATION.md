@@ -281,7 +281,7 @@ Debe ser una funcion o modulo testeable sin Vue.
 
 Resultado: se creo `src/features/survey/application/surveyWizard.ts` con estado y transiciones puras para iniciar, seleccionar, avanzar, retroceder, consultar la pregunta actual y calcular el progreso. Sus transiciones estan cubiertas en `tests/unit/surveyWizard.spec.ts`.
 
-## TODO-011. Eliminar el estado duplicado de respuestas
+## TODO-011. Eliminar el estado duplicado de respuestas [COMPLETADO]
 
 Eliminar gradualmente:
 
@@ -296,6 +296,8 @@ respuestas[preguntaActual.id]
 ```
 
 **Condicion:** volver atras debe restaurar exactamente la seleccion anterior.
+
+Resultado: `respuestasAnteriores` ya no existe. `App.vue` usa `respuestas` como unica fuente de verdad y restaura la seleccion desde el ID de la pregunta anterior. La misma transicion esta cubierta en `tests/unit/surveyWizard.spec.ts` y en la linea base de `tests/unit/App.spec.ts`.
 
 ## TODO-012. Crear el composable del wizard
 
