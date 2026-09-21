@@ -1,5 +1,21 @@
 export type Paso = 'login' | 'welcome' | 'questions' | 'done';
 
+export const QUESTION_IDS = {
+  tonto: 'tonto',
+  casper: 'casper',
+  comefeas: 'comefeas',
+  soltero: 'soltero',
+  anecdota: 'anecdota',
+  meme: 'meme',
+  mensaje: 'mensaje',
+  foto: 'foto',
+  video: 'video',
+  correa: 'correa',
+} as const;
+
+export type QuestionId = typeof QUESTION_IDS[keyof typeof QUESTION_IDS];
+export type OptionId = `${QuestionId}-${number}`;
+
 export interface Multimedia {
   tipo: 'imagen' | 'video';
   src: string;
@@ -7,18 +23,19 @@ export interface Multimedia {
 }
 
 export interface Opcion {
-  id: string;
+  id: OptionId;
   texto: string;
   multimedia?: Multimedia;
 }
 
 export interface Pregunta {
-  id: string;
+  id: QuestionId;
   titulo: string;
   opciones: Opcion[];
 }
 
 export type Respuestas = Record<string, string>;
+export type RespuestasEncuesta = Partial<Record<QuestionId, OptionId>>;
 
 export interface PremioRespuesta {
   usuario: string;

@@ -1,4 +1,4 @@
-import type { Pregunta } from './survey.types';
+import { QUESTION_IDS, type Pregunta } from './survey.types';
 
 const multimediaAssets = import.meta.glob('../../../assets/{mensaje,foto,video}-*.{jpg,mp4}', {
   eager: true,
@@ -12,7 +12,7 @@ function multimediaAsset(path: string): string {
 
 export const preguntas: Pregunta[] = [
   {
-    id: 'tonto',
+    id: QUESTION_IDS.tonto,
     titulo: 'Tonto del Año',
     opciones: [
       { id: 'tonto-1', texto: 'Miguel' },
@@ -22,7 +22,7 @@ export const preguntas: Pregunta[] = [
     ],
   },
   {
-    id: 'casper',
+    id: QUESTION_IDS.casper,
     titulo: 'Casper del Año',
     opciones: [
       { id: 'casper-1', texto: 'Raúl' },
@@ -34,7 +34,7 @@ export const preguntas: Pregunta[] = [
     ],
   },
   {
-    id: 'comefeas',
+    id: QUESTION_IDS.comefeas,
     titulo: 'Comefeas del Año',
     opciones: [
       { id: 'comefeas-1', texto: 'Fran' },
@@ -44,7 +44,7 @@ export const preguntas: Pregunta[] = [
     ],
   },
   {
-    id: 'soltero',
+    id: QUESTION_IDS.soltero,
     titulo: 'Soltero del Año',
     opciones: [
       { id: 'soltero-1', texto: 'Sergio Reyes' },
@@ -54,7 +54,7 @@ export const preguntas: Pregunta[] = [
     ],
   },
   {
-    id: 'anecdota',
+    id: QUESTION_IDS.anecdota,
     titulo: 'Anécdota del Año',
     opciones: [
       { id: 'anecdota-1', texto: 'La quedada de verano' },
@@ -66,7 +66,7 @@ export const preguntas: Pregunta[] = [
     ],
   },
   {
-    id: 'meme',
+    id: QUESTION_IDS.meme,
     titulo: 'Meme del Año',
     opciones: [
       { id: 'meme-1', texto: 'Cuando apareció el nuevo miembro' },
@@ -80,7 +80,7 @@ export const preguntas: Pregunta[] = [
     ],
   },
   {
-    id: 'mensaje',
+    id: QUESTION_IDS.mensaje,
     titulo: 'Mensaje del Año',
     opciones: [
       { id: 'mensaje-1', texto: '1', multimedia: { tipo: 'imagen', src: multimediaAsset('../../../assets/mensaje-1.jpg'), alt: 'Mensaje 1' } },
@@ -90,7 +90,7 @@ export const preguntas: Pregunta[] = [
     ],
   },
   {
-    id: 'foto',
+    id: QUESTION_IDS.foto,
     titulo: 'Foto del Año',
     opciones: [
       { id: 'foto-1', texto: '1', multimedia: { tipo: 'imagen', src: multimediaAsset('../../../assets/foto-1.jpg'), alt: 'Foto 1' } },
@@ -100,7 +100,7 @@ export const preguntas: Pregunta[] = [
     ],
   },
   {
-    id: 'video',
+    id: QUESTION_IDS.video,
     titulo: 'Video del Año',
     opciones: [
       { id: 'video-1', texto: '1', multimedia: { tipo: 'video', src: multimediaAsset('../../../assets/video-1.mp4'), alt: 'Video 1' } },
@@ -110,7 +110,7 @@ export const preguntas: Pregunta[] = [
     ],
   },
   {
-    id: 'correa',
+    id: QUESTION_IDS.correa,
     titulo: 'Correa del Año',
     opciones: [
       { id: 'correa-1', texto: 'Miguel' },

@@ -187,7 +187,7 @@ Debe conservar:
 
 Resultado: el catalogo se movio a `src/features/survey/domain/questions.ts` y `App.vue` lo consume como estado reactivo sin modificar sus IDs, orden, textos, opciones ni referencias multimedia.
 
-## TODO-007. Definir IDs como constantes o tipos
+## TODO-007. Definir IDs como constantes o tipos [COMPLETADO]
 
 Evitar IDs dispersos como strings libres:
 
@@ -200,6 +200,8 @@ Evitar IDs dispersos como strings libres:
 Crear tipos o constantes para preguntas y opciones.
 
 **Condicion:** no cambiar los valores almacenados actualmente.
+
+Resultado: se anadieron `QUESTION_IDS`, `QuestionId` y `OptionId` en `src/features/survey/domain/survey.types.ts`. El catalogo usa las constantes de preguntas y el mapa de respuestas conserva los mismos valores persistidos.
 
 ## TODO-008. Definir reglas del cuestionario
 

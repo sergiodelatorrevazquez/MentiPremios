@@ -3,8 +3,10 @@ import { computed, reactive, ref } from 'vue';
 import type {
   CodigoInvitacionIdentificado,
   Multimedia,
+  OptionId,
   Paso,
   Pregunta,
+  RespuestasEncuesta,
 } from './features/survey/domain/survey.types';
 import { preguntas as catalogoPreguntas } from './features/survey/domain/questions';
 
@@ -21,9 +23,9 @@ const loginError = ref<string | null>(null);
 
 const preguntas = reactive<Pregunta[]>(catalogoPreguntas);
 
-const respuestas = reactive<Record<string, string>>({});
+const respuestas = reactive<RespuestasEncuesta>({});
 const indicePreguntaActual = ref(0);
-const respuestaSeleccionada = ref<string | null>(null);
+const respuestaSeleccionada = ref<OptionId | null>(null);
 
 const enviando = ref(false);
 const mensaje = ref<string | null>(null);
@@ -61,7 +63,7 @@ function handlePressEnd(event: MouseEvent | TouchEvent) {
   setTimeout(() => { longPressTriggered = false; }, 10);
 }
 
-function handleClick(opcionId: string, event: MouseEvent | TouchEvent) {
+function handleClick(opcionId: OptionId, event: MouseEvent | TouchEvent) {
   if (longPressTriggered) return;
   respuestaSeleccionada.value = opcionId;
 }
