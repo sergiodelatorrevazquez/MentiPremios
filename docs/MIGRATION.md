@@ -259,7 +259,7 @@ La decision de esquema para la futura persistencia es conservar conceptualmente 
 
 # Fase 2: estado y flujo del wizard
 
-## TODO-010. Crear un estado puro del wizard
+## TODO-010. Crear un estado puro del wizard [COMPLETADO]
 
 Extraer la logica de:
 
@@ -278,6 +278,8 @@ src/features/survey/application/surveyWizard.ts
 ```
 
 Debe ser una funcion o modulo testeable sin Vue.
+
+Resultado: se creo `src/features/survey/application/surveyWizard.ts` con estado y transiciones puras para iniciar, seleccionar, avanzar, retroceder, consultar la pregunta actual y calcular el progreso. Sus transiciones estan cubiertas en `tests/unit/surveyWizard.spec.ts`.
 
 ## TODO-011. Eliminar el estado duplicado de respuestas
 
