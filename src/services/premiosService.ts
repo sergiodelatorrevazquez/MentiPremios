@@ -10,20 +10,16 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
-export interface PremioRespuesta {
-  usuario: string;
-  premios: Record<string, string>;
-}
-
-export interface PalabraClavePayload {
-  usuario: string;
-  palabrasClave: string[];
-}
-
-export interface CodigoInvitacion {
-  nombre: string;
-  usado: boolean;
-}
+export type {
+  CodigoInvitacion,
+  PalabraClavePayload,
+  PremioRespuesta,
+} from '../features/survey/domain/survey.types';
+import type {
+  CodigoInvitacion,
+  PalabraClavePayload,
+  PremioRespuesta,
+} from '../features/survey/domain/survey.types';
 
 export class FirestoreServiceError extends Error {
   constructor(

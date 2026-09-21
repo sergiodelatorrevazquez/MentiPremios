@@ -144,7 +144,7 @@ Un bloque de migracion es compatible cuando:
 
 # Fase 1: contratos y modelo de dominio
 
-## TODO-005. Crear los tipos del dominio
+## TODO-005. Crear los tipos del dominio [COMPLETADO]
 
 Mover desde `App.vue`:
 
@@ -164,7 +164,9 @@ src/features/survey/domain/survey.types.ts
 
 **Condicion:** `App.vue` debe seguir funcionando importando los tipos nuevos.
 
-## TODO-006. Extraer el catalogo de preguntas
+Resultado: se creo `src/features/survey/domain/survey.types.ts`, `App.vue` consume sus tipos y `premiosService.ts` los reexporta temporalmente para mantener compatibilidad con sus consumidores actuales.
+
+## TODO-006. Extraer el catalogo de preguntas [COMPLETADO]
 
 Mover `preguntas` a:
 
@@ -183,7 +185,9 @@ Debe conservar:
 
 **Condicion:** el wizard debe mostrar exactamente las mismas diez preguntas.
 
-## TODO-007. Definir IDs como constantes o tipos
+Resultado: el catalogo se movio a `src/features/survey/domain/questions.ts` y `App.vue` lo consume como estado reactivo sin modificar sus IDs, orden, textos, opciones ni referencias multimedia.
+
+## TODO-007. Definir IDs como constantes o tipos [COMPLETADO]
 
 Evitar IDs dispersos como strings libres:
 
@@ -197,7 +201,9 @@ Crear tipos o constantes para preguntas y opciones.
 
 **Condicion:** no cambiar los valores almacenados actualmente.
 
-## TODO-008. Definir reglas del cuestionario
+Resultado: se anadieron `QUESTION_IDS`, `QuestionId` y `OptionId` en `src/features/survey/domain/survey.types.ts`. El catalogo usa las constantes de preguntas y el mapa de respuestas conserva los mismos valores persistidos.
+
+## TODO-008. Definir reglas del cuestionario [COMPLETADO]
 
 Crear funciones puras para validar:
 
@@ -212,7 +218,9 @@ Ubicacion propuesta:
 src/features/survey/domain/survey.rules.ts
 ```
 
-## TODO-009. Definir el DTO canonico de respuestas
+Resultado: se creo `validateSurveyAnswers` con errores de dominio tipados para respuestas faltantes, preguntas desconocidas, opciones invalidas y cantidad incorrecta. Sus casos principales estan cubiertos en `tests/unit/survey.rules.spec.ts`.
+
+## TODO-009. Definir el DTO canonico de respuestas [COMPLETADO]
 
 Elegir y documentar un unico formato. Por ejemplo:
 
@@ -232,6 +240,20 @@ Decidir explicitamente si el documento Firestore tendra:
 - `invitationId`.
 
 **Condicion:** mantener compatibilidad de lectura con documentos existentes.
+
+Resultado: el contrato canonico de aplicacion es `SurveySubmission`, definido en `src/features/survey/domain/survey.types.ts`:
+
+```ts
+interface SurveySubmission {
+  invitationId: string;
+  participantName: string;
+  answers: Record<QuestionId, OptionId>;
+}
+```
+
+La persistencia actual mantiene temporalmente el contrato legado `{ usuario, premios }`. No se modifica el servicio ni el esquema existente en este TODO. Un adaptador posterior sera responsable de traducir el DTO canonico al formato persistido y de mantener compatibilidad de lectura.
+
+La decision de esquema para la futura persistencia es conservar conceptualmente `invitationId`, `participantName`, `answers` y `createdAt`. La migracion de documentos existentes se definira antes de escribir ese formato.
 
 ---
 
