@@ -220,7 +220,7 @@ src/features/survey/domain/survey.rules.ts
 
 Resultado: se creo `validateSurveyAnswers` con errores de dominio tipados para respuestas faltantes, preguntas desconocidas, opciones invalidas y cantidad incorrecta. Sus casos principales estan cubiertos en `tests/unit/survey.rules.spec.ts`.
 
-## TODO-009. Definir el DTO canonico de respuestas
+## TODO-009. Definir el DTO canonico de respuestas [COMPLETADO]
 
 Elegir y documentar un unico formato. Por ejemplo:
 
@@ -240,6 +240,20 @@ Decidir explicitamente si el documento Firestore tendra:
 - `invitationId`.
 
 **Condicion:** mantener compatibilidad de lectura con documentos existentes.
+
+Resultado: el contrato canonico de aplicacion es `SurveySubmission`, definido en `src/features/survey/domain/survey.types.ts`:
+
+```ts
+interface SurveySubmission {
+  invitationId: string;
+  participantName: string;
+  answers: Record<QuestionId, OptionId>;
+}
+```
+
+La persistencia actual mantiene temporalmente el contrato legado `{ usuario, premios }`. No se modifica el servicio ni el esquema existente en este TODO. Un adaptador posterior sera responsable de traducir el DTO canonico al formato persistido y de mantener compatibilidad de lectura.
+
+La decision de esquema para la futura persistencia es conservar conceptualmente `invitationId`, `participantName`, `answers` y `createdAt`. La migracion de documentos existentes se definira antes de escribir ese formato.
 
 ---
 

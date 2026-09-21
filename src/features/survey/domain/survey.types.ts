@@ -36,6 +36,13 @@ export interface Pregunta {
 
 export type Respuestas = Record<string, string>;
 export type RespuestasEncuesta = Partial<Record<QuestionId, OptionId>>;
+export type RespuestasCompletas = Record<QuestionId, OptionId>;
+
+export interface SurveySubmission {
+  invitationId: string;
+  participantName: string;
+  answers: RespuestasCompletas;
+}
 
 export interface PremioRespuesta {
   usuario: string;
