@@ -121,6 +121,7 @@ function avanzarDesdeBienvenida() {
 }
 
 async function responderYPasarSiguiente() {
+  if (enviando.value) return;
   if (!puedeContinuarPregunta.value || !preguntaActual.value || !codigo.value) return;
 
   const esUltimaPregunta = indicePreguntaActual.value === preguntas.length - 1;

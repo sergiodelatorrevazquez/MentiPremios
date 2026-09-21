@@ -216,6 +216,34 @@ describe('App - Questions', () => {
     expect(wrapper.find('.hero-title').text()).toContain('Gracias');
     expect(wrapper.find('.status--success').exists()).toBe(true);
   });
+
+  it('bloquea envios duplicados mientras se guardan las respuestas', async () => {
+    const { guardarRespuestaUsuario } = await import('../../src/services/premiosService');
+    let resolveSave: (() => void) | undefined;
+    vi.mocked(guardarRespuestaUsuario).mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveSave = resolve; }),
+    );
+
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let questionIndex = 0; questionIndex < 9; questionIndex++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    await wrapper.find('.option-card').trigger('click');
+    const submitButton = wrapper.find('button.button-primary');
+    await submitButton.trigger('click');
+    await submitButton.trigger('click');
+
+    expect(guardarRespuestaUsuario).toHaveBeenCalledTimes(1);
+    expect(submitButton.attributes('disabled')).toBeDefined();
+
+    resolveSave?.();
+    await wrapper.vm.$nextTick();
+  });
 });
 
 describe('App - Visor de foto', () => {

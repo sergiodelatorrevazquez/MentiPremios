@@ -327,7 +327,7 @@ Anadir pruebas para:
 
 Resultado: `tests/unit/surveyWizard.spec.ts` cubre estado inicial, inicio, avance, retroceso, restauracion, limites, respuesta faltante, ultima pregunta y progreso. `tests/unit/App.spec.ts` mantiene la cobertura de las transiciones visibles de login, bienvenida y envio.
 
-## TODO-014. Evitar envios duplicados desde la interfaz
+## TODO-014. Evitar envios duplicados desde la interfaz [COMPLETADO]
 
 Garantizar que un doble click no ejecute dos envios simultaneos.
 
@@ -335,6 +335,8 @@ Resolverlo en dos niveles:
 
 - Bloqueo visual mediante `enviando`.
 - Proteccion real en backend o transaccion.
+
+Resultado: `App.vue` mantiene el boton deshabilitado mediante `enviando` y añade una guarda dentro del handler para rechazar eventos duplicados aunque lleguen antes de actualizar la interfaz. La prueba de `App.spec.ts` verifica que un doble envio durante una persistencia pendiente solo ejecuta una escritura. La proteccion server-side/transaccional queda pendiente de TODO-033 a TODO-037, ya que el proyecto actual no incluye backend.
 
 ---
 
