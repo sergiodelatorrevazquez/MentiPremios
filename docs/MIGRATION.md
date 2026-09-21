@@ -51,7 +51,7 @@ Documentar y probar el flujo actual completo:
 
 Resultado: se documentaron los escenarios en `docs/MIGRATION_BASELINE.md` y se ampliaron las pruebas de `tests/unit/App.spec.ts` para cubrir el flujo completo, la restauracion de respuestas y el visor multimedia.
 
-## TODO-002. Corregir el chequeo de tipos
+## TODO-002. Corregir el chequeo de tipos [COMPLETADO]
 
 Anadir el script:
 
@@ -62,6 +62,8 @@ Anadir el script:
 Corregir los errores actuales de `vi.Mock` en los tests.
 
 **Condicion:** `npm run typecheck` debe pasar antes de iniciar la migracion.
+
+Resultado: se anadio el script `typecheck` y se corrigieron los tipos de los mocks de Vitest en `tests/unit/premiosService.spec.ts`. `npm run typecheck` pasa correctamente.
 
 ## TODO-003. Anadir validacion completa a CI
 
