@@ -166,7 +166,7 @@ src/features/survey/domain/survey.types.ts
 
 Resultado: se creo `src/features/survey/domain/survey.types.ts`, `App.vue` consume sus tipos y `premiosService.ts` los reexporta temporalmente para mantener compatibilidad con sus consumidores actuales.
 
-## TODO-006. Extraer el catalogo de preguntas
+## TODO-006. Extraer el catalogo de preguntas [COMPLETADO]
 
 Mover `preguntas` a:
 
@@ -184,6 +184,8 @@ Debe conservar:
 - Multimedia.
 
 **Condicion:** el wizard debe mostrar exactamente las mismas diez preguntas.
+
+Resultado: el catalogo se movio a `src/features/survey/domain/questions.ts` y `App.vue` lo consume como estado reactivo sin modificar sus IDs, orden, textos, opciones ni referencias multimedia.
 
 ## TODO-007. Definir IDs como constantes o tipos
 
