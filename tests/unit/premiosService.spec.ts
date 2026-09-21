@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { type Mock, vi } from 'vitest';
 import { doc, setDoc, getDoc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../src/firebase';
 import {
@@ -26,7 +26,7 @@ describe('premiosService', () => {
   });
 
   it('guarda respuestas usando setDoc con el usuario como ID', async () => {
-    (setDoc as unknown as vi.Mock).mockResolvedValueOnce({});
+    (setDoc as unknown as Mock).mockResolvedValueOnce({});
 
     await guardarRespuestaUsuario({
       usuario: 'SERGIO2024',
@@ -38,7 +38,7 @@ describe('premiosService', () => {
   });
 
   it('obtiene código por palabra secreta', async () => {
-    (getDoc as unknown as vi.Mock).mockResolvedValueOnce({
+    (getDoc as unknown as Mock).mockResolvedValueOnce({
       exists: () => true,
       id: 'secreta123',
       data: () => ({ nombre: 'Sergio', usado: false }),
@@ -54,7 +54,7 @@ describe('premiosService', () => {
   });
 
   it('marca código como usado', async () => {
-    (updateDoc as unknown as vi.Mock).mockResolvedValueOnce({});
+    (updateDoc as unknown as Mock).mockResolvedValueOnce({});
 
     await marcarCodigoComoUsado('secreta123');
 

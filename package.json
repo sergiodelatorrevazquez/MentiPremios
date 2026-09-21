@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
+    "typecheck": "vue-tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx,vue}\""
   },
   "dependencies": {

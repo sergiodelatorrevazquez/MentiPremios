@@ -167,22 +167,36 @@ describe('App - Questions', () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find('.progress-bar').text()).toContain('1');
+    expect(wrapper.findAll('.option-card')[0].classes()).toContain('option-card--selected');
   });
 
-  it('guarda las respuestas al completar todas las preguntas', async () => {
+  it('completa el flujo y guarda las diez respuestas con el codigo de invitacion', async () => {
     const { guardarRespuestaUsuario, marcarCodigoComoUsado } = await import('../../src/services/premiosService');
 
     const wrapper = mount(App);
     await loginAndStart(wrapper);
 
-    const totalQuestions = wrapper.findAll('.option-card').length > 0 ? 10 : 0;
-    for (let i = 0; i < totalQuestions; i++) {
+    for (let questionIndex = 0; questionIndex < 10; questionIndex++) {
       await wrapper.find('.option-card').trigger('click');
       await wrapper.find('button.button-primary').trigger('click');
       await wrapper.vm.$nextTick();
     }
 
-    expect(guardarRespuestaUsuario).toHaveBeenCalled();
+    expect(guardarRespuestaUsuario).toHaveBeenCalledWith({
+      usuario: 'secreta-123',
+      premios: {
+        tonto: 'tonto-1',
+        casper: 'casper-1',
+        comefeas: 'comefeas-1',
+        soltero: 'soltero-1',
+        anecdota: 'anecdota-1',
+        meme: 'meme-1',
+        mensaje: 'mensaje-1',
+        foto: 'foto-1',
+        video: 'video-1',
+        correa: 'correa-1',
+      },
+    });
     expect(marcarCodigoComoUsado).toHaveBeenCalledWith('secreta-123');
   });
 
@@ -230,6 +244,36 @@ describe('App - Visor de foto', () => {
     expect(wrapper.find('.photo-modal').exists()).toBe(true);
     await wrapper.find('.modal-close-btn').trigger('click');
     expect(wrapper.find('.photo-modal').exists()).toBe(false);
+  });
+});
+
+describe('App - Visor multimedia de respuestas', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('abre y cierra el visor de una imagen mediante pulsacion larga', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(App);
+
+    await loginAndStart(wrapper);
+    for (let questionIndex = 0; questionIndex < 6; questionIndex++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    const multimediaOption = wrapper.find('.option-card');
+    await multimediaOption.trigger('mousedown');
+    vi.advanceTimersByTime(300);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.photo-modal').exists()).toBe(true);
+    expect(wrapper.find('.photo-modal-image').exists()).toBe(true);
+
+    await wrapper.find('.modal-close-btn').trigger('click');
+    expect(wrapper.find('.photo-modal').exists()).toBe(false);
+    vi.useRealTimers();
   });
 });
 
