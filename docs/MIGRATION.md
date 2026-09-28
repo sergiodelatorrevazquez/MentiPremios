@@ -931,7 +931,7 @@ Comprobar que los adaptadores Firebase cumplen las interfaces de aplicacion.
 
 Resultado: se anadio `tests/unit/contracts/repositoryContracts.spec.ts`, que comprueba la conformidad de los adaptadores con los contratos que consumen. Para el repositorio de palabras clave se asigna `FirestoreKeywordsRepository` a `KeywordsRepository`, de modo que una deviation en la firma rompe la compilacion, y se verifica que recibe el `KeywordSubmission` del dominio y no un DTO propio. Para los adaptadores de Cloud Function se comprueba que los stores falsos usados en las pruebas satisfacen `InvitationLookupStore` y `SubmissionStore` tal y como los declaran los handlers, y que el endpoint de envio acepta exactamente el payload que produce `submitSurvey` (solo `invitationId` y `answers`): `participantName` lo resuelve el servidor desde la invitacion, y se verifica que incluirlo hace fallar `parseSurveySubmission`. Tambien se fija que la allowlist `SURVEY_OPTION_IDS` coincide con el catalogo del cliente. `tests/unit/infrastructure/firestoreKeywordsRepository.spec.ts` paso de 1 a 5 pruebas de comportamiento del adaptador: escritura con timestamp del servidor, timestamp que no pisa los campos del envio, envio sin palabras clave, propagacion del error del SDK y ausencia de escritura cuando falla la construccion de la referencia. La suite unitaria queda en 168 pruebas.
 
-## TODO-059. Mejorar pruebas de componentes
+## TODO-059. Mejorar pruebas de componentes [COMPLETADO]
 
 Cada componente extraido debe probar:
 
@@ -940,6 +940,8 @@ Cada componente extraido debe probar:
 - Props.
 - Estados de carga.
 - Estados de error.
+
+Resultado: las seis specs de componentes se reescribieron agrupadas por las cinco categorias pedidas. `QuestionStep.spec.ts` paso de 6 a 19 pruebas: renderizado del titulo, de las reticulas 4/6/8, de la posicion y el progreso, y de la ausencia de precarga del video; props para la opcion seleccionada, la miniatura de reserva, la imagen disponible y el estado del boton principal; eventos para `select-option`, `submit`, `go-back` (tambien cuando esta deshabilitado), el inicio de pulsacion solo en opciones con multimedia y el final en mouseup, mouseleave y touchend; estados de carga con el texto "Guardando..." y `aria-busy`, y de error con el texto "Reintentar envio" tanto al llegar como tras limpiar el error, mas el estado vacio. `LoginStep.spec.ts` paso de 3 a 12, anadiendo `update:modelValue`, la tecla Enter, el estado `Comprobando...` con el boton deshabilitado y los tres casos de error (secreto vacio, error anunciado y ligado por `aria-describedby`, y texto conservado para corregirlo). `MultimediaViewer.spec.ts` paso de 5 a 13 y `AvatarPhotoViewer.spec.ts` de 3 a 9, cubriendo el cierre por fondo, contenido, boton y Escape, el `aria-label` por defecto, la imagen de reserva, el bloqueo y liberación del desplazamiento, la liberación en `onUnmounted` y la trampa de foco con restauracion. `WelcomeStep.spec.ts` paso de 2 a 7 y `CompletionStep.spec.ts` de 1 a 8, dejando constancia de que son pasos sin carga ni error propios: se comprueba que no existen para documentar la ausencia de estados. Durante la expansion se detectaron dos matices de los componentes y se ajustaron las pruebas para reflejar el comportamiento real: el vigilante de apertura no es inmediato, asi que el bloqueo de desplazamiento solo se aplica al pasar de cerrado a abierto, y el clic en el fondo emite `close` mientras el clic en el contenido no. La suite unitaria queda en 215 pruebas.
 
 ## TODO-060. Corregir el test de navegacion atras
 
