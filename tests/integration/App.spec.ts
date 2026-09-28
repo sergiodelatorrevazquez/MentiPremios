@@ -4,6 +4,7 @@ import App from '../../src/app/App.vue';
 import { APP_SERVICES_KEY, type AppServices } from '../../src/app/bootstrap';
 import { InvitationAlreadyUsedError, InvalidInvitationError } from '../../src/features/survey/application/errors';
 import type { SurveySubmission } from '../../src/features/survey/domain/survey.types';
+import { preguntas } from '../../src/features/survey/domain/questions';
 
 const mockAppServices: AppServices = {
   validateInvitation: vi.fn().mockResolvedValue({
@@ -278,7 +279,7 @@ describe('App - Questions', () => {
     expect(vi.mocked(mockAppServices.submitSurvey).mock.calls[0][0].answers.tonto).toBe('tonto-3');
   });
 
-  it('completa el flujo y guarda las diez respuestas con el codigo de invitacion', async () => {
+  it('envía exactamente el payload con invitación, nombre y respuestas', async () => {
     const wrapper = mount(App);
     await loginAndStart(wrapper);
 
@@ -288,9 +289,16 @@ describe('App - Questions', () => {
       await wrapper.vm.$nextTick();
     }
 
-    expect(mockAppServices.submitSurvey).toHaveBeenCalledWith(expect.objectContaining({
+    // toHaveBeenCalledWith sin objectContaining: si aparece un campo extra,
+    // la comparación falla. El formato en memoria incluye `questions` porque
+    // submitSurvey necesita el catálogo para validar; el payload de red queda
+    // reducido a { invitationId, answers }, como fijan bootstrap.spec y
+    // repositoryContracts.spec, donde participantName lo resuelve el servidor.
+    expect(mockAppServices.submitSurvey).toHaveBeenCalledTimes(1);
+    expect(mockAppServices.submitSurvey).toHaveBeenCalledWith({
       invitationId: 'secreta-123',
       participantName: 'Sergio',
+      questions: preguntas,
       answers: {
         tonto: 'tonto-1',
         casper: 'casper-1',
@@ -303,7 +311,36 @@ describe('App - Questions', () => {
         video: 'video-1',
         correa: 'correa-1',
       },
-    }));
+    });
+  });
+
+  it('envía las diez respuestas y ningún campo de más', async () => {
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let questionIndex = 0; questionIndex < 10; questionIndex++) {
+      await wrapper.findAll('.option-card')[1].trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    const payload = vi.mocked(mockAppServices.submitSurvey).mock.calls[0][0];
+
+    expect(Object.keys(payload).sort())
+      .toEqual(['answers', 'invitationId', 'participantName', 'questions']);
+    expect(Object.keys(payload.answers)).toHaveLength(10);
+    expect(payload.answers).toEqual({
+      tonto: 'tonto-2',
+      casper: 'casper-2',
+      comefeas: 'comefeas-2',
+      soltero: 'soltero-2',
+      anecdota: 'anecdota-2',
+      meme: 'meme-2',
+      mensaje: 'mensaje-2',
+      foto: 'foto-2',
+      video: 'video-2',
+      correa: 'correa-2',
+    });
   });
 
   it('muestra pantalla de agradecimiento al completar', async () => {

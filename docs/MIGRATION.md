@@ -949,7 +949,7 @@ No basta con verificar que vuelve al primer indice. Debe verificar que la opcion
 
 Resultado: el test de `tests/integration/App.spec.ts` que antes elegia siempre la primera opcion, y por tanto habria pasado incluso con un bug que restaurara cualquier seleccion, ahora elige la tercera opcion y comprueba que sigue siendo esa la marcada, tanto por clase CSS como por `aria-pressed`, y que las otras dos quedan sin marcar. Se anadieron tres casos mas: que la respuesta guardada sobreviva a un ciclo de retroceder y avanzar, que las respuestas de varias preguntas se acumulen al retroceder dos veces y sigan presentes en el envio final, y que al cambiar una respuesta anterior por otra la nueva llegue al envio (`tonto-3` en lugar de `tonto-1`). El test del envio completo se apoya ahora en esas respuestas acumuladas, asi que la navegacion atras deja de ser un detalle sin cubrir. La suite de integracion queda en 36 pruebas.
 
-## TODO-061. Verificar el payload enviado
+## TODO-061. Verificar el payload enviado [COMPLETADO]
 
 El test debe comprobar exactamente:
 
@@ -962,6 +962,8 @@ El test debe comprobar exactamente:
 ```
 
 o el formato definitivo que se elija.
+
+Resultado: se fijo el formato definitivo en los tres puntos donde el payload cambia de forma. El test de `tests/integration/App.spec.ts` paso de `toHaveBeenCalledWith(expect.objectContaining(...))` a una comparacion exacta, de modo que un campo inesperado en el objeto enviado hace fallar la prueba. Al hacerlo aparecio una cuarta clave, `questions`, que `App.vue` pasa a `submitSurvey` porque el caso de uso la necesita para validar contra el catalogo; se documento que el formato en memoria es `{ invitationId, participantName, questions, answers }` y que el de red queda reducido a `{ invitationId, answers }`, porque el nombre lo resuelve el servidor desde la invitacion. Los dos puntos de la reduccion ya estaban fijados por pruebas: `tests/integration/bootstrap.spec.ts` comprueba la llamada remota y `tests/unit/contracts/repositoryContracts.spec.ts` que `parseSurveySubmission` rechaza cualquier envio con `participantName`. Se anadio un test que verifica las claves del payload, que hay exactamente diez respuestas y que todas apuntan a la opcion elegida, usando la segunda opcion de cada pregunta. La suite de integracion queda en 37 pruebas.
 
 ---
 
