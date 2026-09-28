@@ -708,7 +708,7 @@ Alinear documentacion e implementacion respecto a:
 
 Resultado: `docs/API.md` y `docs/ARCHITECTURE.md` ahora reflejan lo que el handler persiste actualmente: `respuestas/{invitationId}` con un campo plano por pregunta, sin nombre ni timestamps. Se distingue explícitamente el DTO de la callable del documento almacenado y se señala la transición de esquema que sigue.
 
-## TODO-040. Crear una estrategia para documentos existentes
+## TODO-040. Crear una estrategia para documentos existentes [COMPLETADO]
 
 Antes de cambiar el formato, decidir si se requiere:
 
@@ -722,6 +722,8 @@ Por ejemplo:
 ```ts
 schemaVersion: 2
 ```
+
+Resultado/decision: conservar `respuestas` como coleccion y tratar los documentos actuales sin `schemaVersion` como legacy v1. No se reescribiran ni borraran en una migracion masiva; permanecen disponibles para informes y exportaciones. Las nuevas respuestas usaran v2, con `schemaVersion: 2`, `participantName`, `answers`, `createdAt` y `submittedAt`; el ID sera opaco y se enlazara desde el documento de invitacion mediante `responseId`. La logica de reintentos reconocera la respuesta legacy asociada al ID antiguo sin copiar el codigo secreto a documentos nuevos. Cualquier backfill futuro requiere export/respaldo y un plan de rollback.
 
 ## TODO-041. Evitar usar la palabra secreta como ID visible
 
