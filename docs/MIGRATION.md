@@ -695,7 +695,7 @@ Resultado: la validacion se movio a la callable autenticada `validateInvitation`
 
 # Fase 7: modelo de datos y migracion
 
-## TODO-039. Corregir el esquema documentado de respuestas
+## TODO-039. Corregir el esquema documentado de respuestas [COMPLETADO]
 
 Alinear documentacion e implementacion respecto a:
 
@@ -705,6 +705,8 @@ Alinear documentacion e implementacion respecto a:
 - Respuestas.
 - Fecha de creacion.
 - Fecha de envio.
+
+Resultado: `docs/API.md` y `docs/ARCHITECTURE.md` ahora reflejan lo que el handler persiste actualmente: `respuestas/{invitationId}` con un campo plano por pregunta, sin nombre ni timestamps. Se distingue explícitamente el DTO de la callable del documento almacenado y se señala la transición de esquema que sigue.
 
 ## TODO-040. Crear una estrategia para documentos existentes
 

@@ -109,14 +109,15 @@ Document ID: palabra secreta (string, ej: "galaxia-2025")
 
 ### Colección `respuestas`
 ```
-Document ID: nombre de usuario (string, ej: "SERGIO2024")
+Document ID: código de invitación (esquema legado)
 {
-  tonto: "tonto-1",       // map: clave = id de pregunta, valor = id de opción
+  tonto: "tonto-1",       // campo plano por pregunta
   casper: "casper-3",
   comefeas: "comefeas-2",
   // ... todas las preguntas
 }
 ```
+El formato legado no guarda nombre ni timestamp. El formato versionado que se aplicará a nuevos documentos queda definido en TODO-040 a TODO-042.
 
 ### Colección `palabrasClave`
 ```

@@ -28,34 +28,23 @@ codigos/
 
 ### Colección `respuestas`
 
-Respuestas a las preguntas de la encuesta.
+Respuestas a las preguntas de la encuesta. El esquema actualmente desplegado es legado; los documentos nuevos pasarán al esquema versionado descrito en TODO-040 a TODO-042.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| **Document ID** | `string` | Nombre de usuario (se copia del campo `nombre` de `codigos`, normalizado) |
-| `usuario` | `string` | Nombre de la persona |
-| `premios` | `map` | Clave = ID de pregunta, Valor = ID de opción seleccionada |
-| `createdAt` | `timestamp` | Marca de tiempo del servidor (Firebase `serverTimestamp`) |
+| **Document ID** | `string` | Actualmente el código de invitación; el nuevo esquema usa un ID aleatorio |
+| Campos actuales | `string` | Un campo por pregunta, con el ID de la opción seleccionada |
 
 **Ejemplo:**
 ```
-respuestas/
-  └── SERGIO2024/
-        ├── usuario: "Sergio"
-        ├── premios: {
-        │     tonto: "tonto-1",
-        │     casper: "casper-3",
-        │     comefeas: "comefeas-2",
-        │     soltero: "soltero-4",
-        │     anecdata: "anecdota-5",
-        │     meme: "meme-1",
-        │     mensaje: "mensaje-2",
-        │     foto: "foto-3",
-        │     video: "video-1",
-        │     correa: "correa-2"
-        │   }
-        └── createdAt: March 15, 2025 at 10:30:00 PM UTC-5
+respuestas/{codigo-de-invitacion} {
+  tonto: "tonto-1",
+  casper: "casper-3",
+  // ... los diez campos de pregunta
+}
 ```
+
+El esquema actual no persiste nombre del participante, código de invitación como campo ni marcas de tiempo. No confundirlo con el DTO de entrada de la callable, que usa `{ invitationId, answers }`.
 
 ---
 
