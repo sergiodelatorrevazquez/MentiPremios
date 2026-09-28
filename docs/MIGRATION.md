@@ -616,7 +616,7 @@ Resultado: se mantuvo `palabrasClave` como funcionalidad opcional y se aislo en 
 
 Esta fase requiere especial cuidado porque afecta al modelo de seguridad.
 
-## TODO-033. Definir el modelo de seguridad real
+## TODO-033. Definir el modelo de seguridad real [COMPLETADO]
 
 Decidir si el sistema usara:
 
@@ -626,6 +626,8 @@ Decidir si el sistema usara:
 - Firestore con transacciones controladas.
 
 La palabra secreta no deberia considerarse una autorizacion fuerte por si sola.
+
+Resultado: se eligieron Cloud Functions callable con Admin SDK, Firebase Authentication anonima y App Check obligatorio. Firestore quedara accesible solo desde el servidor para las colecciones de invitaciones y respuestas. La decision y sus limites quedan documentados en `docs/SECURITY.md`: el codigo sigue siendo una credencial bearer y App Check mitiga abuso, pero no acredita identidad real.
 
 ## TODO-034. Crear un endpoint unico de envio
 
