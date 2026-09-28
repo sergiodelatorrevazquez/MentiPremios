@@ -522,7 +522,7 @@ Resultado: la capa de aplicacion expone errores tipados con `code` y nombre de d
 
 # Fase 5: infraestructura y Firebase
 
-## TODO-027. Mover la inicializacion de Firebase a infraestructura
+## TODO-027. Mover la inicializacion de Firebase a infraestructura [COMPLETADO]
 
 Mover la inicializacion a:
 
@@ -532,7 +532,7 @@ src/infrastructure/firebase/client.ts
 
 **Condicion:** los modulos de dominio no deben importar Firebase.
 
-## TODO-028. Crear el repositorio de invitaciones
+## TODO-028. Crear el repositorio de invitaciones [COMPLETADO]
 
 Crear una interfaz:
 
@@ -581,7 +581,7 @@ La UI no deberia conocer `db`, `doc`, `setDoc` ni `updateDoc`.
 
 Resultado: `main.ts` crea los servicios y los proporciona mediante `APP_SERVICES_KEY`; `App.vue` consume los casos de uso sin importar el servicio Firebase legacy. `createAppServices` conecta validacion y envio con los repositorios Firebase, incluido el marcado de invitaciones usadas. Los tests cubren el wiring y el flujo de UI.
 
-## TODO-031. Eliminar los alias bilingues del servicio
+## TODO-031. Eliminar los alias bilingues del servicio [COMPLETADO]
 
 Actualmente existen nombres ingleses y alias espanoles en el mismo archivo.
 
@@ -593,6 +593,8 @@ submitSurvey
 ```
 
 La eliminacion debe hacerse solo despues de actualizar consumidores y pruebas.
+
+Resultado: se eliminaron los cuatro exports en espanol, se actualizaron los tests y la documentacion al API en ingles, y se corrigio el mock del cliente Firebase usado por el test del servicio.
 
 ## TODO-032. Eliminar funcionalidades no utilizadas o aislarlas
 

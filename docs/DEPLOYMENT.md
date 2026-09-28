@@ -53,7 +53,7 @@ codigos/
 Se crea automáticamente cuando los usuarios envían sus votos. **No necesitas crear documentos manualmente.**
 
 #### Colección `palabrasClave`
-Se crea automáticamente si se usa la función `guardarPalabrasClaveUsuario`. **No necesitas crearla manualmente.**
+Se crea automáticamente si se usa la función `saveUserKeywords`. **No necesitas crearla manualmente.**
 
 ### 1.4 Reglas de seguridad de Firestore
 

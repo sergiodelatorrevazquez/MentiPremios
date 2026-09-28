@@ -74,10 +74,9 @@ Palabras clave opcionales asociadas a usuarios. La funcionalidad existe en el se
 
 ## Servicio: `src/services/premiosService.ts`
 
-Todas las funciones están definidas con nombres en inglés y exportadas también con alias en español.
+Las funciones del servicio se exportan con nombres en inglés.
 
 ### `saveUserAnswer(payload)`
-**Alias**: `guardarRespuestaUsuario`
 
 ```typescript
 async function saveUserAnswer(payload: PremioRespuesta): Promise<void>
@@ -92,7 +91,7 @@ interface PremioRespuesta {
 
 **Uso**:
 ```typescript
-await guardarRespuestaUsuario({
+await saveUserAnswer({
   usuario: 'SERGIO2024',
   premios: { tonto: 'tonto-1', casper: 'casper-3' },
 });
@@ -101,7 +100,6 @@ await guardarRespuestaUsuario({
 ---
 
 ### `saveUserKeywords(payload)`
-**Alias**: `guardarPalabrasClaveUsuario`
 
 ```typescript
 async function saveUserKeywords(payload: PalabraClavePayload): Promise<void>
@@ -116,7 +114,7 @@ interface PalabraClavePayload {
 
 **Uso**:
 ```typescript
-await guardarPalabrasClaveUsuario({
+await saveUserKeywords({
   usuario: 'Sergio',
   palabrasClave: ['divertido', 'leal', 'fiestero'],
 });
@@ -125,7 +123,6 @@ await guardarPalabrasClaveUsuario({
 ---
 
 ### `getCodeBySecretWord(secretWord)`
-**Alias**: `obtenerCodigoPorPalabraSecreta`
 
 ```typescript
 async function getCodeBySecretWord(
@@ -146,7 +143,7 @@ interface CodigoInvitacion {
 
 **Uso**:
 ```typescript
-const codigo = await obtenerCodigoPorPalabraSecreta('secreto-de-sergio');
+const codigo = await getCodeBySecretWord('secreto-de-sergio');
 if (!codigo) {
   // Palabra incorrecta
 } else if (codigo.usado) {
@@ -159,7 +156,6 @@ if (!codigo) {
 ---
 
 ### `markCodeAsUsed(secretWord)`
-**Alias**: `marcarCodigoComoUsado`
 
 ```typescript
 async function markCodeAsUsed(secretWord: string): Promise<void>
@@ -169,7 +165,7 @@ async function markCodeAsUsed(secretWord: string): Promise<void>
 
 **Uso**:
 ```typescript
-await marcarCodigoComoUsado('secreto-de-sergio');
+await markCodeAsUsed('secreto-de-sergio');
 ```
 
 ---

@@ -102,7 +102,3 @@ export async function markCodeAsUsed(secretWord: string): Promise<void> {
   }
 }
 
-export const guardarRespuestaUsuario = saveUserAnswer;
-export const guardarPalabrasClaveUsuario = saveUserKeywords;
-export const obtenerCodigoPorPalabraSecreta = getCodeBySecretWord;
-export const marcarCodigoComoUsado = markCodeAsUsed;
