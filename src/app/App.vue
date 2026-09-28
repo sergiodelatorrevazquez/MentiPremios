@@ -10,6 +10,7 @@ import { preguntas as catalogoPreguntas } from '../features/survey/domain/questi
 import { useSurveyWizard } from '../features/survey/application/useSurveyWizard';
 import LoginStep from '../features/survey/presentation/LoginStep.vue';
 import WelcomeStep from '../features/survey/presentation/WelcomeStep.vue';
+import QuestionStep from '../features/survey/presentation/QuestionStep.vue';
 
 import {
   guardarRespuestaUsuario,
@@ -43,6 +44,18 @@ const visorMultimediaAbierto = ref(false);
 const multimediaActual = ref<Multimedia | null>(null);
 let pressTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressTriggered = false;
+
+function handleQuestionSelect(optionId: OptionId) {
+  seleccionarRespuesta(optionId);
+}
+
+function handleQuestionLongPressStart(multimedia: Multimedia) {
+  handlePressStart(multimedia, new Event('mousedown') as MouseEvent | TouchEvent);
+}
+
+function handleQuestionLongPressEnd() {
+  handlePressEnd(new Event('mouseup') as MouseEvent | TouchEvent);
+}
 
 function iniciarVisor(multimedia: Multimedia) {
   multimediaActual.value = multimedia;
@@ -273,74 +286,21 @@ function handleModalKeydown(e: KeyboardEvent) {
       </template>
 
       <template v-else-if="pasoActual === 'questions' && codigo && preguntaActual">
-        <div class="progress-bar">
-          <span>Pregunta {{ indicePreguntaActual + 1 }} de {{ preguntas.length }}</span>
-          <div class="progress-bar-track">
-            <div
-              class="progress-bar-fill"
-              :style="{ width: progreso + '%' }"
-            />
-          </div>
-        </div>
-
-        <h1 class="hero-title">
-          {{ preguntaActual.titulo }}
-        </h1>
-
-        <div class="options-grid" :class="'options-grid--' + preguntaActual.opciones.length">
-          <button
-            v-for="opcion in preguntaActual.opciones"
-            :key="opcion.id"
-            type="button"
-            class="option-card"
-            :class="{ 'option-card--selected': respuestaSeleccionada === opcion.id, 'option-card--with-media': opcion.multimedia }"
-            @click="handleClick(opcion.id, $event)"
-            @mousedown="opcion.multimedia && handlePressStart(opcion.multimedia, $event)"
-            @mouseup="handlePressEnd($event)"
-            @mouseleave="handlePressEnd($event)"
-            @touchstart="opcion.multimedia && handlePressStart(opcion.multimedia, $event)"
-            @touchend="handlePressEnd($event)"
-          >
-            <div v-if="opcion.multimedia" class="option-media">
-              <img
-                v-if="opcion.multimedia.tipo === 'imagen'"
-                class="option-media-thumbnail"
-                :src="opcion.multimedia.src"
-                :alt="opcion.multimedia.alt"
-              >
-              <video
-                v-else
-                class="option-media-thumbnail"
-                :src="opcion.multimedia.src"
-                :alt="opcion.multimedia.alt"
-                muted
-                preload="metadata"
-              />
-            </div>
-            <span class="option-text">{{ opcion.texto }}</span>
-          </button>
-        </div>
-
-        <div class="footer">
-          <div class="footer-actions">
-            <button
-              type="button"
-              class="button-secondary"
-              :disabled="!puedeVolverAtras"
-              @click="volverAtras"
-            >
-              ← Atrás
-            </button>
-            <button
-              type="button"
-              class="button-primary"
-              :disabled="!puedeContinuarPregunta"
-              @click="responderYPasarSiguiente"
-            >
-              {{ indicePreguntaActual + 1 === preguntas.length ? (enviando ? 'Guardando...' : 'Enviar y cerrar') : 'Siguiente pregunta' }}
-            </button>
-          </div>
-        </div>
+        <QuestionStep
+          :question="preguntaActual"
+          :selected-option-id="respuestaSeleccionada"
+          :current-question-index="indicePreguntaActual"
+          :total-questions="preguntas.length"
+          :progress="progreso"
+          :can-go-back="puedeVolverAtras"
+          :can-continue="puedeContinuarPregunta"
+          :is-submitting="enviando"
+          @select-option="handleQuestionSelect"
+          @long-press-start="handleQuestionLongPressStart"
+          @long-press-end="handleQuestionLongPressEnd"
+          @go-back="volverAtras"
+          @submit="responderYPasarSiguiente"
+        />
       </template>
 
       <template v-else-if="pasoActual === 'done' && codigo">

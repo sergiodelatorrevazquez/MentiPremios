@@ -385,7 +385,7 @@ src/features/survey/presentation/WelcomeStep.vue
 
 Resultado: la pantalla de bienvenida queda separada en `src/features/survey/presentation/WelcomeStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/WelcomeStep.spec.ts`. El flujo sigue siendo el mismo: nombre del participante + inicio de la encuesta.
 
-## TODO-018. Extraer la pantalla de preguntas
+## TODO-018. Extraer la pantalla de preguntas [COMPLETADO]
 
 Crear:
 
@@ -400,6 +400,8 @@ Responsabilidades:
 - Opciones.
 - Seleccion.
 - Botones anterior y siguiente.
+
+Resultado: la pantalla de preguntas queda separada en `src/features/survey/presentation/QuestionStep.vue`, conectada a `src/app/App.vue` y cubierta por pruebas en `tests/unit/QuestionStep.spec.ts` manteniendo la misma logica de seleccion, progreso, retroceso y envio.
 
 ## TODO-019. Extraer la pantalla final
 
