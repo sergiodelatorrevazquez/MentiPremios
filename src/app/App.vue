@@ -5,15 +5,15 @@ import type {
   Multimedia,
   OptionId,
   Pregunta,
-} from './features/survey/domain/survey.types';
-import { preguntas as catalogoPreguntas } from './features/survey/domain/questions';
-import { useSurveyWizard } from './features/survey/application/useSurveyWizard';
+} from '../features/survey/domain/survey.types';
+import { preguntas as catalogoPreguntas } from '../features/survey/domain/questions';
+import { useSurveyWizard } from '../features/survey/application/useSurveyWizard';
 
 import {
   guardarRespuestaUsuario,
   marcarCodigoComoUsado,
   obtenerCodigoPorPalabraSecreta,
-} from './services/premiosService';
+} from '../services/premiosService';
 
 const palabraSecreta = ref('');
 const codigo = ref<CodigoInvitacionIdentificado | null>(null);
@@ -207,7 +207,7 @@ function handleModalKeydown(e: KeyboardEvent) {
         </button>
         <img
           class="photo-modal-image"
-          src="./assets/foto-amigos.jpg"
+          src="../assets/foto-amigos.jpg"
           alt="Foto de amigos"
         >
       </div>
@@ -495,7 +495,7 @@ body {
   border-radius: var(--radius-full);
   background-size: cover;
   background-position: center;
-  background-image: url('./assets/foto-amigos.jpg');
+  background-image: url('../assets/foto-amigos.jpg');
   background-color: rgba(255, 255, 255, 0.55);
   border: 2px solid rgba(11, 61, 11, 0.25);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);

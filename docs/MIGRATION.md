@@ -342,7 +342,7 @@ Resultado: `App.vue` mantiene el boton deshabilitado mediante `enviando` y añad
 
 # Fase 3: descomposicion de la interfaz
 
-## TODO-015. Crear el componente raiz de la aplicacion
+## TODO-015. Crear el componente raiz de la aplicacion [COMPLETADO]
 
 Reducir `App.vue` a composicion de modulos:
 
@@ -355,6 +355,8 @@ Debe encargarse principalmente de:
 - Montar el layout.
 - Conectar el wizard.
 - Seleccionar el paso visible.
+
+Resultado: se crea la raiz modular en `src/app/App.vue`, manteniendo el comportamiento actual del flujo de encuesta. El archivo `src/App.vue` queda como wrapper de compatibilidad para no romper imports ni tests existentes mientras la migracion sigue en curso.
 
 ## TODO-016. Extraer la pantalla de login
 
