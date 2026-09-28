@@ -777,7 +777,7 @@ Crear una funcion que valide si el recurso existe.
 
 Resultado: `multimediaRegistry.ts` define las rutas admitidas como union literal y un registro completo tipado con tipo, URL, disponibilidad y ruta física. `resolveMultimediaAsset` valida la entrada y usa el placeholder de TODO-044 cuando falta el archivo; el catálogo ya no indexa un glob arbitrario ni fuerza casts a `string`.
 
-## TODO-046. Anadir pruebas de recursos
+## TODO-046. Anadir pruebas de recursos [COMPLETADO]
 
 Comprobar que todas las opciones multimedia tienen:
 
@@ -785,6 +785,8 @@ Comprobar que todas las opciones multimedia tienen:
 - URL valida.
 - Texto alternativo para imagenes.
 - Recurso existente.
+
+Resultado: `multimediaFallback.spec.ts` recorre las rutas esperadas y todas las opciones, comprueba tipo, alt, URL no vacia, extension correspondiente y existencia fisica del asset o placeholder. Tambien impide que la imagen del avatar entre accidentalmente en el catalogo de respuestas.
 
 ## TODO-047. Corregir el favicon
 
