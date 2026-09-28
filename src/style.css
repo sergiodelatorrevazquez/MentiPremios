@@ -9,6 +9,21 @@
   --color-error-bg: #fee2e2;
   --color-error-border: #fecaca;
   --color-error: #b91c1c;
+  --color-focus: #155eef;
+  --font-family-base: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-display: 40px;
+  --line-height-base: 1.5;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 14px;
@@ -16,6 +31,8 @@
   --shadow-sm: 0 2px 8px rgba(11, 61, 11, 0.08);
   --shadow-md: 0 10px 24px rgba(11, 61, 11, 0.12);
   --shadow-lg: 0 18px 36px rgba(11, 61, 11, 0.22);
+  --breakpoint-mobile: 640px;
+  --focus-ring: 0 0 0 3px rgba(21, 94, 239, 0.35);
 }
 
 *,
@@ -26,7 +43,7 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-family-base);
   background: var(--color-background);
   color: var(--color-text);
 }
@@ -48,8 +65,6 @@ body {
   justify-content: space-between;
   position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   width: 100%;
   z-index: 50;
   padding: 14px 18px;
@@ -61,8 +76,8 @@ body {
 .app-header-inner {
   width: 100%;
   max-width: 1040px;
-  margin: 0 auto;
   display: flex;
+  margin: 0 auto;
   align-items: center;
   justify-content: space-between;
 }
@@ -108,7 +123,7 @@ body {
 }
 
 .app-title {
-  font-size: 20px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -309,42 +324,6 @@ body {
   transition: width 0.3s ease;
 }
 
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  background: var(--color-primary);
-  border-bottom: 2px solid rgba(11, 61, 11, 0.15);
-  box-shadow: var(--shadow-md);
-}
-
-.app-header-inner {
-  width: 100%;
-  max-width: 1040px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.app-header-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.app-title {
-  color: var(--color-text);
-  font-size: 20px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
 .photo-modal {
   position: fixed;
   inset: 0;
@@ -407,7 +386,7 @@ body {
   border-radius: var(--radius-full);
   background: var(--color-primary);
   color: var(--color-text);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   box-shadow: var(--shadow-lg);
@@ -437,7 +416,7 @@ body {
   border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.08s ease, background 0.08s ease;
@@ -457,7 +436,7 @@ body {
   margin-top: 16px;
   padding: 12px 16px;
   border-radius: var(--radius-sm);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 
@@ -473,7 +452,7 @@ body {
 
 .hero-title {
   margin: 0 0 16px;
-  font-size: 40px;
+  font-size: var(--font-size-display);
   line-height: 1.2;
   text-align: center;
 }
@@ -481,7 +460,7 @@ body {
 .hero-kicker {
   margin: 0 0 8px;
   color: var(--color-text-muted);
-  font-size: 16px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   text-transform: uppercase;
   text-align: center;
@@ -490,7 +469,7 @@ body {
 .section-description {
   margin: 0 0 18px;
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
   text-align: center;
 }

@@ -70,20 +70,6 @@ function onSubmit() {
 </template>
 
 <style scoped>
-:root {
-  --color-primary: #90ee90;
-  --color-primary-dark: #5fe55f;
-  --color-primary-darker: #4bdc4b;
-  --color-text: #0b3d0b;
-  --color-text-muted: rgba(11, 61, 11, 0.8);
-  --color-background: #f6fff6;
-  --color-surface: #ffffff;
-  --color-error-bg: #fee2e2;
-  --color-error-border: #fecaca;
-  --color-error: #b91c1c;
-  --radius-full: 999px;
-}
-
 .hero-kicker {
   margin: 0 0 8px;
   font-size: 16px;

@@ -827,7 +827,7 @@ Los estilos especificos de componentes deben estar aislados para evitar efectos 
 
 Resultado: los SFC conservan sus estilos locales con `scoped`; el antiguo bloque global de `App.vue` se encuentra en `src/style.css`. `tests/unit/styleScope.spec.ts` recorre los componentes para evitar introducir nuevos bloques `<style>` globales.
 
-## TODO-051. Crear tokens visuales centralizados
+## TODO-051. Crear tokens visuales centralizados [COMPLETADO]
 
 Mantener variables para:
 
@@ -837,6 +837,8 @@ Mantener variables para:
 - Sombras.
 - Tipografia.
 - Breakpoints.
+
+Resultado: `src/style.css` es la unica fuente de tokens para color, tipografia, line-height, espaciado, radios, sombras, foco y breakpoint movil; se eliminaron las declaraciones `:root` duplicadas de los SFC. `designTokens.spec.ts` verifica el contrato. CSS nativo no permite interpolar custom properties en condiciones `@media`, por lo que el breakpoint queda duplicado como literal `640px` en la regla responsive, documentado junto al token.
 
 ## TODO-052. Anadir estados completos de interfaz
 
