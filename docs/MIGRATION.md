@@ -753,7 +753,7 @@ Resultado: `firestoreSchemas.ts` valida invitaciones y sus `responseId`, mapas c
 
 # Fase 8: multimedia
 
-## TODO-044. Resolver assets inexistentes
+## TODO-044. Resolver assets inexistentes [COMPLETADO]
 
 Decidir entre:
 
@@ -762,6 +762,8 @@ Decidir entre:
 - Mostrar un placeholder controlado.
 
 Nunca dejar `src` indefinidos.
+
+Resultado: se conserva el catálogo de opciones y se muestra `public/media-unavailable.svg` para recursos ausentes. El descriptor mantiene tipo y alt, marca `unavailable` y siempre tiene una URL definida; miniaturas y visor renderizan el fallback como imagen aunque la opción original fuera un video. Tests cubren fallback y ausencia de fuentes `undefined`.
 
 ## TODO-045. Crear un registro tipado de multimedia
 

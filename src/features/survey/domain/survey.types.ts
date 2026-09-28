@@ -20,6 +20,7 @@ export interface Multimedia {
   tipo: 'imagen' | 'video';
   src: string;
   alt?: string;
+  unavailable?: boolean;
 }
 
 export interface Opcion {

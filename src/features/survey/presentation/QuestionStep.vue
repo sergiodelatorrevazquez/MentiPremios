@@ -73,7 +73,13 @@ function onGoBack() {
       >
         <div v-if="opcion.multimedia" class="option-media">
           <img
-            v-if="opcion.multimedia.tipo === 'imagen'"
+            v-if="opcion.multimedia.unavailable"
+            class="option-media-thumbnail"
+            :src="opcion.multimedia.src"
+            :alt="opcion.multimedia.alt"
+          >
+          <img
+            v-else-if="opcion.multimedia.tipo === 'imagen'"
             class="option-media-thumbnail"
             :src="opcion.multimedia.src"
             :alt="opcion.multimedia.alt"

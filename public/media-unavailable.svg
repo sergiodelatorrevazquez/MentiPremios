@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-labelledby="title desc">
+  <title id="title">Recurso multimedia no disponible</title>
+  <desc id="desc">Un icono de imagen con una marca de ausencia.</desc>
+  <rect width="640" height="400" fill="#f0f3f0"/>
+  <rect x="208" y="92" width="224" height="176" rx="12" fill="#fff" stroke="#758075" stroke-width="8"/>
+  <circle cx="270" cy="148" r="18" fill="#758075"/>
+  <path d="m226 244 58-58 36 35 33-29 63 52" fill="none" stroke="#758075" stroke-linecap="round" stroke-linejoin="round" stroke-width="10"/>
+  <path d="m382 105 48 48m0-48-48 48" stroke="#b54747" stroke-linecap="round" stroke-width="10"/>
+</svg>

@@ -42,7 +42,7 @@ function onBackdropKeydown(e: KeyboardEvent) {
         ✕
       </button>
       <img
-        v-if="props.media.tipo === 'imagen'"
+        v-if="props.media.unavailable || props.media.tipo === 'imagen'"
         class="photo-modal-image"
         :src="props.media.src"
         :alt="props.media.alt"
