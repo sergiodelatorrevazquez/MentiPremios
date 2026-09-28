@@ -438,11 +438,13 @@ Separar el modal de la foto del avatar del visor multimedia de respuestas si sus
 
 Resultado: el modal de la foto del avatar queda extraido a `src/features/survey/presentation/AvatarPhotoViewer.vue`, `src/app/App.vue` solo coordina su apertura/cierre y se cubre con `tests/unit/AvatarPhotoViewer.spec.ts` para mantener el comportamiento visual y de cierre.
 
-## TODO-022. Mantener temporalmente el contrato de `App.vue`
+## TODO-022. Mantener temporalmente el contrato de `App.vue` [COMPLETADO]
 
 Durante la migracion, `App.vue` puede seguir coordinando los componentes nuevos.
 
 **Condicion:** no mover toda la interfaz de una vez. Cada componente debe tener sus pruebas antes de eliminar la implementacion anterior.
+
+Resultado: la aplicacion mantiene una capa de coordinacion en `src/app/App.vue` mientras los pasos y modales se extraen de forma incremental. El shell sigue siendo el punto de entrada estable para el flujo, pero la responsabilidad visual y de comportamiento queda separada en componentes como `LoginStep`, `QuestionStep`, `MultimediaViewer` y `AvatarPhotoViewer`, cada uno con pruebas asociadas. Este enfoque cumple la compatibilidad temporal sin forzar una migracion destructiva de la interfaz.
 
 ---
 
