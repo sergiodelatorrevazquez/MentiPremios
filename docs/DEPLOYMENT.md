@@ -60,29 +60,15 @@ La colección queda aislada para uso opcional y se crea automáticamente al guar
 
 ### 1.4 Reglas de seguridad de Firestore
 
-Para un uso básico (modo prueba), usa estas reglas:
+El archivo `firestore.rules` está configurado en `firebase.json` y aplica denegación por defecto. Las lecturas individuales de invitación requieren autenticación; las consultas globales y las escrituras cliente están denegadas. El acceso de invitación por `get` es transitorio y se eliminará al completar TODO-038.
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
+Despliega las reglas con:
+
+```bash
+firebase deploy --only firestore:rules
 ```
 
-> ⚠️ **Modo prueba** permite leer y escribir a cualquiera. Para producción, restringe el acceso:
-> ```
-> match /codigos/{secretWord} {
->   allow read: if true;
->   allow update: if resource.data.usado == false;
-> }
-> match /respuestas/{userId} {
->   allow create: if true;
-> }
-> ```
+Las Cloud Functions usan Admin SDK y no quedan limitadas por estas reglas; por eso el envío transaccional permanece server-side.
 
 ---
 

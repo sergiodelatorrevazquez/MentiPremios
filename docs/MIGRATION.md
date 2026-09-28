@@ -668,7 +668,7 @@ No confiar unicamente en la UI. Validar:
 
 Resultado: `parseSurveySubmission` valida exactamente el conjunto de preguntas/opciones permitido, IDs y campos inesperados, formato de valores y un maximo de 4 KiB. El handler tambien exige documentos de invitacion con `nombre` y `usado` bien formados. Un test de paridad alerta si el catalogo del frontend cambia sin actualizar la allowlist del servidor.
 
-## TODO-037. Crear reglas de Firestore restrictivas
+## TODO-037. Crear reglas de Firestore restrictivas [COMPLETADO]
 
 Eliminar las reglas de desarrollo:
 
@@ -682,6 +682,8 @@ Las reglas deben impedir:
 - Modificacion arbitraria de respuestas.
 - Reutilizacion de codigos.
 - Escrituras con campos inesperados.
+
+Resultado: `firestore.rules` usa denegacion por defecto, bloquea listados de `codigos`, todas las lecturas/escrituras de `respuestas`, y cualquier escritura cliente. Solo permite temporalmente `get` autenticado de un codigo para mantener el login hasta TODO-038. `firebase.json` referencia las reglas y el despliegue esta documentado.
 
 ## TODO-038. Separar lectura de invitacion y autorizacion
 
