@@ -16,6 +16,7 @@ import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.v
 import AvatarPhotoViewer from '../features/survey/presentation/AvatarPhotoViewer.vue';
 import { InvitationAlreadyUsedError, InvalidInvitationError } from '../features/survey/application/errors';
 import { logger } from '../infrastructure/logging/logger';
+import { metrics } from '../infrastructure/metrics/metrics';
 import { APP_SERVICES_KEY, type AppServices } from './bootstrap';
 
 function requireAppServices(): AppServices {
@@ -68,6 +69,9 @@ function handleQuestionLongPressEnd() {
 }
 
 function iniciarVisor(multimedia: Multimedia) {
+  // El asset puede no existir en el despliegue: se cuenta el intento para que
+  // el dato llegue a tiempo, sin exponer la ruta del archivo en la métrica.
+  if (multimedia.unavailable) metrics.increment('multimedia_failed');
   multimediaActual.value = multimedia;
   visorMultimediaAbierto.value = true;
   longPressTriggered = true;
@@ -133,6 +137,7 @@ async function validarPalabraSecreta() {
 
 function avanzarDesdeBienvenida() {
   iniciarEncuesta();
+  metrics.increment('survey_started');
 }
 
 async function responderYPasarSiguiente() {
@@ -156,11 +161,16 @@ async function responderYPasarSiguiente() {
       answers: { ...respuestas },
     });
     mensaje.value = '¡Respuestas guardadas correctamente en MentiPremios!';
+    metrics.increment('submission_succeeded');
+    // El servidor marca la invitación como usada dentro de la misma transacción
+    // que escribe la respuesta, así que un envío correcto la consumió.
+    metrics.increment('invitation_used');
     cambiarPaso('done');
   } catch (e) {
     // Solo el mensaje del error: el contexto lleva el error completo y el
     // logger se encarga de quitar palabra secreta, nombre y respuestas.
     logger.error('fallo al enviar la encuesta', { error: e });
+    metrics.increment('submission_failed');
     error.value = 'Ha ocurrido un error al guardar tus respuestas. Inténtalo de nuevo.';
   } finally {
     enviando.value = false;

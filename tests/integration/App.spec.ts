@@ -6,6 +6,7 @@ import { InvitationAlreadyUsedError, InvalidInvitationError } from '../../src/fe
 import type { SurveySubmission } from '../../src/features/survey/domain/survey.types';
 import { preguntas } from '../../src/features/survey/domain/questions';
 import { logger, type LogEntry } from '../../src/infrastructure/logging/logger';
+import { metrics } from '../../src/infrastructure/metrics/metrics';
 
 const entries: LogEntry[] = [];
 
@@ -526,6 +527,124 @@ describe('App - Visor multimedia de respuestas', () => {
 
     expect(wrapper.findAll('.option-card')[1].classes()).toContain('option-card--selected');
     vi.useRealTimers();
+  });
+});
+
+describe('App - métricas', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    metrics.reset();
+  });
+
+  it('cuenta un inicio por cada paso a las preguntas', async () => {
+    const wrapper = mount(App);
+    expect(metrics.value('survey_started')).toBe(0);
+
+    await loginAndStart(wrapper);
+
+    expect(metrics.value('survey_started')).toBe(1);
+  });
+
+  it('cuenta el acierto, la invitación usada y ningún fallo al enviar bien', async () => {
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    expect(metrics.value('submission_succeeded')).toBe(1);
+    expect(metrics.value('invitation_used')).toBe(1);
+    expect(metrics.value('submission_failed')).toBe(0);
+  });
+
+  it('cuenta un fallo por intento y no por reintento acertado', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(mockAppServices.submitSurvey)
+      .mockRejectedValueOnce(new Error('temporarily unavailable'))
+      .mockResolvedValueOnce({} as SurveySubmission);
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+    expect(metrics.value('submission_failed')).toBe(1);
+
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(metrics.value('submission_failed')).toBe(1);
+    expect(metrics.value('submission_succeeded')).toBe(1);
+    consoleError.mockRestore();
+  });
+
+  it('cuenta un fallo de multimedia al abrir un asset no disponible', async () => {
+    vi.useFakeTimers();
+    // En el entorno de test todos los assets existen, así que se simula la
+    // situación de despliegue en la que un archivo falta.
+    const opcion = preguntas[6].opciones[0];
+    const multimediaOriginal = opcion.multimedia;
+    opcion.multimedia = { ...multimediaOriginal!, unavailable: true };
+
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+    for (let questionIndex = 0; questionIndex < 6; questionIndex++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    expect(metrics.value('multimedia_failed')).toBe(0);
+
+    await wrapper.find('.option-card').trigger('mousedown');
+    vi.advanceTimersByTime(300);
+    await wrapper.vm.$nextTick();
+
+    expect(metrics.value('multimedia_failed')).toBe(1);
+    expect(wrapper.find('.photo-modal').exists()).toBe(true);
+    opcion.multimedia = multimediaOriginal;
+    vi.useRealTimers();
+  });
+
+  it('no cuenta fallo de multimedia cuando el asset está disponible', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+    for (let questionIndex = 0; questionIndex < 6; questionIndex++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    await wrapper.find('.option-card').trigger('mousedown');
+    vi.advanceTimersByTime(300);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.photo-modal').exists()).toBe(true);
+    expect(metrics.value('multimedia_failed')).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it('no cuenta invitaciones usadas cuando el envío falla', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(mockAppServices.submitSurvey).mockRejectedValue(new Error('db down'));
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    expect(metrics.value('invitation_used')).toBe(0);
+    expect(metrics.value('submission_succeeded')).toBe(0);
+    consoleError.mockRestore();
   });
 });
 
