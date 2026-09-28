@@ -11,6 +11,7 @@ import { useSurveyWizard } from '../features/survey/application/useSurveyWizard'
 import LoginStep from '../features/survey/presentation/LoginStep.vue';
 import WelcomeStep from '../features/survey/presentation/WelcomeStep.vue';
 import QuestionStep from '../features/survey/presentation/QuestionStep.vue';
+import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
 
 import {
   guardarRespuestaUsuario,
@@ -304,15 +305,10 @@ function handleModalKeydown(e: KeyboardEvent) {
       </template>
 
       <template v-else-if="pasoActual === 'done' && codigo">
-        <h1 class="hero-title">
-          Gracias por participar, {{ codigo.nombre }}
-        </h1>
-        <p class="section-description">
-          Tus respuestas se han guardado en Firebase y se usarán para montar una gala de premios inolvidable con todo el grupo.
-        </p>
-        <div class="status status--success">
-          {{ mensaje ?? 'Tus respuestas se han guardado correctamente.' }}
-        </div>
+        <CompletionStep
+          :participant-name="codigo.nombre"
+          :message="mensaje"
+        />
       </template>
 
       <div

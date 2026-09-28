@@ -403,13 +403,15 @@ Responsabilidades:
 
 Resultado: la pantalla de preguntas queda separada en `src/features/survey/presentation/QuestionStep.vue`, conectada a `src/app/App.vue` y cubierta por pruebas en `tests/unit/QuestionStep.spec.ts` manteniendo la misma logica de seleccion, progreso, retroceso y envio.
 
-## TODO-019. Extraer la pantalla final
+## TODO-019. Extraer la pantalla final [COMPLETADO]
 
 Crear:
 
 ```text
 src/features/survey/presentation/CompletionStep.vue
 ```
+
+Resultado: la pantalla final queda separada en `src/features/survey/presentation/CompletionStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/CompletionStep.spec.ts`, manteniendo el mismo mensaje de agradecimiento y finalizacion de la encuesta.
 
 ## TODO-020. Extraer el visor multimedia
 
