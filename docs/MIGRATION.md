@@ -810,7 +810,7 @@ Resultado/decision: el inventario actual no contiene videos; solo existe `mensaj
 
 # Fase 9: estilos y experiencia visual
 
-## TODO-049. Centralizar los estilos globales
+## TODO-049. Centralizar los estilos globales [COMPLETADO]
 
 Decidir que estilos son globales y cuales pertenecen a componentes.
 
@@ -818,6 +818,8 @@ Eliminar duplicaciones entre:
 
 - `src/style.css`.
 - El bloque de estilos de `App.vue`.
+
+Resultado: las reglas compartidas del shell, wizard, controles, opciones y visor se consolidaron en `src/style.css`; se retiró el bloque global de `App.vue`. Los estilos de la aplicación se cargan desde un único entrypoint y los componentes mantienen su presentación propia para TODO-050.
 
 ## TODO-050. Aplicar `scoped` donde corresponda
 
