@@ -342,7 +342,7 @@ Resultado: `App.vue` mantiene el boton deshabilitado mediante `enviando` y añad
 
 # Fase 3: descomposicion de la interfaz
 
-## TODO-015. Crear el componente raiz de la aplicacion
+## TODO-015. Crear el componente raiz de la aplicacion [COMPLETADO]
 
 Reducir `App.vue` a composicion de modulos:
 
@@ -356,7 +356,9 @@ Debe encargarse principalmente de:
 - Conectar el wizard.
 - Seleccionar el paso visible.
 
-## TODO-016. Extraer la pantalla de login
+Resultado: se crea la raiz modular en `src/app/App.vue`, manteniendo el comportamiento actual del flujo de encuesta y eliminando la duplicidad de puntos de entrada.
+
+## TODO-016. Extraer la pantalla de login [COMPLETADO]
 
 Crear:
 
@@ -371,7 +373,9 @@ Responsabilidades:
 - Mensajes de error.
 - Estado de carga.
 
-## TODO-017. Extraer la pantalla de bienvenida
+Resultado: la pantalla de login queda separada en `src/features/survey/presentation/LoginStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/LoginStep.spec.ts` sin cambiar el flujo actual.
+
+## TODO-017. Extraer la pantalla de bienvenida [COMPLETADO]
 
 Crear:
 
@@ -379,7 +383,9 @@ Crear:
 src/features/survey/presentation/WelcomeStep.vue
 ```
 
-## TODO-018. Extraer la pantalla de preguntas
+Resultado: la pantalla de bienvenida queda separada en `src/features/survey/presentation/WelcomeStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/WelcomeStep.spec.ts`. El flujo sigue siendo el mismo: nombre del participante + inicio de la encuesta.
+
+## TODO-018. Extraer la pantalla de preguntas [COMPLETADO]
 
 Crear:
 
@@ -395,7 +401,9 @@ Responsabilidades:
 - Seleccion.
 - Botones anterior y siguiente.
 
-## TODO-019. Extraer la pantalla final
+Resultado: la pantalla de preguntas queda separada en `src/features/survey/presentation/QuestionStep.vue`, conectada a `src/app/App.vue` y cubierta por pruebas en `tests/unit/QuestionStep.spec.ts` manteniendo la misma logica de seleccion, progreso, retroceso y envio.
+
+## TODO-019. Extraer la pantalla final [COMPLETADO]
 
 Crear:
 
@@ -403,7 +411,9 @@ Crear:
 src/features/survey/presentation/CompletionStep.vue
 ```
 
-## TODO-020. Extraer el visor multimedia
+Resultado: la pantalla final queda separada en `src/features/survey/presentation/CompletionStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/CompletionStep.spec.ts`, manteniendo el mismo mensaje de agradecimiento y finalizacion de la encuesta.
+
+## TODO-020. Extraer el visor multimedia [COMPLETADO]
 
 Crear:
 
@@ -420,15 +430,21 @@ Debe conservar:
 - Cierre del modal.
 - Accesibilidad.
 
-## TODO-021. Extraer el visor de la foto del avatar
+Resultado: el visor multimedia queda separado en `src/features/survey/presentation/MultimediaViewer.vue`, conectado desde `src/app/App.vue` y cubierto por pruebas en `tests/unit/MultimediaViewer.spec.ts`, manteniendo la vista completa de imagen o video y el cierre por click/escape.
+
+## TODO-021. Extraer el visor de la foto del avatar [COMPLETADO]
 
 Separar el modal de la foto del avatar del visor multimedia de respuestas si sus comportamientos son distintos.
 
-## TODO-022. Mantener temporalmente el contrato de `App.vue`
+Resultado: el modal de la foto del avatar queda extraido a `src/features/survey/presentation/AvatarPhotoViewer.vue`, `src/app/App.vue` solo coordina su apertura/cierre y se cubre con `tests/unit/AvatarPhotoViewer.spec.ts` para mantener el comportamiento visual y de cierre.
+
+## TODO-022. Mantener temporalmente el contrato de `App.vue` [COMPLETADO]
 
 Durante la migracion, `App.vue` puede seguir coordinando los componentes nuevos.
 
 **Condicion:** no mover toda la interfaz de una vez. Cada componente debe tener sus pruebas antes de eliminar la implementacion anterior.
+
+Resultado: la aplicacion mantiene una capa de coordinacion en `src/app/App.vue` mientras los pasos y modales se extraen de forma incremental. El shell sigue siendo el punto de entrada estable para el flujo, pero la responsabilidad visual y de comportamiento queda separada en componentes como `LoginStep`, `QuestionStep`, `MultimediaViewer` y `AvatarPhotoViewer`, cada uno con pruebas asociadas. Este enfoque cumple la compatibilidad temporal sin forzar una migracion destructiva de la interfaz.
 
 ---
 

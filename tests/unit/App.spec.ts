@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { vi } from 'vitest';
-import App from '../../src/App.vue';
+import App from '../../src/app/App.vue';
 
 vi.mock('../../src/services/premiosService', () => ({
   guardarRespuestaUsuario: vi.fn().mockResolvedValue(undefined),

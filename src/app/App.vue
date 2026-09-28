@@ -5,15 +5,21 @@ import type {
   Multimedia,
   OptionId,
   Pregunta,
-} from './features/survey/domain/survey.types';
-import { preguntas as catalogoPreguntas } from './features/survey/domain/questions';
-import { useSurveyWizard } from './features/survey/application/useSurveyWizard';
+} from '../features/survey/domain/survey.types';
+import { preguntas as catalogoPreguntas } from '../features/survey/domain/questions';
+import { useSurveyWizard } from '../features/survey/application/useSurveyWizard';
+import LoginStep from '../features/survey/presentation/LoginStep.vue';
+import WelcomeStep from '../features/survey/presentation/WelcomeStep.vue';
+import QuestionStep from '../features/survey/presentation/QuestionStep.vue';
+import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
+import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.vue';
+import AvatarPhotoViewer from '../features/survey/presentation/AvatarPhotoViewer.vue';
 
 import {
   guardarRespuestaUsuario,
   marcarCodigoComoUsado,
   obtenerCodigoPorPalabraSecreta,
-} from './services/premiosService';
+} from '../services/premiosService';
 
 const palabraSecreta = ref('');
 const codigo = ref<CodigoInvitacionIdentificado | null>(null);
@@ -41,6 +47,18 @@ const visorMultimediaAbierto = ref(false);
 const multimediaActual = ref<Multimedia | null>(null);
 let pressTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressTriggered = false;
+
+function handleQuestionSelect(optionId: OptionId) {
+  seleccionarRespuesta(optionId);
+}
+
+function handleQuestionLongPressStart(multimedia: Multimedia) {
+  handlePressStart(multimedia, new Event('mousedown') as MouseEvent | TouchEvent);
+}
+
+function handleQuestionLongPressEnd() {
+  handlePressEnd(new Event('mouseup') as MouseEvent | TouchEvent);
+}
 
 function iniciarVisor(multimedia: Multimedia) {
   multimediaActual.value = multimedia;
@@ -184,225 +202,58 @@ function handleModalKeydown(e: KeyboardEvent) {
       </div>
     </header>
 
-    <div
-      v-if="visorFotoAbierto"
-      class="photo-modal"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      @click="cerrarVisorFoto"
-      @keydown="handleModalKeydown"
-    >
-      <div
-        class="photo-modal-inner"
-        @click.stop
-      >
-        <button
-          type="button"
-          class="modal-close-btn"
-          aria-label="Cerrar"
-          @click="cerrarVisorFoto"
-        >
-          ✕
-        </button>
-        <img
-          class="photo-modal-image"
-          src="./assets/foto-amigos.jpg"
-          alt="Foto de amigos"
-        >
-      </div>
-    </div>
+    <AvatarPhotoViewer
+      :model-value="visorFotoAbierto"
+      @close="cerrarVisorFoto"
+    />
 
-    <div
-      v-if="visorMultimediaAbierto && multimediaActual"
-      class="photo-modal"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      @click="cerrarVisorMultimedia"
-      @keydown="handleMultimediaKeydown"
-    >
-      <div
-        class="photo-modal-inner"
-        @click.stop
-      >
-        <button
-          type="button"
-          class="modal-close-btn"
-          aria-label="Cerrar"
-          @click="cerrarVisorMultimedia"
-        >
-          ✕
-        </button>
-        <img
-          v-if="multimediaActual.tipo === 'imagen'"
-          class="photo-modal-image"
-          :src="multimediaActual.src"
-          :alt="multimediaActual.alt"
-        >
-        <video
-          v-else
-          class="photo-modal-video"
-          :src="multimediaActual.src"
-          :alt="multimediaActual.alt"
-          controls
-          autoplay
-          playsinline
-        />
-      </div>
-    </div>
+    <MultimediaViewer
+      :model-value="visorMultimediaAbierto"
+      :media="multimediaActual"
+      @close="cerrarVisorMultimedia"
+    />
 
     <main class="app-content">
       <template v-if="pasoActual === 'login'">
-        <h3 class="hero-kicker">
-          Bienvenido a los premios de
-        </h3>
-        <h1 class="hero-title">
-          Sin Mentirosas no hay Traidores
-        </h1>
-        <p class="section-description">
-          El rey del grupo te ha mandado tu palabra secreta por privado, métela aquí para poder acceder al cuestionario,
-          y acuérdate de que solo puedes responderlo una vez, así que piensa bien.
-        </p>
-
-        <div class="field">
-          <div class="field-label">
-            <span>Clave</span>
-          </div>
-          <input
-            v-model="palabraSecreta"
-            class="field-input"
-            type="text"
-            placeholder="Escribe aquí tu palabra secreta..."
-            maxlength="50"
-            @keyup.enter="validarPalabraSecreta"
-          >
-          <div
-            v-if="loginError"
-            class="field-error"
-          >
-            {{ loginError }}
-          </div>
-        </div>
-
-        <div class="footer">
-          <div class="footer-text">
-            Solo podrás usar esta palabra una vez. Después de completar la encuesta, quedará marcada como respondida.
-          </div>
-          <button
-            type="button"
-            class="button-primary"
-            :disabled="!puedeContinuarLogin"
-            @click="validarPalabraSecreta"
-          >
-            {{ enviando ? 'Comprobando...' : 'Entrar a mi encuesta' }}
-          </button>
-        </div>
+        <LoginStep
+          :model-value="palabraSecreta"
+          :login-error="loginError"
+          :is-submitting="enviando"
+          @update:model-value="palabraSecreta = $event"
+          @submit="validarPalabraSecreta"
+        />
       </template>
 
       <template v-else-if="pasoActual === 'welcome' && codigo">
-        <h1 class="hero-title">
-          {{ codigo.nombre }}
-        </h1>
-        <p class="section-description">
-          Cuando pulses el botón ya empezarán a salir las preguntas una a una, y por si no te acuerdas, tienes que votar a Miguel como correa obligatoriamente.
-        </p>
-
-        <div class="footer">
-          <div class="footer-text">
-            Cuando pulses en continuar empezarán a mostrarse las preguntas, una detrás de otra.
-          </div>
-          <button
-            type="button"
-            class="button-primary"
-            @click="avanzarDesdeBienvenida"
-          >
-            Empezar la encuesta
-          </button>
-        </div>
+        <WelcomeStep
+          :participant-name="codigo.nombre"
+          @continue="avanzarDesdeBienvenida"
+        />
       </template>
 
       <template v-else-if="pasoActual === 'questions' && codigo && preguntaActual">
-        <div class="progress-bar">
-          <span>Pregunta {{ indicePreguntaActual + 1 }} de {{ preguntas.length }}</span>
-          <div class="progress-bar-track">
-            <div
-              class="progress-bar-fill"
-              :style="{ width: progreso + '%' }"
-            />
-          </div>
-        </div>
-
-        <h1 class="hero-title">
-          {{ preguntaActual.titulo }}
-        </h1>
-
-        <div class="options-grid" :class="'options-grid--' + preguntaActual.opciones.length">
-          <button
-            v-for="opcion in preguntaActual.opciones"
-            :key="opcion.id"
-            type="button"
-            class="option-card"
-            :class="{ 'option-card--selected': respuestaSeleccionada === opcion.id, 'option-card--with-media': opcion.multimedia }"
-            @click="handleClick(opcion.id, $event)"
-            @mousedown="opcion.multimedia && handlePressStart(opcion.multimedia, $event)"
-            @mouseup="handlePressEnd($event)"
-            @mouseleave="handlePressEnd($event)"
-            @touchstart="opcion.multimedia && handlePressStart(opcion.multimedia, $event)"
-            @touchend="handlePressEnd($event)"
-          >
-            <div v-if="opcion.multimedia" class="option-media">
-              <img
-                v-if="opcion.multimedia.tipo === 'imagen'"
-                class="option-media-thumbnail"
-                :src="opcion.multimedia.src"
-                :alt="opcion.multimedia.alt"
-              >
-              <video
-                v-else
-                class="option-media-thumbnail"
-                :src="opcion.multimedia.src"
-                :alt="opcion.multimedia.alt"
-                muted
-                preload="metadata"
-              />
-            </div>
-            <span class="option-text">{{ opcion.texto }}</span>
-          </button>
-        </div>
-
-        <div class="footer">
-          <div class="footer-actions">
-            <button
-              type="button"
-              class="button-secondary"
-              :disabled="!puedeVolverAtras"
-              @click="volverAtras"
-            >
-              ← Atrás
-            </button>
-            <button
-              type="button"
-              class="button-primary"
-              :disabled="!puedeContinuarPregunta"
-              @click="responderYPasarSiguiente"
-            >
-              {{ indicePreguntaActual + 1 === preguntas.length ? (enviando ? 'Guardando...' : 'Enviar y cerrar') : 'Siguiente pregunta' }}
-            </button>
-          </div>
-        </div>
+        <QuestionStep
+          :question="preguntaActual"
+          :selected-option-id="respuestaSeleccionada"
+          :current-question-index="indicePreguntaActual"
+          :total-questions="preguntas.length"
+          :progress="progreso"
+          :can-go-back="puedeVolverAtras"
+          :can-continue="puedeContinuarPregunta"
+          :is-submitting="enviando"
+          @select-option="handleQuestionSelect"
+          @long-press-start="handleQuestionLongPressStart"
+          @long-press-end="handleQuestionLongPressEnd"
+          @go-back="volverAtras"
+          @submit="responderYPasarSiguiente"
+        />
       </template>
 
       <template v-else-if="pasoActual === 'done' && codigo">
-        <h1 class="hero-title">
-          Gracias por participar, {{ codigo.nombre }}
-        </h1>
-        <p class="section-description">
-          Tus respuestas se han guardado en Firebase y se usarán para montar una gala de premios inolvidable con todo el grupo.
-        </p>
-        <div class="status status--success">
-          {{ mensaje ?? 'Tus respuestas se han guardado correctamente.' }}
-        </div>
+        <CompletionStep
+          :participant-name="codigo.nombre"
+          :message="mensaje"
+        />
       </template>
 
       <div
@@ -495,7 +346,7 @@ body {
   border-radius: var(--radius-full);
   background-size: cover;
   background-position: center;
-  background-image: url('./assets/foto-amigos.jpg');
+  background-image: url('../assets/foto-amigos.jpg');
   background-color: rgba(255, 255, 255, 0.55);
   border: 2px solid rgba(11, 61, 11, 0.25);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
