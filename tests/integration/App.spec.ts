@@ -177,20 +177,105 @@ describe('App - Questions', () => {
     expect(button.attributes('disabled')).toBeDefined();
   });
 
-  it('permite volver atrás y restaura la respuesta', async () => {
+  it('restaura la opción seleccionada al volver atrás, no solo el índice', async () => {
     const wrapper = mount(App);
     await loginAndStart(wrapper);
 
-    const opciones = wrapper.findAll('.option-card');
-    await opciones[0].trigger('click');
+    // Se elige la tercera opción, no la primera: volver a marcar la primera
+    // pasaría con un test que solo comprobara "hay algo seleccionado".
+    const elegidas = wrapper.findAll('.option-card');
+    await elegidas[2].trigger('click');
+    expect(elegidas[2].classes()).toContain('option-card--selected');
+    expect(elegidas[0].classes()).not.toContain('option-card--selected');
+
     await wrapper.find('button.button-primary').trigger('click');
     await wrapper.vm.$nextTick();
+    expect(wrapper.find('.progress-bar').text()).toContain('2');
 
     await wrapper.find('button.button-secondary').trigger('click');
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find('.progress-bar').text()).toContain('1');
-    expect(wrapper.findAll('.option-card')[0].classes()).toContain('option-card--selected');
+    const restauradas = wrapper.findAll('.option-card');
+    expect(restauradas[2].classes()).toContain('option-card--selected');
+    expect(restauradas[2].attributes('aria-pressed')).toBe('true');
+    expect(restauradas[0].attributes('aria-pressed')).toBe('false');
+    expect(restauradas[1].attributes('aria-pressed')).toBe('false');
+  });
+
+  it('mantiene la respuesta guardada al volver atrás y avanzar de nuevo', async () => {
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    await wrapper.findAll('.option-card')[1].trigger('click');
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    await wrapper.find('button.button-secondary').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    // Al volver a avanzar se llega a la segunda pregunta y la primera sigue guardada,
+    // lo que se comprueba en el envío completo de más abajo.
+    expect(wrapper.find('.progress-bar').text()).toContain('2');
+  });
+
+  it('acumula las respuestas de varias preguntas al retroceder', async () => {
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    await wrapper.findAll('.option-card')[1].trigger('click');
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.findAll('.option-card')[3].trigger('click');
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.progress-bar').text()).toContain('3');
+
+    await wrapper.find('button.button-secondary').trigger('click');
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.progress-bar').text()).toContain('2');
+    expect(wrapper.findAll('.option-card')[3].classes()).toContain('option-card--selected');
+
+    await wrapper.find('button.button-secondary').trigger('click');
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.progress-bar').text()).toContain('1');
+    expect(wrapper.findAll('.option-card')[1].classes()).toContain('option-card--selected');
+
+    // Las dos respuestas previas siguen ahí: el envío final las lleva.
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+  });
+
+  it('permite cambiar una respuesta anterior y usar la nueva en el envío', async () => {
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    await wrapper.findAll('.option-card')[0].trigger('click');
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.find('button.button-secondary').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    await wrapper.findAll('.option-card')[2].trigger('click');
+    expect(wrapper.findAll('.option-card')[0].classes()).not.toContain('option-card--selected');
+    expect(wrapper.findAll('.option-card')[2].classes()).toContain('option-card--selected');
+
+    // Se avanza solo una vez para no volver a elegir la primera opción de la pregunta 1.
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    for (let index = 1; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    expect(vi.mocked(mockAppServices.submitSurvey).mock.calls[0][0].answers.tonto).toBe('tonto-3');
   });
 
   it('completa el flujo y guarda las diez respuestas con el codigo de invitacion', async () => {
