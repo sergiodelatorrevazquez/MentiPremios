@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import LoginStep from '../../src/features/survey/presentation/LoginStep.vue';
+import LoginStep from '../../../src/features/survey/presentation/LoginStep.vue';
 
 describe('LoginStep', () => {
   it('renders the login screen content', () => {

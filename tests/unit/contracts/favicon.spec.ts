@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const workspaceRoot = resolve(__dirname, '../..');
+const workspaceRoot = resolve(__dirname, '../../../');
 
 describe('favicon configuration', () => {
   it('points to an existing public asset', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { InvalidSubmissionError, PersistenceError } from '../../src/features/survey/application/errors';
-import { submitSurvey } from '../../src/features/survey/application/submitSurvey';
-import { QUESTION_IDS, type Pregunta } from '../../src/features/survey/domain/survey.types';
+import { InvalidSubmissionError, PersistenceError } from '../../../src/features/survey/application/errors';
+import { submitSurvey } from '../../../src/features/survey/application/submitSurvey';
+import { QUESTION_IDS, type Pregunta } from '../../../src/features/survey/domain/survey.types';
 
 const preguntas: Pregunta[] = [
   {

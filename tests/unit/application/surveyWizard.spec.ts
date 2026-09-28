@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { preguntas } from '../../src/features/survey/domain/questions';
+import { preguntas } from '../../../src/features/survey/domain/questions';
 import {
   createSurveyWizardState,
   getProgress,
@@ -7,7 +7,7 @@ import {
   goToPreviousQuestion,
   selectAnswer,
   startSurvey,
-} from '../../src/features/survey/application/surveyWizard';
+} from '../../../src/features/survey/application/surveyWizard';
 
 describe('surveyWizard', () => {
   it('crea el estado inicial del wizard', () => {

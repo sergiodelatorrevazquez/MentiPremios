@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { preguntas } from '../../src/features/survey/domain/questions';
-import { validateSurveyAnswers } from '../../src/features/survey/domain/survey.rules';
+import { preguntas } from '../../../src/features/survey/domain/questions';
+import { validateSurveyAnswers } from '../../../src/features/survey/domain/survey.rules';
 
 describe('validateSurveyAnswers', () => {
   it('acepta una respuesta valida para cada pregunta', () => {

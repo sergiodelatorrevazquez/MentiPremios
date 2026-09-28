@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { FirestoreKeywordsRepository } from '../../src/infrastructure/firebase/firestoreKeywordsRepository';
+import { FirestoreKeywordsRepository } from '../../../src/infrastructure/firebase/firestoreKeywordsRepository';
 
 vi.mock('firebase/firestore', () => ({
   addDoc: vi.fn(),

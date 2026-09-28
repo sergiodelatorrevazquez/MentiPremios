@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { nextTick } from 'vue';
-import AvatarPhotoViewer from '../../src/features/survey/presentation/AvatarPhotoViewer.vue';
+import AvatarPhotoViewer from '../../../src/features/survey/presentation/AvatarPhotoViewer.vue';
 
 describe('AvatarPhotoViewer', () => {
   it('renders the avatar image when open', () => {

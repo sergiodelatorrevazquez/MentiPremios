@@ -39,7 +39,7 @@ El ID de `usuario` corresponde actualmente al ID de la invitacion. Este contrato
 ## Comando de verificacion
 
 ```bash
-npm test -- --run tests/unit/App.spec.ts
+npm test -- --run tests/integration/App.spec.ts
 ```
 
-Las pruebas de esta linea base estan en `tests/unit/App.spec.ts`. No se debe eliminar ni modificar su comportamiento esperado durante las primeras fases de la migracion sin actualizar primero este documento y acordar el nuevo contrato.
+Las pruebas de esta linea base estan en `tests/integration/App.spec.ts`. No se debe eliminar ni modificar su comportamiento esperado durante las primeras fases de la migracion sin actualizar primero este documento y acordar el nuevo contrato.

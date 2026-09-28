@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import QuestionStep from '../../src/features/survey/presentation/QuestionStep.vue';
-import { preguntas } from '../../src/features/survey/domain/questions';
+import QuestionStep from '../../../src/features/survey/presentation/QuestionStep.vue';
+import { preguntas } from '../../../src/features/survey/domain/questions';
 
 describe('QuestionStep', () => {
   it('renders question text and option list', () => {

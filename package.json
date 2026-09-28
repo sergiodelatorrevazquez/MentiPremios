@@ -7,6 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "test:unit": "vitest tests/unit",
+    "test:integration": "vitest tests/integration",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
     "typecheck": "vue-tsc --noEmit",

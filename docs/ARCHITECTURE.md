@@ -32,10 +32,15 @@ functions/src/
 ├── validateInvitationHandler.ts
 └── submitSurveyHandler.ts
 
-tests/unit/
-├── App.spec.ts              # Tests de integración del wizard
-├── bootstrap.spec.ts        # Composición e invocación callable
-└── *Handler.spec.ts         # Tests unitarios de handlers server-side
+tests/
+├── unit/                    # Pruebas aisladas, sin red ni Firebase real
+│   ├── domain/              # Reglas puras: validación de respuestas, assets
+│   ├── application/         # Casos de uso y handlers con dobles en memoria
+│   ├── components/          # SFC aislados con Vue Test Utils
+│   ├── infrastructure/      # Adaptadores con el SDK de Firebase simulado
+│   └── contracts/           # Invariantes del repo: tokens, estilos, esquema
+├── integration/             # Composición real con solo los adaptadores externos falsos
+└── e2e/                     # Chromium real sobre el harness
 ```
 
 ## Patrón de componentes
@@ -167,17 +172,35 @@ Los estilos se dividen en:
 
 ## Testing
 
-- **Framework**: Vitest + Vue Test Utils + Happy DOM
-- **Mock de Firebase**: `premiosService` se mockea en `App.spec.ts`; `firebase/firestore` se mockea en `premiosService.spec.ts`
+- **Framework**: Vitest + Vue Test Utils + Happy DOM, con Playwright como nivel superior
+- **Niveles**: `unit`, `integration` y `e2e`, cada uno ejecutable por separado
+- **Mocks**: los dobles viven en `src/infrastructure/firebase/client.ts` (inyectados como `AppServices`), en `vi.mock` del SDK de Firebase y en stores falsos de Cloud Functions
 - **Cobertura**: Configurada en `vite.config.ts` con reporter `text` y `html`
 - **Setup**: `vitest.setup.ts` configura `config.global.components = {}`
 
+### Niveles de prueba
+
+| Nivel | Qué ejercita | Doble de frontera | Ejecución |
+|---|---|---|---|
+| `tests/unit/domain` | Reglas puras y catálogo de assets, sin Vue | Ninguno | `npm run test:unit -- --run` |
+| `tests/unit/application` | Casos de uso del cliente y handlers de Cloud Functions | Repositorios y stores en memoria | `npm run test:unit -- --run` |
+| `tests/unit/components` | Cada SFC por separado con Vue Test Utils | Ninguno | `npm run test:unit -- --run` |
+| `tests/unit/infrastructure` | Adaptadores de Firebase | SDK de Firebase simulado | `npm run test:unit -- --run` |
+| `tests/unit/contracts` | Tokens, estilos, esquema Firestore y estructura del repo | Lectura de ficheros | `npm run test:unit -- --run` |
+| `tests/integration` | Composición de la app completa | Solo `AppServices` externos | `npm run test:integration -- --run` |
+| `tests/e2e` | Flujo real en Chromium, móvil y escritorio | `AppServices` simulados en el harness | `npm run test:e2e` |
+
+`tests/unit/contracts/testLayout.spec.ts` vigila la estructura: si una spec aparece fuera de un nivel o de una capa conocida, falla.
+
 ### Tests existentes
 
-| Archivo | Tipo | Casos |
+| Archivo | Nivel | Casos |
 |---|---|---|
-| `tests/unit/App.spec.ts` | Integración | Login (input, botón, errores), Welcome (nombre), Questions (selección, progreso, navegación, guardado, thank-you), Visor de foto |
-| `tests/unit/premiosService.spec.ts` | Unitario | Guardar respuestas, obtener código, marcar usado |
+| `tests/integration/App.spec.ts` | Integración | Login (input, botón, errores), Welcome (nombre), Questions (selección, progreso, navegación, guardado, thank-you), Visor de foto |
+| `tests/integration/bootstrap.spec.ts` | Integración | Composición e invocación callable |
+| `tests/unit/application/submitSurvey.spec.ts` | Unitario | Validación, construcción del payload, orden de persistencia, reintento |
+| `tests/unit/application/submitSurveyHandler.spec.ts` | Unitario | Autenticación, idempotencia y operaciones de servidor |
+| `tests/unit/domain/survey.rules.spec.ts` | Unitario | Respuestas completas, opciones inválidas, preguntas desconocidas |
 
 ## CI/CD
 
@@ -186,7 +209,10 @@ El workflow de GitHub Actions (`.github/workflows/tests.yml`) ejecuta en push/PR
 2. `actions/setup-node@v4` con Node 20 y cache npm
 3. `npm ci`
 4. `npm run lint`
-5. `npm test -- --run`
+5. `npm run test:unit -- --run`
+6. `npm run test:integration -- --run`
+
+Un job `e2e` paralelo instala Chromium y ejecuta `npm run test:e2e`.
 
 ## Decisiones arquitectónicas clave
 

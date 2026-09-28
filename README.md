@@ -79,8 +79,10 @@ npm run dev
 ## 🧪 Tests
 
 ```bash
-npm test -- --run       # Una ejecución
+npm test -- --run       # Una ejecución de todo
 npm test                # Modo watch
+npm run test:unit       # Solo tests unitarias
+npm run test:integration # Solo tests de integración
 npm run test:ui         # Dashboard interactivo
 npm run test:e2e        # Tests responsive en navegador real
 ```
@@ -93,7 +95,9 @@ npm run test:e2e        # Tests responsive en navegador real
 | `npm run build` | Build de producción |
 | `npm run preview` | Vista previa de la build |
 | `npm run lint` | ESLint |
-| `npm test` | Tests unitarios |
+| `npm test` | Tests unitarias y de integración |
+| `npm run test:unit` | Tests unitarias por capa |
+| `npm run test:integration` | Tests de integración |
 | `npm run test:e2e` | Tests responsive (Playwright) |
 
 ## 🏗️ Estructura del proyecto
@@ -108,15 +112,18 @@ src/
 └── style.css                # Estilos globales
 
 functions/src/               # Callables autenticadas para invitaciones y envíos
-tests/unit/                  # Tests de UI, casos de uso y repositorios
-tests/e2e/                   # Tests responsive en navegador real
+tests/
+├── unit/                    # Pruebas aisladas, una carpeta por capa
+│   ├── domain/  application/  components/  infrastructure/  contracts/
+├── integration/             # Composición real con adaptadores externos falsos
+└── e2e/                     # Chromium real sobre el harness
 ```
 
 ## 🤝 Contribuir
 
 1. Haz un fork del repositorio
 2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
-3. Haz tus cambios y ejecuta `npm run lint && npm test -- --run`
+3. Haz tus cambios y ejecuta `npm run lint && npm test -- --run` (o `npm run test:unit` / `npm run test:integration` por nivel)
 4. Envía un pull request
 
 ## 📄 Licencia

@@ -2,11 +2,11 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import CompletionStep from '../../src/features/survey/presentation/CompletionStep.vue';
-import QuestionStep from '../../src/features/survey/presentation/QuestionStep.vue';
-import { preguntas } from '../../src/features/survey/domain/questions';
+import CompletionStep from '../../../src/features/survey/presentation/CompletionStep.vue';
+import QuestionStep from '../../../src/features/survey/presentation/QuestionStep.vue';
+import { preguntas } from '../../../src/features/survey/domain/questions';
 
-const workspaceRoot = resolve(__dirname, '../..');
+const workspaceRoot = resolve(__dirname, '../../../');
 const sourceRoot = resolve(workspaceRoot, 'src');
 const globalStyles = readFileSync(resolve(sourceRoot, 'style.css'), 'utf8');
 const indexHtml = readFileSync(resolve(workspaceRoot, 'index.html'), 'utf8');

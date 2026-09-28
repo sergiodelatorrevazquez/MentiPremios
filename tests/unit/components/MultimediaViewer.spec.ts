@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { nextTick } from 'vue';
-import MultimediaViewer from '../../src/features/survey/presentation/MultimediaViewer.vue';
+import MultimediaViewer from '../../../src/features/survey/presentation/MultimediaViewer.vue';
 
 describe('MultimediaViewer', () => {
   it('renders image media when open', () => {

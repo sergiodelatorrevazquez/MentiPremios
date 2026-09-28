@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const globalStyles = readFileSync(resolve(__dirname, '../../src/style.css'), 'utf8');
+const globalStyles = readFileSync(resolve(__dirname, '../../../src/style.css'), 'utf8');
 
 describe('global design tokens', () => {
   it('defines color, typography, spacing, radius, shadow, focus and breakpoint tokens centrally', () => {

@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import WelcomeStep from '../../src/features/survey/presentation/WelcomeStep.vue';
+import WelcomeStep from '../../../src/features/survey/presentation/WelcomeStep.vue';
 
 describe('WelcomeStep', () => {
   it('renders the user welcome message and start button', () => {

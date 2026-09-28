@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const sourceRoot = resolve(__dirname, '../../src');
+const sourceRoot = resolve(__dirname, '../../../src');
 
 function listVueFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
