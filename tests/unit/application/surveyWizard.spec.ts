@@ -2,94 +2,225 @@ import { describe, expect, it } from 'vitest';
 import { preguntas } from '../../../src/features/survey/domain/questions';
 import {
   createSurveyWizardState,
+  getCurrentQuestion,
   getProgress,
   goToNextQuestion,
   goToPreviousQuestion,
   selectAnswer,
   startSurvey,
+  type SurveyWizardState,
 } from '../../../src/features/survey/application/surveyWizard';
+import { validateSurveyAnswers } from '../../../src/features/survey/domain/survey.rules';
+import type { Opcion, Pregunta } from '../../../src/features/survey/domain/survey.types';
 
-describe('surveyWizard', () => {
-  it('crea el estado inicial del wizard', () => {
-    expect(createSurveyWizardState()).toEqual({
-      paso: 'login',
-      indicePregunta: 0,
-      respuestas: {},
-      respuestaSeleccionada: null,
-    });
-  });
+const DOS_PREGUNTAS: Pregunta[] = [
+  {
+    id: 'tonto',
+    titulo: 'Tonto del Año',
+    opciones: [
+      { id: 'tonto-1', texto: 'Miguel' },
+      { id: 'tonto-2', texto: 'Pablo' },
+    ],
+  },
+  {
+    id: 'casper',
+    titulo: 'Casper del Año',
+    opciones: [
+      { id: 'casper-1', texto: 'Raúl' },
+      { id: 'casper-2', texto: 'Jorge' },
+    ],
+  },
+];
 
-  it('inicia la encuesta en la primera pregunta', () => {
-    const state = startSurvey(createSurveyWizardState());
+const ultimaOpcion = (pregunta: Pregunta): Opcion => pregunta.opciones.at(-1)!;
+
+function responder(preguntas: readonly Pregunta[], opcion: (q: Pregunta) => Opcion['id']) {
+  let state = startSurvey(createSurveyWizardState(), preguntas);
+  for (const pregunta of preguntas) {
+    state = selectAnswer(state, opcion(pregunta));
+    state = goToNextQuestion(state, preguntas);
+  }
+  return state;
+}
+
+describe('transiciones del wizard sobre un catálogo de dos preguntas', () => {
+  it('inicia en la primera pregunta y sin selección previa', () => {
+    const state = startSurvey(createSurveyWizardState(), DOS_PREGUNTAS);
 
     expect(state.paso).toBe('questions');
-    expect(state.indicePregunta).toBe(0);
+    expect(getCurrentQuestion(state, DOS_PREGUNTAS)).toBe(DOS_PREGUNTAS[0]);
     expect(state.respuestaSeleccionada).toBeNull();
   });
 
-  it('no avanza si la pregunta actual no tiene respuesta', () => {
-    const state = startSurvey(createSurveyWizardState());
+  it('no arranca la encuesta si el catálogo está vacío', () => {
+    const state = startSurvey(createSurveyWizardState(), []);
 
-    expect(goToNextQuestion(state, preguntas)).toEqual(state);
+    expect(state.paso).toBe('questions');
+    expect(state.respuestaSeleccionada).toBeNull();
   });
 
-  it('guarda la respuesta y avanza a la siguiente pregunta', () => {
-    const state = selectAnswer(startSurvey(createSurveyWizardState()), 'tonto-1');
-    const nextState = goToNextQuestion(state, preguntas);
+  it('no avanza sin respuesta seleccionada', () => {
+    const state = startSurvey(createSurveyWizardState(), DOS_PREGUNTAS);
 
-    expect(nextState.indicePregunta).toBe(1);
-    expect(nextState.respuestas).toEqual({ tonto: 'tonto-1' });
-    expect(nextState.respuestaSeleccionada).toBeNull();
+    expect(goToNextQuestion(state, DOS_PREGUNTAS)).toBe(state);
   });
 
-  it('retrocede y restaura la respuesta anterior', () => {
-    const firstState = selectAnswer(startSurvey(createSurveyWizardState()), 'tonto-1');
-    const secondState = goToNextQuestion(firstState, preguntas);
-    const previousState = goToPreviousQuestion(secondState, preguntas);
+  it('no avanza si el índice apunta fuera del catálogo', () => {
+    const fueraDeRango: SurveyWizardState = {
+      ...startSurvey(createSurveyWizardState(), DOS_PREGUNTAS),
+      indicePregunta: 5,
+      respuestaSeleccionada: 'tonto-1',
+    };
 
-    expect(previousState.indicePregunta).toBe(0);
-    expect(previousState.respuestaSeleccionada).toBe('tonto-1');
+    expect(goToNextQuestion(fueraDeRango, DOS_PREGUNTAS)).toBe(fueraDeRango);
   });
 
-  it('no retrocede antes de la primera pregunta', () => {
-    const state = startSurvey(createSurveyWizardState());
+  it('no retrocede en la primera pregunta', () => {
+    const state = selectAnswer(startSurvey(createSurveyWizardState(), DOS_PREGUNTAS), 'tonto-1');
 
-    expect(goToPreviousQuestion(state, preguntas)).toEqual(state);
+    expect(goToPreviousQuestion(state, DOS_PREGUNTAS)).toBe(state);
   });
 
-  it('restaura una respuesta existente al iniciar la encuesta', () => {
-    const state = createSurveyWizardState();
-    state.respuestas.tonto = 'tonto-2';
+  it('no retrocede con índice negativo', () => {
+    const negativo: SurveyWizardState = {
+      ...startSurvey(createSurveyWizardState(), DOS_PREGUNTAS),
+      indicePregunta: -1,
+    };
 
-    expect(startSurvey(state, preguntas).respuestaSeleccionada).toBe('tonto-2');
+    expect(goToPreviousQuestion(negativo, DOS_PREGUNTAS)).toBe(negativo);
   });
 
-  it('calcula el progreso y no avanza más allá de la última pregunta', () => {
-    let state = startSurvey(createSurveyWizardState());
+  it('conserva la respuesta al retroceder y la vuelve a mostrar', () => {
+    let state = startSurvey(createSurveyWizardState(), DOS_PREGUNTAS);
+    state = selectAnswer(state, 'tonto-2');
+    state = goToNextQuestion(state, DOS_PREGUNTAS);
+    state = selectAnswer(state, 'casper-1');
 
-    for (let questionIndex = 0; questionIndex < preguntas.length; questionIndex += 1) {
-      const question = preguntas[questionIndex];
-      state = selectAnswer(state, question.opciones[0].id);
-      state = goToNextQuestion(state, preguntas);
-    }
+    const atras = goToPreviousQuestion(state, DOS_PREGUNTAS);
 
-    expect(state.indicePregunta).toBe(preguntas.length - 1);
-    expect(Object.keys(state.respuestas)).toHaveLength(preguntas.length);
+    expect(atras.indicePregunta).toBe(0);
+    expect(atras.respuestaSeleccionada).toBe('tonto-2');
+    // La seleccion pendiente no se guarda hasta avanzar.
+    expect(atras.respuestas).toEqual({ tonto: 'tonto-2' });
+  });
+
+  it('reavanza tras retroceder y mantiene la respuesta ya guardada', () => {
+    let state = startSurvey(createSurveyWizardState(), DOS_PREGUNTAS);
+    state = selectAnswer(state, 'tonto-1');
+    state = goToNextQuestion(state, DOS_PREGUNTAS);
+    state = selectAnswer(state, 'casper-1');
+    state = goToPreviousQuestion(state, DOS_PREGUNTAS);
+
+    const adelante = goToNextQuestion(state, DOS_PREGUNTAS);
+
+    expect(adelante.indicePregunta).toBe(1);
+    expect(adelante.respuestas).toEqual({ tonto: 'tonto-1' });
+  });
+
+  it('sobrescribe la respuesta al volver a elegir otra opción', () => {
+    let state = selectAnswer(startSurvey(createSurveyWizardState(), DOS_PREGUNTAS), 'tonto-1');
+    state = goToNextQuestion(state, DOS_PREGUNTAS);
+    state = goToPreviousQuestion(state, DOS_PREGUNTAS);
+    state = selectAnswer(state, 'tonto-2');
+
+    const final = goToNextQuestion(state, DOS_PREGUNTAS);
+
+    expect(final.respuestas.tonto).toBe('tonto-2');
+  });
+
+  it('no arrastra respuestas entre catálogos distintos', () => {
+    const soloMeme: Pregunta[] = [{
+      id: 'meme',
+      titulo: 'Meme del Año',
+      opciones: [
+        { id: 'meme-1', texto: 'A' },
+        { id: 'meme-2', texto: 'B' },
+      ],
+    }];
+
+    let state = startSurvey(createSurveyWizardState(), DOS_PREGUNTAS);
+    state = selectAnswer(state, 'tonto-1');
+    state = goToNextQuestion(state, DOS_PREGUNTAS);
+
+    // La segunda pregunta del catálogo original no existe en el nuevo catálogo.
+    expect(getCurrentQuestion(state, soloMeme)).toBeUndefined();
+    expect(goToNextQuestion(state, soloMeme)).toBe(state);
+  });
+});
+
+describe('progreso del wizard', () => {
+  it('devuelve 0 sin preguntas', () => {
+    expect(getProgress(startSurvey(createSurveyWizardState(), []), [])).toBe(0);
+  });
+
+  it('cuenta la pregunta actual como completada', () => {
+    const state = startSurvey(createSurveyWizardState(), preguntas);
+
+    expect(getProgress(state, preguntas)).toBe(Math.round((1 / preguntas.length) * 100));
+  });
+
+  it('llega al 100% al responder la última', () => {
+    const state = responder(preguntas, (pregunta) => pregunta.opciones[0].id);
+
     expect(getProgress(state, preguntas)).toBe(100);
   });
 
-  it('mantiene la última pregunta al registrar su respuesta', () => {
-    let state = startSurvey(createSurveyWizardState(), preguntas);
+  it('ronda al entero más cercano y no baja de 1 con una sola pregunta', () => {
+    expect(getProgress(startSurvey(createSurveyWizardState(), DOS_PREGUNTAS), DOS_PREGUNTAS))
+      .toBe(50);
+    expect(getProgress(startSurvey(createSurveyWizardState(), [DOS_PREGUNTAS[0]]), [DOS_PREGUNTAS[0]]))
+      .toBe(100);
+  });
 
-    for (let questionIndex = 0; questionIndex < preguntas.length - 1; questionIndex += 1) {
-      state = selectAnswer(state, preguntas[questionIndex].opciones[0].id);
+  it('retrocede también el progreso', () => {
+    let state = startSurvey(createSurveyWizardState(), DOS_PREGUNTAS);
+    state = selectAnswer(state, 'tonto-1');
+    state = goToNextQuestion(state, DOS_PREGUNTAS);
+
+    expect(getProgress(state, DOS_PREGUNTAS)).toBe(100);
+    expect(getProgress(goToPreviousQuestion(state, DOS_PREGUNTAS), DOS_PREGUNTAS)).toBe(50);
+  });
+});
+
+describe('respuestas completas', () => {
+  it('registra una respuesta por pregunta del catálogo real', () => {
+    const state = responder(preguntas, (pregunta) => pregunta.opciones[0].id);
+
+    expect(Object.keys(state.respuestas).sort()).toEqual(preguntas.map((p) => p.id).sort());
+    expect(validateSurveyAnswers(preguntas, state.respuestas).valid).toBe(true);
+  });
+
+  it('produce un envío válido eligiendo la última opción de cada pregunta', () => {
+    const state = responder(preguntas, (pregunta) => ultimaOpcion(pregunta).id);
+
+    expect(validateSurveyAnswers(preguntas, state.respuestas)).toEqual({
+      valid: true,
+      errors: [],
+    });
+  });
+
+  it('deja el cuestionario completo tras un ida y vuelta por todas las preguntas', () => {
+    let state = startSurvey(createSurveyWizardState(), preguntas);
+    state = responder(preguntas, (pregunta) => pregunta.opciones[0].id);
+    for (const pregunta of preguntas.slice(0, -1)) {
+      state = goToPreviousQuestion(state, preguntas);
+      state = selectAnswer(state, pregunta.opciones[1].id);
       state = goToNextQuestion(state, preguntas);
     }
 
-    state = selectAnswer(state, preguntas.at(-1)!.opciones[0].id);
-    const finalState = goToNextQuestion(state, preguntas);
+    expect(Object.keys(state.respuestas)).toHaveLength(preguntas.length);
+    expect(validateSurveyAnswers(preguntas, state.respuestas).valid).toBe(true);
+  });
 
-    expect(finalState.indicePregunta).toBe(preguntas.length - 1);
-    expect(finalState.respuestas.correa).toBe('correa-1');
+  it('conserva respuestas que ya no corresponden al catálogo recibido', () => {
+    let state = startSurvey(createSurveyWizardState(), preguntas);
+    state = selectAnswer(state, 'tonto-1');
+    state = goToNextQuestion(state, preguntas);
+
+    const enOtro = goToNextQuestion(state, [preguntas[1]]);
+
+    // El indice ya no apunta a una pregunta real, asi que la transicion no avanza,
+    // pero la respuesta de la pregunta anterior sigue guardada.
+    expect(enOtro.respuestas).toEqual({ tonto: 'tonto-1' });
   });
 });
