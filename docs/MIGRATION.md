@@ -1191,7 +1191,7 @@ se conviertan en puerta giratoria. Las reglas que ya vivian en
 una regla de dependencias —la pureza del wizard y que las reglas de validacion
 no muten el catalogo—, de modo que cada invariante tiene un unico sitio.
 
-## TODO-070. Crear guia de contribucion
+## TODO-070. Crear guia de contribucion [COMPLETADO]
 
 Documentar:
 
@@ -1201,6 +1201,38 @@ Documentar:
 - Como ejecutar tests.
 - Como ejecutar typecheck.
 - Como anadir multimedia.
+
+Resultado: se creo `docs/CONTRIBUTING.md`, enlazado desde el README y de la
+tabla de documentacion, con las seis secciones pedidas en el orden en que
+alguien se las encuentra. Las tres primeras son tablas de "cambia esto → toca
+esto", que es el formato que de verdad resuelve la pregunta, y cada una lleva
+el aviso que hace fallar el cambio a medias: anadir una pregunta exige tocar a
+la vez el catalogo del cliente y la allowlist del servidor porque si no el
+envio falla con `invalid-argument`; anadir un campo a una respuesta guardada
+exige actualizar el parser en el mismo despliegue porque el parser exige
+exactamente cinco claves y un campo de mas convierte el documento en invalido;
+y un repositorio nuevo del cliente no puede escribir en Firestore porque las
+reglas lo niegan todo. Se documento tambien la diferencia entre el DTO que viaja
+por la red y el documento que se guarda, que son distintos y confundirlos rompe
+el contrato, y por que el nombre de la persona no lo envia el cliente. Las
+secciones de tests y typecheck dicen que comprobacion responde a cada capa y
+que un test que se puede pasar sin montar la app va a `unit`, con el criterio
+que hace decidible esa eleccion. La de multimedia explica por que el nombre del
+archivo es el contrato, por que un fallo de asset no rompe la build, y por que
+la foto del avatar es la excepcion. Se anadio una seccion de privacidad con las
+tres reglas que el proyecto sostiene con tests —nada de `console.*` en `src/`,
+metricas sin datos personales, nada en el navegador— y otra de commits con el
+"un commit por TODO" y la regla de que un PR de documentacion tenga la
+documentacion como parte dificil. Escribir la guia destapo un hueco: el primer
+paso deia "crea un .env.local" sin decir de donde salen los valores y sin ningun
+fichero de ejemplo, asi que se anadio `.env.example` con las siete variables y
+un comentario que aclara que nada de eso es secreto, porque el prefijo `VITE_`
+las hace publicas. `.gitignore` ignoraba `.env.*`, asi que hizo falta una
+excepcion para que la plantilla se pueda versionar. El criterio de
+finalizacion de este mismo documento se actualizo para incluir `npm run test:e2e`,
+que faltaba pese a ser una de las tres capas de test, y para anadir que las
+reglas de dependencia tienen que estar verificadas por pruebas y no por
+costumbre.
 
 ---
 
@@ -1256,9 +1288,11 @@ La migracion se considerara completada cuando:
 - `npm run typecheck` pase.
 - `npm run lint` pase sin warnings relevantes.
 - `npm test -- --run` pase.
+- `npm run test:e2e` pase.
 - `npm run build` pase.
 - El dominio no dependa de Vue ni Firebase.
 - La interfaz no acceda directamente a Firestore.
 - El envio sea atomico e idempotente.
 - Las reglas de Firebase no permitan acceso indiscriminado.
 - La documentacion refleje la arquitectura y el modelo de datos reales.
+- Las cuatro reglas de dependencia esten verificadas por pruebas, no por costumbre.

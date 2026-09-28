@@ -66,11 +66,15 @@ codigos/
 npm run dev
 ```
 
+La configuración local está en `.env.example`; cópialo a `.env.local` y
+rellénalo con las credenciales de tu proyecto de Firebase.
+
 ## 📖 Documentación
 
 | Documento | Descripción |
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura, flujo de datos y decisiones técnicas |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Guía de contribución: dónde tocar cada cosa y cómo pasar los tests |
 | [docs/RECOVERY.md](docs/RECOVERY.md) | Qué ocurre y qué se recupera cuando algo falla |
 | [docs/API.md](docs/API.md) | Modelo de datos Firestore y referencia del servicio |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Guía de uso para participantes |
@@ -122,9 +126,11 @@ tests/
 
 ## 🤝 Contribuir
 
+Lee la [guía de contribución](docs/CONTRIBUTING.md): dónde añadir una pregunta, cómo pasar los tests y qué reglas de dependencia no se cruzan.
+
 1. Haz un fork del repositorio
 2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
-3. Haz tus cambios y ejecuta `npm run lint && npm test -- --run` (o `npm run test:unit` / `npm run test:integration` por nivel)
+3. Haz tus cambios y ejecuta `npm run typecheck && npm run lint && npm test -- --run` (o `npm run test:unit` / `npm run test:integration` / `npm run test:e2e` por nivel)
 4. Envía un pull request
 
 ## 📄 Licencia

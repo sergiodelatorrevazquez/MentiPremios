@@ -9,6 +9,7 @@ blob-report
 .playwright
 .env
 .env.*
+!.env.example
 *.log
 npm-debug.log*
 yarn-error.log*
