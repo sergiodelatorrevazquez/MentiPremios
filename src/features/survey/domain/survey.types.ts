@@ -21,6 +21,7 @@ export interface Multimedia {
   src: string;
   alt?: string;
   unavailable?: boolean;
+  assetPath?: string;
 }
 
 export interface Opcion {

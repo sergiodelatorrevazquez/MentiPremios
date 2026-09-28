@@ -765,7 +765,7 @@ Nunca dejar `src` indefinidos.
 
 Resultado: se conserva el catálogo de opciones y se muestra `public/media-unavailable.svg` para recursos ausentes. El descriptor mantiene tipo y alt, marca `unavailable` y siempre tiene una URL definida; miniaturas y visor renderizan el fallback como imagen aunque la opción original fuera un video. Tests cubren fallback y ausencia de fuentes `undefined`.
 
-## TODO-045. Crear un registro tipado de multimedia
+## TODO-045. Crear un registro tipado de multimedia [COMPLETADO]
 
 En lugar de acceder a claves manualmente:
 
@@ -774,6 +774,8 @@ multimediaAssets['./assets/foto-1.jpg']
 ```
 
 Crear una funcion que valide si el recurso existe.
+
+Resultado: `multimediaRegistry.ts` define las rutas admitidas como union literal y un registro completo tipado con tipo, URL, disponibilidad y ruta física. `resolveMultimediaAsset` valida la entrada y usa el placeholder de TODO-044 cuando falta el archivo; el catálogo ya no indexa un glob arbitrario ni fuerza casts a `string`.
 
 ## TODO-046. Anadir pruebas de recursos
 

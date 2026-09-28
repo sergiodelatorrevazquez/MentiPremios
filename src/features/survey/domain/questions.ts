@@ -1,24 +1,5 @@
-import { QUESTION_IDS, type Multimedia, type Pregunta } from './survey.types';
-
-const multimediaAssets = import.meta.glob('../../../assets/{mensaje,foto,video}-*.{jpg,mp4}', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-});
-
-function multimediaAsset(tipo: Multimedia['tipo'], path: string, alt: string): Multimedia {
-  const src = multimediaAssets[path];
-  if (typeof src === 'string') {
-    return { tipo, src, alt };
-  }
-
-  return {
-    tipo,
-    src: '/media-unavailable.svg',
-    alt: `${alt} (recurso no disponible)`,
-    unavailable: true,
-  };
-}
+import { QUESTION_IDS, type Pregunta } from './survey.types';
+import { MULTIMEDIA_ASSET_PATHS, resolveMultimediaAsset } from './multimediaRegistry';
 
 export const preguntas: Pregunta[] = [
   {
@@ -93,30 +74,30 @@ export const preguntas: Pregunta[] = [
     id: QUESTION_IDS.mensaje,
     titulo: 'Mensaje del Año',
     opciones: [
-      { id: 'mensaje-1', texto: '1', multimedia: multimediaAsset('imagen', '../../../assets/mensaje-1.jpg', 'Mensaje 1') },
-      { id: 'mensaje-2', texto: '2', multimedia: multimediaAsset('imagen', '../../../assets/mensaje-2.jpg', 'Mensaje 2') },
-      { id: 'mensaje-3', texto: '3', multimedia: multimediaAsset('imagen', '../../../assets/mensaje-3.jpg', 'Mensaje 3') },
-      { id: 'mensaje-4', texto: '4', multimedia: multimediaAsset('imagen', '../../../assets/mensaje-4.jpg', 'Mensaje 4') },
+      { id: 'mensaje-1', texto: '1', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.mensaje1, 'Mensaje 1') },
+      { id: 'mensaje-2', texto: '2', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.mensaje2, 'Mensaje 2') },
+      { id: 'mensaje-3', texto: '3', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.mensaje3, 'Mensaje 3') },
+      { id: 'mensaje-4', texto: '4', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.mensaje4, 'Mensaje 4') },
     ],
   },
   {
     id: QUESTION_IDS.foto,
     titulo: 'Foto del Año',
     opciones: [
-      { id: 'foto-1', texto: '1', multimedia: multimediaAsset('imagen', '../../../assets/foto-1.jpg', 'Foto 1') },
-      { id: 'foto-2', texto: '2', multimedia: multimediaAsset('imagen', '../../../assets/foto-2.jpg', 'Foto 2') },
-      { id: 'foto-3', texto: '3', multimedia: multimediaAsset('imagen', '../../../assets/foto-3.jpg', 'Foto 3') },
-      { id: 'foto-4', texto: '4', multimedia: multimediaAsset('imagen', '../../../assets/foto-4.jpg', 'Foto 4') },
+      { id: 'foto-1', texto: '1', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.foto1, 'Foto 1') },
+      { id: 'foto-2', texto: '2', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.foto2, 'Foto 2') },
+      { id: 'foto-3', texto: '3', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.foto3, 'Foto 3') },
+      { id: 'foto-4', texto: '4', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.foto4, 'Foto 4') },
     ],
   },
   {
     id: QUESTION_IDS.video,
     titulo: 'Video del Año',
     opciones: [
-      { id: 'video-1', texto: '1', multimedia: multimediaAsset('video', '../../../assets/video-1.mp4', 'Video 1') },
-      { id: 'video-2', texto: '2', multimedia: multimediaAsset('video', '../../../assets/video-2.mp4', 'Video 2') },
-      { id: 'video-3', texto: '3', multimedia: multimediaAsset('video', '../../../assets/video-3.mp4', 'Video 3') },
-      { id: 'video-4', texto: '4', multimedia: multimediaAsset('video', '../../../assets/video-4.mp4', 'Video 4') },
+      { id: 'video-1', texto: '1', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.video1, 'Video 1') },
+      { id: 'video-2', texto: '2', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.video2, 'Video 2') },
+      { id: 'video-3', texto: '3', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.video3, 'Video 3') },
+      { id: 'video-4', texto: '4', multimedia: resolveMultimediaAsset(MULTIMEDIA_ASSET_PATHS.video4, 'Video 4') },
     ],
   },
   {
