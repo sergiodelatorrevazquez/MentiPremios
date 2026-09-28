@@ -1,23 +1,18 @@
 import {
-  addDoc,
-  collection,
   doc,
   getDoc,
-  serverTimestamp,
   setDoc,
   updateDoc,
   FirestoreError,
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../infrastructure/firebase/client';
 
 export type {
   CodigoInvitacion,
-  PalabraClavePayload,
   PremioRespuesta,
 } from '../features/survey/domain/survey.types';
 import type {
   CodigoInvitacion,
-  PalabraClavePayload,
   PremioRespuesta,
 } from '../features/survey/domain/survey.types';
 
@@ -32,7 +27,6 @@ export class FirestoreServiceError extends Error {
 }
 
 const RESPUESTAS_COLLECTION = 'respuestas';
-const PALABRAS_CLAVE_COLLECTION = 'palabrasClave';
 const CODIGOS_COLLECTION = 'codigos';
 
 function handleFirestoreError(error: unknown): never {
@@ -52,17 +46,6 @@ export async function saveUserAnswer(payload: PremioRespuesta): Promise<void> {
   try {
     const docRef = doc(db, RESPUESTAS_COLLECTION, payload.usuario);
     await setDoc(docRef, payload.premios);
-  } catch (error) {
-    handleFirestoreError(error);
-  }
-}
-
-export async function saveUserKeywords(payload: PalabraClavePayload): Promise<void> {
-  try {
-    await addDoc(collection(db, PALABRAS_CLAVE_COLLECTION), {
-      ...payload,
-      createdAt: serverTimestamp(),
-    });
   } catch (error) {
     handleFirestoreError(error);
   }
@@ -102,7 +85,3 @@ export async function markCodeAsUsed(secretWord: string): Promise<void> {
   }
 }
 
-export const guardarRespuestaUsuario = saveUserAnswer;
-export const guardarPalabrasClaveUsuario = saveUserKeywords;
-export const obtenerCodigoPorPalabraSecreta = getCodeBySecretWord;
-export const marcarCodigoComoUsado = markCodeAsUsed;

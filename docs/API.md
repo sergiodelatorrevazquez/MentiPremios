@@ -61,7 +61,7 @@ respuestas/
 
 ### Colección `palabrasClave`
 
-Palabras clave opcionales asociadas a usuarios. La funcionalidad existe en el servicio pero **no se usa en la UI actual**.
+Palabras clave opcionales asociadas a usuarios. La funcionalidad existe en `FirestoreKeywordsRepository` pero **no se usa en la UI actual**.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
@@ -74,10 +74,9 @@ Palabras clave opcionales asociadas a usuarios. La funcionalidad existe en el se
 
 ## Servicio: `src/services/premiosService.ts`
 
-Todas las funciones están definidas con nombres en inglés y exportadas también con alias en español.
+Las funciones del servicio se exportan con nombres en inglés.
 
 ### `saveUserAnswer(payload)`
-**Alias**: `guardarRespuestaUsuario`
 
 ```typescript
 async function saveUserAnswer(payload: PremioRespuesta): Promise<void>
@@ -92,7 +91,7 @@ interface PremioRespuesta {
 
 **Uso**:
 ```typescript
-await guardarRespuestaUsuario({
+await saveUserAnswer({
   usuario: 'SERGIO2024',
   premios: { tonto: 'tonto-1', casper: 'casper-3' },
 });
@@ -100,23 +99,27 @@ await guardarRespuestaUsuario({
 
 ---
 
-### `saveUserKeywords(payload)`
-**Alias**: `guardarPalabrasClaveUsuario`
+### Repositorio opcional de palabras clave
+
+Esta funcionalidad no forma parte del flujo de encuesta. Se mantiene aislada en `FirestoreKeywordsRepository` (`src/infrastructure/firebase/firestoreKeywordsRepository.ts`).
 
 ```typescript
-async function saveUserKeywords(payload: PalabraClavePayload): Promise<void>
-
-interface PalabraClavePayload {
+interface KeywordSubmission {
   usuario: string;
   palabrasClave: string[];
 }
+
+interface KeywordsRepository {
+  save(submission: KeywordSubmission): Promise<void>;
+}
 ```
 
-**Operación Firestore**: `addDoc(collection(db, 'palabrasClave'), { ...payload, createdAt: serverTimestamp() })`
+El repositorio escribe en `palabrasClave` y añade `createdAt` con `serverTimestamp()`.
 
 **Uso**:
 ```typescript
-await guardarPalabrasClaveUsuario({
+const repository = new FirestoreKeywordsRepository(db);
+await repository.save({
   usuario: 'Sergio',
   palabrasClave: ['divertido', 'leal', 'fiestero'],
 });
@@ -125,7 +128,6 @@ await guardarPalabrasClaveUsuario({
 ---
 
 ### `getCodeBySecretWord(secretWord)`
-**Alias**: `obtenerCodigoPorPalabraSecreta`
 
 ```typescript
 async function getCodeBySecretWord(
@@ -146,7 +148,7 @@ interface CodigoInvitacion {
 
 **Uso**:
 ```typescript
-const codigo = await obtenerCodigoPorPalabraSecreta('secreto-de-sergio');
+const codigo = await getCodeBySecretWord('secreto-de-sergio');
 if (!codigo) {
   // Palabra incorrecta
 } else if (codigo.usado) {
@@ -159,7 +161,6 @@ if (!codigo) {
 ---
 
 ### `markCodeAsUsed(secretWord)`
-**Alias**: `marcarCodigoComoUsado`
 
 ```typescript
 async function markCodeAsUsed(secretWord: string): Promise<void>
@@ -169,7 +170,7 @@ async function markCodeAsUsed(secretWord: string): Promise<void>
 
 **Uso**:
 ```typescript
-await marcarCodigoComoUsado('secreto-de-sergio');
+await markCodeAsUsed('secreto-de-sergio');
 ```
 
 ---

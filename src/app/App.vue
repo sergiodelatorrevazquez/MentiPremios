@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, inject, reactive, ref } from 'vue';
 import type {
   CodigoInvitacionIdentificado,
   Multimedia,
@@ -14,12 +14,16 @@ import QuestionStep from '../features/survey/presentation/QuestionStep.vue';
 import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
 import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.vue';
 import AvatarPhotoViewer from '../features/survey/presentation/AvatarPhotoViewer.vue';
+import { InvitationAlreadyUsedError, InvalidInvitationError } from '../features/survey/application/errors';
+import { APP_SERVICES_KEY, type AppServices } from './bootstrap';
 
-import {
-  guardarRespuestaUsuario,
-  marcarCodigoComoUsado,
-  obtenerCodigoPorPalabraSecreta,
-} from '../services/premiosService';
+function requireAppServices(): AppServices {
+  const services = inject(APP_SERVICES_KEY);
+  if (!services) throw new Error('App services were not provided during application bootstrap.');
+  return services;
+}
+
+const appServices = requireAppServices();
 
 const palabraSecreta = ref('');
 const codigo = ref<CodigoInvitacionIdentificado | null>(null);
@@ -112,23 +116,18 @@ async function validarPalabraSecreta() {
 
   try {
     const secreta = palabraSecreta.value.trim();
-    const encontrado = await obtenerCodigoPorPalabraSecreta(secreta);
-
-    if (!encontrado) {
-      loginError.value = 'La palabra secreta es incorrecta. Revisa lo que te ha llegado en la invitación.';
-      return;
-    }
-
-    if (encontrado.usado) {
-      loginError.value = 'Ya has respondido a la encuesta de MentiPremios con esta palabra secreta. ¡Gracias de nuevo!';
-      return;
-    }
-
+    const encontrado = await appServices.validateInvitation(secreta);
     codigo.value = encontrado;
     cambiarPaso('welcome');
   } catch (e) {
-    console.error(e);
-    error.value = 'Ha ocurrido un error al comprobar la palabra secreta. Inténtalo de nuevo.';
+    if (e instanceof InvitationAlreadyUsedError) {
+      loginError.value = 'Ya has respondido a la encuesta de MentiPremios con esta palabra secreta. ¡Gracias de nuevo!';
+    } else if (e instanceof InvalidInvitationError) {
+      loginError.value = 'La palabra secreta es incorrecta. Revisa lo que te ha llegado en la invitación.';
+    } else {
+      console.error(e);
+      error.value = 'Ha ocurrido un error al comprobar la palabra secreta. Inténtalo de nuevo.';
+    }
   } finally {
     enviando.value = false;
   }
@@ -154,8 +153,12 @@ async function responderYPasarSiguiente() {
   error.value = null;
 
   try {
-    await guardarRespuestaUsuario({ usuario: codigo.value.id, premios: { ...respuestas } });
-    await marcarCodigoComoUsado(codigo.value.id);
+    await appServices.submitSurvey({
+      invitationId: codigo.value.id,
+      participantName: codigo.value.nombre,
+      questions: preguntas,
+      answers: { ...respuestas },
+    });
     mensaje.value = '¡Respuestas guardadas correctamente en MentiPremios!';
     cambiarPaso('done');
   } catch (e) {

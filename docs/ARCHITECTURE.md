@@ -74,7 +74,7 @@ Transiciones:
 
 ```
 Usuario escribe palabra secreta
-  → obtenerCodigoPorPalabraSecreta(secreta)     ← Firestore: getDoc(codigos/{secreta})
+  → getCodeBySecretWord(secreta)               ← Firestore: getDoc(codigos/{secreta})
     → ¿No existe? → Error "palabra incorrecta"
     → ¿usado === true? → Error "ya has respondido"
     → ¿usado === false? → Avanza a welcome
@@ -87,8 +87,8 @@ Usuario responde 10 preguntas una a una
   → Navegación: next (acumula y avanza) / back (restaura respuesta anterior)
 
 En la última pregunta, pulsa "Enviar y cerrar"
-  → guardarRespuestaUsuario({ usuario, premios })  ← Firestore: setDoc(respuestas/{usuario})
-  → marcarCodigoComoUsado(secretWord)              ← Firestore: updateDoc(codigos/{secretWord}, { usado: true })
+  → saveUserAnswer({ usuario, premios })            ← Firestore: setDoc(respuestas/{usuario})
+  → markCodeAsUsed(secretWord)                     ← Firestore: updateDoc(codigos/{secretWord}, { usado: true })
   → Avanza a done
 ```
 
@@ -124,16 +124,17 @@ Document ID: auto-generado por Firestore
 }
 ```
 
-## Capa de servicio (`src/services/premiosService.ts`)
+## Persistencia de premios e invitaciones
 
-Toda la interacción con Firestore está encapsulada en `premiosService.ts`. Las funciones exportadas tienen alias en castellano:
+`premiosService.ts` contiene las operaciones de compatibilidad para respuestas e invitaciones. La funcionalidad opcional de palabras clave está aislada en `FirestoreKeywordsRepository` y no se conecta al flujo de encuesta.
 
-| Función original | Alias español | Operación Firestore |
-|---|---|---|
-| `saveUserAnswer` | `guardarRespuestaUsuario` | `setDoc(respuestas/{usuario}, premios)` |
-| `saveUserKeywords` | `guardarPalabrasClaveUsuario` | `addDoc(palabrasClave, {usuario, palabrasClave, createdAt})` |
-| `getCodeBySecretWord` | `obtenerCodigoPorPalabraSecreta` | `getDoc(codigos/{secretWord})` |
-| `markCodeAsUsed` | `marcarCodigoComoUsado` | `updateDoc(codigos/{secretWord}, {usado: true})` |
+| Función | Operación Firestore |
+|---|---|
+| `saveUserAnswer` | `setDoc(respuestas/{usuario}, premios)` |
+| `getCodeBySecretWord` | `getDoc(codigos/{secretWord})` |
+| `markCodeAsUsed` | `updateDoc(codigos/{secretWord}, {usado: true})` |
+
+`FirestoreKeywordsRepository.save` escribe en `palabrasClave` con un timestamp del servidor.
 
 Errores de Firestore se envuelven en `FirestoreServiceError` (`src/services/premiosService.ts:28-36`).
 

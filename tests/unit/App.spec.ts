@@ -1,16 +1,20 @@
-import { mount } from '@vue/test-utils';
+import { config, mount } from '@vue/test-utils';
 import { vi } from 'vitest';
 import App from '../../src/app/App.vue';
+import { APP_SERVICES_KEY, type AppServices } from '../../src/app/bootstrap';
+import { InvitationAlreadyUsedError, InvalidInvitationError } from '../../src/features/survey/application/errors';
+import type { SurveySubmission } from '../../src/features/survey/domain/survey.types';
 
-vi.mock('../../src/services/premiosService', () => ({
-  guardarRespuestaUsuario: vi.fn().mockResolvedValue(undefined),
-  marcarCodigoComoUsado: vi.fn().mockResolvedValue(undefined),
-  obtenerCodigoPorPalabraSecreta: vi.fn().mockResolvedValue({
+const mockAppServices: AppServices = {
+  validateInvitation: vi.fn().mockResolvedValue({
     id: 'secreta-123',
     nombre: 'Sergio',
     usado: false,
   }),
-}));
+  submitSurvey: vi.fn().mockResolvedValue({} as SurveySubmission),
+};
+
+config.global.provide = { [APP_SERVICES_KEY]: mockAppServices };
 
 describe('App - Login', () => {
   beforeEach(() => {
@@ -43,8 +47,9 @@ describe('App - Login', () => {
   });
 
   it('muestra error cuando la palabra secreta es incorrecta', async () => {
-    const { obtenerCodigoPorPalabraSecreta } = await import('../../src/services/premiosService');
-    vi.mocked(obtenerCodigoPorPalabraSecreta).mockResolvedValueOnce(null);
+    vi.mocked(mockAppServices.validateInvitation).mockRejectedValueOnce(
+      new InvalidInvitationError('invitation-not-found'),
+    );
 
     const wrapper = mount(App);
     const input = wrapper.find('input.field-input');
@@ -56,12 +61,9 @@ describe('App - Login', () => {
   });
 
   it('muestra error cuando la palabra ya ha sido usada', async () => {
-    const { obtenerCodigoPorPalabraSecreta } = await import('../../src/services/premiosService');
-    vi.mocked(obtenerCodigoPorPalabraSecreta).mockResolvedValueOnce({
-      id: 'secreta-123',
-      nombre: 'Sergio',
-      usado: true,
-    });
+    vi.mocked(mockAppServices.validateInvitation).mockRejectedValueOnce(
+      new InvitationAlreadyUsedError(),
+    );
 
     const wrapper = mount(App);
     const input = wrapper.find('input.field-input');
@@ -171,8 +173,6 @@ describe('App - Questions', () => {
   });
 
   it('completa el flujo y guarda las diez respuestas con el codigo de invitacion', async () => {
-    const { guardarRespuestaUsuario, marcarCodigoComoUsado } = await import('../../src/services/premiosService');
-
     const wrapper = mount(App);
     await loginAndStart(wrapper);
 
@@ -182,9 +182,10 @@ describe('App - Questions', () => {
       await wrapper.vm.$nextTick();
     }
 
-    expect(guardarRespuestaUsuario).toHaveBeenCalledWith({
-      usuario: 'secreta-123',
-      premios: {
+    expect(mockAppServices.submitSurvey).toHaveBeenCalledWith(expect.objectContaining({
+      invitationId: 'secreta-123',
+      participantName: 'Sergio',
+      answers: {
         tonto: 'tonto-1',
         casper: 'casper-1',
         comefeas: 'comefeas-1',
@@ -196,8 +197,7 @@ describe('App - Questions', () => {
         video: 'video-1',
         correa: 'correa-1',
       },
-    });
-    expect(marcarCodigoComoUsado).toHaveBeenCalledWith('secreta-123');
+    }));
   });
 
   it('muestra pantalla de agradecimiento al completar', async () => {
@@ -218,10 +218,11 @@ describe('App - Questions', () => {
   });
 
   it('bloquea envios duplicados mientras se guardan las respuestas', async () => {
-    const { guardarRespuestaUsuario } = await import('../../src/services/premiosService');
     let resolveSave: (() => void) | undefined;
-    vi.mocked(guardarRespuestaUsuario).mockImplementationOnce(
-      () => new Promise<void>((resolve) => { resolveSave = resolve; }),
+    vi.mocked(mockAppServices.submitSurvey).mockImplementationOnce(
+      () => new Promise<SurveySubmission>((resolve) => {
+        resolveSave = () => resolve({} as SurveySubmission);
+      }),
     );
 
     const wrapper = mount(App);
@@ -238,7 +239,7 @@ describe('App - Questions', () => {
     await submitButton.trigger('click');
     await submitButton.trigger('click');
 
-    expect(guardarRespuestaUsuario).toHaveBeenCalledTimes(1);
+    expect(mockAppServices.submitSurvey).toHaveBeenCalledTimes(1);
     expect(submitButton.attributes('disabled')).toBeDefined();
 
     resolveSave?.();

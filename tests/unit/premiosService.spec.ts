@@ -1,10 +1,9 @@
 import { type Mock, vi } from 'vitest';
 import { doc, setDoc, getDoc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../src/firebase';
 import {
-  guardarRespuestaUsuario,
-  obtenerCodigoPorPalabraSecreta,
-  marcarCodigoComoUsado,
+  saveUserAnswer,
+  getCodeBySecretWord,
+  markCodeAsUsed,
 } from '../../src/services/premiosService';
 
 vi.mock('firebase/firestore', () => ({
@@ -16,7 +15,7 @@ vi.mock('firebase/firestore', () => ({
   serverTimestamp: vi.fn(),
 }));
 
-vi.mock('../../src/firebase', () => ({
+vi.mock('../../src/infrastructure/firebase/client', () => ({
   db: {},
 }));
 
@@ -28,7 +27,7 @@ describe('premiosService', () => {
   it('guarda respuestas usando setDoc con el usuario como ID', async () => {
     (setDoc as unknown as Mock).mockResolvedValueOnce({});
 
-    await guardarRespuestaUsuario({
+    await saveUserAnswer({
       usuario: 'SERGIO2024',
       premios: { pregunta1: 'opcionA', pregunta2: 'opcionB' },
     });
@@ -44,7 +43,7 @@ describe('premiosService', () => {
       data: () => ({ nombre: 'Sergio', usado: false }),
     });
 
-    const result = await obtenerCodigoPorPalabraSecreta('secreta123');
+    const result = await getCodeBySecretWord('secreta123');
 
     expect(result).toEqual({
       id: 'secreta123',
@@ -56,7 +55,7 @@ describe('premiosService', () => {
   it('marca código como usado', async () => {
     (updateDoc as unknown as Mock).mockResolvedValueOnce({});
 
-    await marcarCodigoComoUsado('secreta123');
+    await markCodeAsUsed('secreta123');
 
     expect(updateDoc).toHaveBeenCalled();
   });

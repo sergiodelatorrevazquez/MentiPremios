@@ -450,7 +450,7 @@ Resultado: la aplicacion mantiene una capa de coordinacion en `src/app/App.vue` 
 
 # Fase 4: capa de aplicacion
 
-## TODO-023. Crear el caso de uso de validacion
+## TODO-023. Crear el caso de uso de validacion [COMPLETADO]
 
 Crear:
 
@@ -466,7 +466,9 @@ Debe encargarse de:
 - Distinguir invitacion ya utilizada.
 - Devolver una invitacion valida.
 
-## TODO-024. Crear el caso de uso de envio
+Resultado: la validacion de invitacion queda encapsulada en un caso de uso aislado, con pruebas en `tests/unit/validateInvitation.spec.ts` y manejo de errores de dominio.
+
+## TODO-024. Crear el caso de uso de envio [COMPLETADO]
 
 Crear:
 
@@ -484,7 +486,9 @@ Debe coordinar:
 
 La interfaz no debe llamar directamente a varias operaciones de Firebase.
 
-## TODO-025. Definir errores de aplicacion
+Resultado: el envio queda orquestado por una unica funcion de aplicacion, con validacion del cuestionario, construccion del payload y persistencia ordenada, cubierto por `tests/unit/submitSurvey.spec.ts`.
+
+## TODO-025. Definir errores de aplicacion [COMPLETADO]
 
 Crear errores diferenciados:
 
@@ -498,7 +502,9 @@ PersistenceError
 
 La UI traducira estos errores a mensajes en espanol.
 
-## TODO-026. Separar textos de usuario de errores tecnicos
+Resultado: se crean las clases en `src/features/survey/application/errors.ts` con codigo interno para distinguir cada caso y permitir a la capa de presentacion traducir mensajes sin depender de strings visuales.
+
+## TODO-026. Separar textos de usuario de errores tecnicos [COMPLETADO]
 
 La capa de aplicacion no debe depender de textos visuales concretos.
 
@@ -510,11 +516,13 @@ return { type: 'invitation-already-used' };
 
 La interfaz decide que mensaje mostrar.
 
+Resultado: la capa de aplicacion expone errores tipados con `code` y nombre de dominio; la UI no depende de mensajes en texto humano de la aplicacion y puede traducirlos con criterio de presentacion.
+
 ---
 
 # Fase 5: infraestructura y Firebase
 
-## TODO-027. Mover la inicializacion de Firebase a infraestructura
+## TODO-027. Mover la inicializacion de Firebase a infraestructura [COMPLETADO]
 
 Mover la inicializacion a:
 
@@ -524,7 +532,7 @@ src/infrastructure/firebase/client.ts
 
 **Condicion:** los modulos de dominio no deben importar Firebase.
 
-## TODO-028. Crear el repositorio de invitaciones
+## TODO-028. Crear el repositorio de invitaciones [COMPLETADO]
 
 Crear una interfaz:
 
@@ -540,7 +548,7 @@ Implementacion:
 src/infrastructure/firebase/firestoreInvitationRepository.ts
 ```
 
-## TODO-029. Crear el repositorio de respuestas
+## TODO-029. Crear el repositorio de respuestas [COMPLETADO]
 
 Crear una interfaz:
 
@@ -552,7 +560,9 @@ interface SurveySubmissionRepository {
 
 Implementacion Firebase separada.
 
-## TODO-030. Crear una composicion de dependencias
+Resultado: se implemento `FirestoreSurveySubmissionRepository`, tipado con el DTO canonico `SurveySubmission`. El repositorio traduce el envio al formato de persistencia legado escribiendo solo el mapa de respuestas en `respuestas/{invitationId}`, manteniendo el contrato existente mientras se migra la arquitectura. El test verifica la ruta y el contenido persistido.
+
+## TODO-030. Crear una composicion de dependencias [COMPLETADO]
 
 Crear:
 
@@ -569,7 +579,9 @@ casos de uso
 
 La UI no deberia conocer `db`, `doc`, `setDoc` ni `updateDoc`.
 
-## TODO-031. Eliminar los alias bilingues del servicio
+Resultado: `main.ts` crea los servicios y los proporciona mediante `APP_SERVICES_KEY`; `App.vue` consume los casos de uso sin importar el servicio Firebase legacy. `createAppServices` conecta validacion y envio con los repositorios Firebase, incluido el marcado de invitaciones usadas. Los tests cubren el wiring y el flujo de UI.
+
+## TODO-031. Eliminar los alias bilingues del servicio [COMPLETADO]
 
 Actualmente existen nombres ingleses y alias espanoles en el mismo archivo.
 
@@ -582,7 +594,9 @@ submitSurvey
 
 La eliminacion debe hacerse solo despues de actualizar consumidores y pruebas.
 
-## TODO-032. Eliminar funcionalidades no utilizadas o aislarlas
+Resultado: se eliminaron los cuatro exports en espanol, se actualizaron los tests y la documentacion al API en ingles, y se corrigio el mock del cliente Firebase usado por el test del servicio.
+
+## TODO-032. Eliminar funcionalidades no utilizadas o aislarlas [COMPLETADO]
 
 `palabrasClave` no forma parte del flujo actual.
 
@@ -593,6 +607,8 @@ Decidir entre:
 - Mantenerla documentada como funcionalidad futura.
 
 No debe permanecer mezclada con el flujo principal sin una razon clara.
+
+Resultado: se mantuvo `palabrasClave` como funcionalidad opcional y se aislo en `features/keywords` y `FirestoreKeywordsRepository`. Se conservaron el esquema y el timestamp existentes; `premiosService` ya no importa ni expone esta capacidad y la documentacion deja claro que no forma parte del flujo activo.
 
 ---
 
