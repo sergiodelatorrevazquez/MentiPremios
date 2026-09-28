@@ -16,17 +16,17 @@ export async function validateInvitation(
   const normalizedSecret = secret.trim().toLowerCase();
 
   if (!normalizedSecret) {
-    throw new InvalidInvitationError('invalid-secret');
+    throw new InvalidInvitationError('invalid-secret', 'invalid-secret');
   }
 
   const invitation = await finder(normalizedSecret);
 
   if (!invitation) {
-    throw new InvalidInvitationError('invitation-not-found');
+    throw new InvalidInvitationError('invitation-not-found', 'invitation-not-found');
   }
 
   if (invitation.usado) {
-    throw new InvitationAlreadyUsedError('invitation-already-used');
+    throw new InvitationAlreadyUsedError('invitation-already-used', 'invitation-already-used');
   }
 
   return invitation;

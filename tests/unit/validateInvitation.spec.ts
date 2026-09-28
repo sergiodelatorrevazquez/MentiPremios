@@ -24,7 +24,10 @@ describe('validateInvitation', () => {
   it('throws when the invitation does not exist', async () => {
     await expect(
       validateInvitation('missing', async () => null),
-    ).rejects.toBeInstanceOf(InvalidInvitationError);
+    ).rejects.toMatchObject({
+      name: 'InvalidInvitationError',
+      code: 'invitation-not-found',
+    });
   });
 
   it('throws when the invitation was already used', async () => {
@@ -34,6 +37,9 @@ describe('validateInvitation', () => {
         nombre: 'Sergio',
         usado: true,
       })),
-    ).rejects.toBeInstanceOf(InvitationAlreadyUsedError);
+    ).rejects.toMatchObject({
+      name: 'InvitationAlreadyUsedError',
+      code: 'invitation-already-used',
+    });
   });
 });

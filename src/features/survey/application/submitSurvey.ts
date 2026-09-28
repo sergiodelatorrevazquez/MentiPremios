@@ -25,7 +25,7 @@ export async function submitSurvey({
   const surveyValidation = validateSurveyAnswers(questions, answers);
 
   if (!surveyValidation.valid) {
-    throw new InvalidSubmissionError('invalid-submission');
+    throw new InvalidSubmissionError('invalid-submission', 'invalid-submission');
   }
 
   const submission: SurveySubmission = {
@@ -40,7 +40,10 @@ export async function submitSurvey({
     await persist(submission);
     await markInvitationUsed(invitationId);
   } catch (error) {
-    throw new PersistenceError(error instanceof Error ? error.message : 'Unknown persistence error');
+    throw new PersistenceError(
+      'persistence-error',
+      error instanceof Error ? error.message : 'Unknown persistence error',
+    );
   }
 
   return submission;

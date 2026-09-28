@@ -73,7 +73,10 @@ describe('submitSurvey', () => {
         persist,
         markInvitationUsed,
       }),
-    ).rejects.toBeInstanceOf(InvalidSubmissionError);
+    ).rejects.toMatchObject({
+      name: 'InvalidSubmissionError',
+      code: 'invalid-submission',
+    });
 
     expect(persist).not.toHaveBeenCalled();
     expect(markInvitationUsed).not.toHaveBeenCalled();
@@ -95,6 +98,9 @@ describe('submitSurvey', () => {
         persist,
         markInvitationUsed,
       }),
-    ).rejects.toBeInstanceOf(PersistenceError);
+    ).rejects.toMatchObject({
+      name: 'PersistenceError',
+      code: 'persistence-error',
+    });
   });
 });
