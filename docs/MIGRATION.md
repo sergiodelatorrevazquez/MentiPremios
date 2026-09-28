@@ -356,9 +356,9 @@ Debe encargarse principalmente de:
 - Conectar el wizard.
 - Seleccionar el paso visible.
 
-Resultado: se crea la raiz modular en `src/app/App.vue`, manteniendo el comportamiento actual del flujo de encuesta. El archivo `src/App.vue` queda como wrapper de compatibilidad para no romper imports ni tests existentes mientras la migracion sigue en curso.
+Resultado: se crea la raiz modular en `src/app/App.vue`, manteniendo el comportamiento actual del flujo de encuesta y eliminando la duplicidad de puntos de entrada.
 
-## TODO-016. Extraer la pantalla de login
+## TODO-016. Extraer la pantalla de login [COMPLETADO]
 
 Crear:
 
@@ -372,6 +372,8 @@ Responsabilidades:
 - Boton de acceso.
 - Mensajes de error.
 - Estado de carga.
+
+Resultado: la pantalla de login queda separada en `src/features/survey/presentation/LoginStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/LoginStep.spec.ts` sin cambiar el flujo actual.
 
 ## TODO-017. Extraer la pantalla de bienvenida
 

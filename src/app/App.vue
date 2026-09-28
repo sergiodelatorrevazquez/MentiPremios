@@ -8,6 +8,7 @@ import type {
 } from '../features/survey/domain/survey.types';
 import { preguntas as catalogoPreguntas } from '../features/survey/domain/questions';
 import { useSurveyWizard } from '../features/survey/application/useSurveyWizard';
+import LoginStep from '../features/survey/presentation/LoginStep.vue';
 
 import {
   guardarRespuestaUsuario,
@@ -254,50 +255,13 @@ function handleModalKeydown(e: KeyboardEvent) {
 
     <main class="app-content">
       <template v-if="pasoActual === 'login'">
-        <h3 class="hero-kicker">
-          Bienvenido a los premios de
-        </h3>
-        <h1 class="hero-title">
-          Sin Mentirosas no hay Traidores
-        </h1>
-        <p class="section-description">
-          El rey del grupo te ha mandado tu palabra secreta por privado, métela aquí para poder acceder al cuestionario,
-          y acuérdate de que solo puedes responderlo una vez, así que piensa bien.
-        </p>
-
-        <div class="field">
-          <div class="field-label">
-            <span>Clave</span>
-          </div>
-          <input
-            v-model="palabraSecreta"
-            class="field-input"
-            type="text"
-            placeholder="Escribe aquí tu palabra secreta..."
-            maxlength="50"
-            @keyup.enter="validarPalabraSecreta"
-          >
-          <div
-            v-if="loginError"
-            class="field-error"
-          >
-            {{ loginError }}
-          </div>
-        </div>
-
-        <div class="footer">
-          <div class="footer-text">
-            Solo podrás usar esta palabra una vez. Después de completar la encuesta, quedará marcada como respondida.
-          </div>
-          <button
-            type="button"
-            class="button-primary"
-            :disabled="!puedeContinuarLogin"
-            @click="validarPalabraSecreta"
-          >
-            {{ enviando ? 'Comprobando...' : 'Entrar a mi encuesta' }}
-          </button>
-        </div>
+        <LoginStep
+          :model-value="palabraSecreta"
+          :login-error="loginError"
+          :is-submitting="enviando"
+          @update:model-value="palabraSecreta = $event"
+          @submit="validarPalabraSecreta"
+        />
       </template>
 
       <template v-else-if="pasoActual === 'welcome' && codigo">
