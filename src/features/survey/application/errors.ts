@@ -41,8 +41,12 @@ export class SubmissionAlreadyCompletedError extends Error {
 export class PersistenceError extends Error {
   public readonly code: string;
 
-  constructor(code: string = 'persistence-error', message = 'A persistence error occurred.') {
-    super(message);
+  constructor(
+    code: string = 'persistence-error',
+    message = 'A persistence error occurred.',
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
     this.name = 'PersistenceError';
     this.code = code;
   }

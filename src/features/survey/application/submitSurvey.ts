@@ -37,9 +37,12 @@ export async function submitSurvey({
   try {
     await persist(submission);
   } catch (error) {
+    // Se guarda la causa original para que `classifyNetworkError` pueda ver el
+    // código real de Firebase a través del envoltorio.
     throw new PersistenceError(
       'persistence-error',
       error instanceof Error ? error.message : 'Unknown persistence error',
+      { cause: error },
     );
   }
 

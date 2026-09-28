@@ -2,7 +2,9 @@
 
 ## Modelo de datos (Firestore)
 
-El proyecto utiliza **Firebase Firestore** con tres colecciones. El navegador usa autenticación anónima y App Check para invocar Cloud Functions; las reglas no permiten acceso Firestore directo desde el cliente.
+El proyecto utiliza **Firebase Firestore** con tres colecciones. El navegador usa autenticación anónima y App Check para invocar Cloud Functions; `firestore.rules` deniega toda lectura y escritura directa, incluidas las colecciones que no están declaradas, mediante una regla comodín final.
+
+Las tres collections siguen el patrón de validar en dos sitios: el documento se parsea con un esquema (`functions/src/firestoreSchemas.ts`) y la petición se valida en el handler. Un documento que no encaja no es «un documento raro», es un documento inexistente para el servidor.
 
 ---
 
@@ -12,32 +14,34 @@ Control de acceso. Cada documento es una invitación de una persona.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| **Document ID** | `string` | Palabra secreta única (ej: `galaxia-2025`, `mvp-sergio-2025`) |
-| `nombre` | `string` | Nombre de la persona (se muestra en la bienvenida) |
+| **Document ID** | `string` | Palabra secreta normalizada (`trim()` + `toLowerCase()`, máx. 128 caracteres, sin `/`) |
+| `nombre` | `string` | Nombre de la persona; no puede estar vacío ni ser solo espacios |
 | `usado` | `boolean` | `false` = disponible, `true` = ya respondió |
+| `responseId` | `string?` | ID del documento de respuesta; lo escribe el servidor al enviar. Máx. 150 caracteres, sin `/` |
 
 **Ejemplo en Firebase Console:**
 ```
 codigos/
   └── secreto-de-sergio/
         ├── nombre: "Sergio"
-        └── usado: false
+        ├── usado: false
+        └── responseId: "kQ7fZ2mXpR4t"   ← solo después de responder
 ```
+
+`responseId` es lo que hace idempotente el reintento: sin él, un reenvío no tendría forma de distinguir «ya guardado» de «nunca guardado».
 
 ---
 
 ### Colección `respuestas`
 
-Respuestas a las preguntas de la encuesta. Los documentos legacy conservan su formato; los nuevos usan un ID opaco y el esquema versionado v2.
-
 | Campo | Tipo | Descripción |
 |---|---|---|
-| **Document ID** | `string` | ID aleatorio interno; no contiene el código de invitación |
-| `schemaVersion` | `number` | `2` para documentos nuevos; ausente en documentos legacy |
-| `participantName` | `string` | Nombre visible del participante |
-| `answers` | `map` | IDs de pregunta a IDs de opción |
-| `createdAt` | `timestamp` | Timestamp de Firestore asignado por el servidor al crear el documento |
-| `submittedAt` | `timestamp` | Timestamp de Firestore asignado por el servidor al completar el envío |
+| **Document ID** | `string` | ID opaco generado por el servidor; en documentos legacy es el propio código |
+| `schemaVersion` | `number` | `2` para documentos nuevos; **ausente** en documentos legacy (se infieren por v1) |
+| `participantName` | `string` | Nombre visible; no puede estar vacío |
+| `answers` | `map` | ID de pregunta → ID de opción, exactamente 10 entradas de la allowlist |
+| `createdAt` | `timestamp` | `FieldValue.serverTimestamp()` |
+| `submittedAt` | `timestamp` | `FieldValue.serverTimestamp()` |
 
 **Ejemplo:**
 ```
@@ -50,7 +54,9 @@ respuestas/{id-aleatorio} {
 }
 ```
 
-Los documentos legacy conservan un campo plano por pregunta bajo un ID igual al código. Las nuevas invitaciones guardan el enlace `responseId`; el código no se copia a documentos nuevos de respuesta. Ambos timestamps se generan con `FieldValue.serverTimestamp()` durante la transacción. No confundir el esquema persistido con el DTO de entrada de la callable, que usa `{ invitationId, answers }`.
+Los documentos v2 deben tener **exactamente** esas cinco claves: un campo extra hace que el documento se lea como inválido. Los legacy no llevan versión, se leen por la forma plana y no se reescriben.
+
+El nombre de la persona se copia desde la invitación, no desde el cliente: es la invitación la única fuente autorizada, y así el DTO remoto no necesita transportar el nombre.
 
 ---
 
@@ -69,15 +75,61 @@ Palabras clave opcionales asociadas a usuarios. La funcionalidad existe en `Fire
 
 ## Cloud Functions
 
-Las operaciones de invitación y envío se ejecutan en Cloud Functions callable. Todas requieren Firebase Authentication y App Check.
+Las operaciones de invitación y envío se ejecutan en Cloud Functions callable, región `us-central1`. Ambas exigen `enforceAppCheck: true` y reciben el usuario de la autenticación anónima; un `HttpsError` con `unauthenticated` es la respuesta cuando falta.
 
 ### `validateInvitation`
 
-Entrada: `{ secret: string }`. El servidor normaliza el código, comprueba que la invitación exista y no esté usada, y devuelve únicamente `{ participantName: string }`. El documento y su ID no se exponen al cliente.
+**Entrada** — `{ secret: string }`:
+
+| Regla | Detalle |
+|---|---|
+| Tipo | `string`; el resto de formas se rechaza con `invalid-argument` |
+| Normalización | `trim()` + `toLowerCase()`, idéntica a la del cliente |
+| Longitud | Entre 1 y 128 caracteres |
+| Separadores | No puede contener `/` |
+
+**Salida** — `{ participantName: string }`. El ID del documento y el resto de campos no se exponen nunca.
 
 ### `submitSurvey`
 
-Entrada: `{ invitationId: string, answers: Record<QuestionId, OptionId> }`. El servidor vuelve a validar la invitación y persiste la respuesta y el estado de uso dentro de una transacción. Los reintentos idénticos son idempotentes; uno conflictivo se rechaza.
+**Entrada** — `{ invitationId: string, answers: Record<QuestionId, OptionId> }`:
+
+| Regla | Detalle |
+|---|---|
+| Claves | Exactamente dos: `invitationId` y `answers`. Cualquier clave extra se rechaza |
+| Tamaño | El JSON serializado no puede superar 4096 bytes (`MAX_SUBMISSION_BYTES`) |
+| `invitationId` | `string` de 1 a 128 caracteres, sin espacios en los extremos y sin `/` |
+| `answers` | Exactamente 10 entradas, una por cada pregunta, todas de la allowlist `SURVEY_OPTION_IDS` |
+
+La allowlist vive en `functions/src/surveySchema.ts` y no se deriva del catálogo del cliente. Es la que impide que alguien envíe una respuesta arbitraria con `curl` sin pasar por la interfaz.
+
+**Salida** — `{ submitted: true }`.
+
+**Transacción.** Todo ocurre dentro de una `runTransaction`: se lee la invitación, se escribe la respuesta con `create` y se marca la invitación con `update { usado: true, responseId }`. Las dos escrituras pasan o no pasan juntas, así que no existe un estado en el que la respuesta esté guardada y la invitación libre.
+
+**Idempotencia.** Un reintento idéntico devuelve `{ submitted: true }` sin escribir nada. Un reintento con respuestas distintas recibe `failed-precondition`. Es exactamente lo que permite tratar la invitación consumida como acierto después de un fallo de red (`docs/RECOVERY.md`).
+
+---
+
+## Códigos de error
+
+El servidor devuelve `HttpsError`; el cliente los ve como `functions/<código>`. La columna de la derecha es la traducción en `src/app/bootstrap.ts` y, cuando no hay traducción, en `classifyNetworkError`.
+
+| Código | Callable | Cuándo ocurre | Qué hace el cliente |
+|---|---|---|---|
+| `unauthenticated` | Ambas | Sin sesión anónima activa | `classifyNetworkError` → `permission` |
+| `invalid-argument` | Ambas | DTO inválido: tipo, longitud, `/`, claves de más, tamaño, allowlist | `validateInvitation` → `InvalidInvitationError`; en `submitSurvey` → `classifyNetworkError` → `permission` |
+| `not-found` | Ambas | La invitación no existe o su documento no encaja en el esquema | `validateInvitation` → `InvalidInvitationError`; en `submitSurvey` → `classifyNetworkError` → `permission` |
+| `failed-precondition` | Ambas | Invitación ya usada, o reintento con respuestas distintas | `validateInvitation` → `InvitationAlreadyUsedError`; en `submitSurvey` se trata como **acierto** |
+| `internal` | Ambas | Cualquier fallo inesperado en el servidor | `classifyNetworkError` → `unavailable` |
+| `deadline-exceeded` | Implícito | Cloud Functions agota su plazo | `classifyNetworkError` → `timeout` |
+| `unavailable` | Implícito | Backend no disponible | `classifyNetworkError` → `unavailable` |
+
+`invalid-argument` y `not-found` se colapsan en el mismo error de cliente a propósito: distinguir «el código no existe» de «el código es incorrecto» solo ayudaría a quien está probando códigos ajenos.
+
+El mensaje que ve la persona sale de `classifyNetworkError`, no del texto del servidor. Los textos de `HttpsError` están en inglés y sirven para los logs.
+
+---
 
 ## Repositorio opcional de palabras clave
 
@@ -85,7 +137,7 @@ Esta funcionalidad no forma parte del flujo de encuesta ni se expone al navegado
 
 ---
 
-## Preguntas de la encuesta (definidas en `src/App.vue:37-146`)
+## Preguntas de la encuesta (definidas en `src/features/survey/domain/questions.ts`)
 
 | ID | Título | Opciones | Multimedia |
 |---|---|---|---|
@@ -100,4 +152,4 @@ Esta funcionalidad no forma parte del flujo de encuesta ni se expone al navegado
 | `video` | Video del Año | 4 videos | Video (pulsación larga para detalle) |
 | `correa` | Correa del Año | 4 × Miguel (broma) | — |
 
-**Nota**: Las opciones multimedia se cargan con `import.meta.glob` de Vite. Solo `mensaje-1.jpg` existe actualmente en `src/assets/`. El resto de archivos (`mensaje-2..4.jpg`, `foto-1..4.jpg`, `video-1..4.mp4`) deben añadirse para que las opciones funcionen correctamente.
+**Nota**: las opciones multimedia se resuelven con `import.meta.glob` de Vite desde `src/features/survey/domain/multimediaRegistry.ts`. En el repositorio solo existe `mensaje-1.jpg`; el resto de archivos (`mensaje-2..4.jpg`, `foto-1..4.jpg`, `video-1..4.mp4`) **no están** y por eso las opciones correspondientes caen en el marcador `/media-unavailable.svg` con el sufijo «(recurso no disponible)» en su texto alternativo. Abrir cualquiera de esos visores incrementa `multimedia_failed`, que es la forma de detectar el hueco desde el propio producto. Al añadir un archivo, el registro lo encuentra solo en el siguiente build, sin tocar código.

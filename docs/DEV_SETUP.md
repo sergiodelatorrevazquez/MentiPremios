@@ -212,7 +212,7 @@ El proyecto usa ESLint 9 con configuración flat (`eslint.config.mjs`). Las regl
 
 ### Añadir una nueva pregunta
 
-En `src/App.vue:37-146`, añade un nuevo objeto al array `preguntas`:
+En `src/features/survey/domain/questions.ts`, añade un nuevo objeto al array `preguntas`:
 
 ```typescript
 {
@@ -227,10 +227,15 @@ En `src/App.vue:37-146`, añade un nuevo objeto al array `preguntas`:
 
 ### Añadir una nueva colección Firestore
 
-1. Añade constantes en `src/services/premiosService.ts` (ej: `const NUEVA_COLECCION = 'nuevaColeccion'`)
-2. Crea funciones con `addDoc`, `getDocs`, `setDoc`, etc.
-3. Exporta las funciones (con y sin alias en español)
+Las escrituras pasan por Cloud Functions, no por el navegador: las reglas de
+Firestore deniegan el acceso directo. Para datos nuevos, lo habitual es añadir
+una callable en `functions/src/` y un repositorio en
+`src/infrastructure/firebase/` que la invoque, siguiendo el patrón de
+`FirestoreKeywordsRepository`.
 
 ### Cambiar la imagen del avatar
 
-Reemplaza `src/assets/foto-amigos.jpg` por otra imagen con el mismo nombre, o cambia la URL en la clase `.avatar-circle` en `src/App.vue:625` y `src/style.css:90`.
+Reemplaza `src/assets/foto-amigos.jpg` por otra imagen con el mismo nombre, o
+cambia la ruta en los dos sitios donde se referencia a mano: `src/style.css:105`
+(el `background-image` de `.avatar-circle`) y el `src` del `<img>` en
+`src/features/survey/presentation/AvatarPhotoViewer.vue`.

@@ -14,7 +14,10 @@ import QuestionStep from '../features/survey/presentation/QuestionStep.vue';
 import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
 import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.vue';
 import AvatarPhotoViewer from '../features/survey/presentation/AvatarPhotoViewer.vue';
-import { InvitationAlreadyUsedError, InvalidInvitationError } from '../features/survey/application/errors';
+import { InvitationAlreadyUsedError, InvalidInvitationError, SubmissionAlreadyCompletedError } from '../features/survey/application/errors';
+import { classifyNetworkError } from '../features/survey/application/networkError';
+import { logger } from '../infrastructure/logging/logger';
+import { metrics } from '../infrastructure/metrics/metrics';
 import { APP_SERVICES_KEY, type AppServices } from './bootstrap';
 
 function requireAppServices(): AppServices {
@@ -52,18 +55,24 @@ let pressTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressTriggered = false;
 
 function handleQuestionSelect(optionId: OptionId) {
+  // Una pulsación larga abre el visor y, al soltar, el navegador emite también
+  // un click. Sin esta guarda la opción quedaría seleccionada sin querer.
+  if (longPressTriggered) return;
   seleccionarRespuesta(optionId);
 }
 
 function handleQuestionLongPressStart(multimedia: Multimedia) {
-  handlePressStart(multimedia, new Event('mousedown') as MouseEvent | TouchEvent);
+  handlePressStart(multimedia);
 }
 
 function handleQuestionLongPressEnd() {
-  handlePressEnd(new Event('mouseup') as MouseEvent | TouchEvent);
+  handlePressEnd();
 }
 
 function iniciarVisor(multimedia: Multimedia) {
+  // El asset puede no existir en el despliegue: se cuenta el intento para que
+  // el dato llegue a tiempo, sin exponer la ruta del archivo en la métrica.
+  if (multimedia.unavailable) metrics.increment('multimedia_failed');
   multimediaActual.value = multimedia;
   visorMultimediaAbierto.value = true;
   longPressTriggered = true;
@@ -74,28 +83,19 @@ function cerrarVisorMultimedia() {
   multimediaActual.value = null;
 }
 
-function handlePressStart(multimedia: Multimedia, event: MouseEvent | TouchEvent) {
+function handlePressStart(multimedia: Multimedia) {
   longPressTriggered = false;
   pressTimer = setTimeout(() => {
     iniciarVisor(multimedia);
   }, 300);
 }
 
-function handlePressEnd(event: MouseEvent | TouchEvent) {
+function handlePressEnd() {
   if (pressTimer) {
     clearTimeout(pressTimer);
     pressTimer = null;
   }
   setTimeout(() => { longPressTriggered = false; }, 10);
-}
-
-function handleClick(opcionId: OptionId, event: MouseEvent | TouchEvent) {
-  if (longPressTriggered) return;
-  seleccionarRespuesta(opcionId);
-}
-
-function handleMultimediaKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') cerrarVisorMultimedia();
 }
 
 const puedeContinuarLogin = computed(() => palabraSecreta.value.trim().length > 0 && !enviando.value);
@@ -115,6 +115,10 @@ async function validarPalabraSecreta() {
 
   try {
     const secreta = palabraSecreta.value.trim();
+    // La palabra secreta es el dato más sensible del flujo: se registra como
+    // secreto antes de usarla, para que el logger la elimine de cualquier
+    // mensaje o contexto que se emita después.
+    logger.registerSecret(secreta);
     const encontrado = await appServices.validateInvitation(secreta);
     codigo.value = encontrado;
     cambiarPaso('welcome');
@@ -124,8 +128,9 @@ async function validarPalabraSecreta() {
     } else if (e instanceof InvalidInvitationError) {
       loginError.value = 'La palabra secreta es incorrecta. Revisa lo que te ha llegado en la invitación.';
     } else {
-      console.error(e);
-      error.value = 'Ha ocurrido un error al comprobar la palabra secreta. Inténtalo de nuevo.';
+      const fallo = classifyNetworkError(e);
+      logger.error('fallo al validar la invitación', { error: e, kind: fallo.kind });
+      error.value = fallo.userMessage;
     }
   } finally {
     enviando.value = false;
@@ -134,6 +139,7 @@ async function validarPalabraSecreta() {
 
 function avanzarDesdeBienvenida() {
   iniciarEncuesta();
+  metrics.increment('survey_started');
 }
 
 async function responderYPasarSiguiente() {
@@ -157,10 +163,30 @@ async function responderYPasarSiguiente() {
       answers: { ...respuestas },
     });
     mensaje.value = '¡Respuestas guardadas correctamente en MentiPremios!';
+    metrics.increment('submission_succeeded');
+    // El servidor marca la invitación como usada dentro de la misma transacción
+    // que escribe la respuesta, así que un envío correcto la consumió.
+    metrics.increment('invitation_used');
     cambiarPaso('done');
   } catch (e) {
-    console.error(e);
-    error.value = 'Ha ocurrido un error al guardar tus respuestas. Inténtalo de nuevo.';
+    // Si el servidor dice que la invitación ya se usó, es que un intento
+    // anterior sí llegó a guardarse: la respuesta está a salvo aunque la
+    // respuesta HTTP se perdiera por el camino. Se trata como acierto para no
+    // pedir a la persona que escriba otra vez lo que ya está en Firestore.
+    if (e instanceof InvitationAlreadyUsedError || e instanceof SubmissionAlreadyCompletedError) {
+      logger.warn('el envío llegó tarde: la invitación ya estaba usada', { kind: 'already-used' });
+      mensaje.value = 'Tus respuestas ya estaban guardadas de un intento anterior. ¡Gracias!';
+      metrics.increment('submission_succeeded');
+      metrics.increment('invitation_used');
+      cambiarPaso('done');
+      return;
+    }
+    // Solo el mensaje del error: el contexto lleva el error completo y el
+    // logger se encarga de quitar palabra secreta, nombre y respuestas.
+    const fallo = classifyNetworkError(e);
+    logger.error('fallo al enviar la encuesta', { error: e, kind: fallo.kind });
+    metrics.increment('submission_failed');
+    error.value = fallo.userMessage;
   } finally {
     enviando.value = false;
   }
@@ -177,10 +203,6 @@ function cerrarVisorFoto() {
 function volverAtras() {
   if (!puedeVolverAtras.value) return;
   volverPregunta();
-}
-
-function handleModalKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') cerrarVisorFoto();
 }
 </script>
 

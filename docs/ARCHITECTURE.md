@@ -2,50 +2,109 @@
 
 ## Vista general
 
-MentiPremios es una **Single Page Application (SPA)** construida con **Vue 3 + TypeScript** y Cloud Functions. El navegador no accede directamente a Firestore: valida invitaciones y envía respuestas mediante callables autenticadas con App Check. La aplicación sigue un wizard de cuatro pasos donde los usuarios introducen una palabra secreta, reciben una bienvenida personalizada, responden 10 preguntas y ven una confirmación.
+MentiPremios es una **Single Page Application (SPA)** construida con **Vue 3 + TypeScript** y Cloud Functions. El navegador no accede directamente a Firestore: valida invitaciones y envía respuestas mediante callables autenticadas con App Check. La aplicación sigue un wizard de cuatro pasos donde las personas introducen una palabra secreta, reciben una bienvenida personalizada, responden 10 preguntas y ven una confirmación.
 
 ```
 index.html
   └── src/main.ts                     ← Bootstrap de Vue 3
-        └── src/App.vue               ← Único componente (wizard de 4 pasos)
-              ├── Template: login → welcome → questions → done
-              ├── Script: Composition API (ref, reactive, computed)
-              └── Style: Scoped CSS (tema verde)
-          ├── Firebase Auth anónimo + App Check
-          └── Cloud Functions callables
-            └── Firebase Admin SDK → Firestore
+        └── src/app/App.vue           ← Shell del wizard: orquesta, no implementa
+              ├── features/survey/presentation/   ← Los seis SFC de cada paso y sus visores
+              ├── features/survey/application/    ← Casos de uso puros (sin Vue)
+              ├── features/survey/domain/         ← Catálogo y reglas puras
+              ├── infrastructure/firebase/        ← Cliente y repositorios
+              ├── infrastructure/logging/         ← Logger con redacción
+              └── infrastructure/metrics/         ← Contadores sin datos sensibles
+                    └── Cloud Functions callables
+                          └── Firebase Admin SDK → Firestore
 ```
 
 ## Estructura de directorios
 
 ```
 src/
-├── app/                     # Shell y composition root
-├── features/survey/         # Dominio, casos de uso y presentación
-├── features/keywords/       # Contrato opcional
-├── infrastructure/firebase/# Cliente y repositorio opcional
-├── main.ts                  # Bootstrap de Vue + servicios
-└── style.css                # Estilos globales
+├── app/                             # Shell y composition root
+│   ├── App.vue                      # 292 líneas: orquesta pasos y conecta casos de uso
+│   └── bootstrap.ts                 # Traduce errores de Firebase a errores de dominio
+├── features/
+│   ├── survey/
+│   │   ├── domain/                  # Catálogo, tipos, reglas de validación, assets
+│   │   ├── application/             # Casos de uso: inviting, envío, wizard, red
+│   │   └── presentation/            # Los seis SFC de interfaz
+│   └── keywords/                    # Contrato opcional de palabras clave
+├── infrastructure/
+│   ├── firebase/                    # Cliente y repositorio Firestore
+│   ├── logging/logger.ts            # Logger con niveles y redacción
+│   └── metrics/metrics.ts           # Contadores cerrados
+├── main.ts                          # Bootstrap de Vue + inyección de servicios
+└── style.css                        # Tokens de diseño y estilos globales
 
 functions/src/
-├── index.ts                 # Callable Functions
-├── validateInvitationHandler.ts
-└── submitSurveyHandler.ts
+├── index.ts                         # Callable Functions
+├── validateInvitationHandler.ts     # Lectura de la invitación
+├── submitSurveyHandler.ts           # Transacción de respuesta + invitación
+├── surveySchema.ts                  # Allowlist de opciones válidas
+├── surveyValidation.ts              # DTO remoto de envío
+└── firestoreSchemas.ts              # Esquemas de lectura y escritura
 
 tests/
-├── unit/                    # Pruebas aisladas, sin red ni Firebase real
-│   ├── domain/              # Reglas puras: validación de respuestas, assets
-│   ├── application/         # Casos de uso y handlers con dobles en memoria
-│   ├── components/          # SFC aislados con Vue Test Utils
-│   ├── infrastructure/      # Adaptadores con el SDK de Firebase simulado
-│   └── contracts/           # Invariantes del repo: tokens, estilos, esquema
-├── integration/             # Composición real con solo los adaptadores externos falsos
-└── e2e/                     # Chromium real sobre el harness
+├── unit/                            # Pruebas aisladas, sin red ni Firebase real
+│   ├── domain/                      # Reglas puras, catálogo, aislamiento
+│   ├── application/                 # Casos de uso y handlers con dobles en memoria
+│   ├── components/                  # SFC aislados con Vue Test Utils
+│   ├── infrastructure/              # Adaptadores con el SDK de Firebase simulado
+│   └── contracts/                   # Invariantes del repo: tokens, logging, esquema
+├── integration/                     # Composición real con solo los adaptadores externos falsos
+└── e2e/                             # Chromium real sobre el harness
 ```
+
+## Capas y regla de dependencia
+
+Las dependencias apuntan hacia dentro, nunca hacia fuera:
+
+```
+presentation  →  application  →  domain
+                                 ↑
+infrastructure  ────────────────┘   (la inyecta bootstrap.ts)
+```
+
+Las cuatro reglas que se sostienen, con el fichero que las verifica:
+
+| Regla | Verificación |
+|---|---|
+| `domain` no importa Vue ni Firebase, ni sale del dominio | `dependencyRules.spec.ts` |
+| `application` no importa componentes | `dependencyRules.spec.ts` |
+| `presentation` no accede directamente a Firestore | `dependencyRules.spec.ts` |
+| `infrastructure` no contiene reglas de interfaz | `dependencyRules.spec.ts` |
+
+Y lo que cada capa hace:
+
+- **`domain/`** no importa Vue, ni `app/`, ni `infrastructure/`, ni ningún paquete que no sea `node:`. Contiene el catálogo de preguntas, los tipos, las reglas de validación y el registro de multimedia.
+- **`application/`** implementa los casos de uso sin componentes. `surveyWizard.ts` calcula el estado del wizard con funciones puras que devuelven un estado nuevo; `useSurveyWizard.ts` es el adaptador que las conecta a `ref` y `reactive`.
+- **`presentation/`** son los seis SFC, sin acceso a Firebase ni a casos de uso. Pueden leer los tipos del dominio, que es la dirección permitida de la flecha.
+- **`app/App.vue`** es el único punto que conoce todas las capas. Recibe `AppServices` por `inject` de la clave que `main.ts` provee a través de `bootstrap.ts`, así que el shell no importa Firebase ni el Admin SDK.
+
+**Excepciones, y por qué existen:**
+
+- `app/` sí importa `firebase/auth` y `firebase/functions`. Es el composition root: si nadie puede conocer el SDK, nadie puede construirlo.
+- `useSurveyWizard.ts` importa Vue, y es el único fichero de `application/` que lo hace. La lógica que vale la pena probar vive en `surveyWizard.ts`, sin Vue.
+- `infrastructure/` puede importar tipos del dominio. Un adaptador implementa un contrato, y ese contrato está en el dominio.
+
+`tests/unit/contracts/dependencyRules.spec.ts` comprueba las cuatro reglas leyendo los ficheros. Se verificó que muerden: al añadir un `import { ref } from 'vue'` al dominio, un `getFirestore` a `presentation`, un SFC a `application` y un `vue` a `infrastructure`, caen seis pruebas. Una guarda que no muerde es indistinguishable de una que no existe.
 
 ## Patrón de componentes
 
-Actualmente **todo el UI está en `src/App.vue`** (~990 líneas). No hay componentes hijos en `src/components/`. El archivo `DEV.md` recomienda dividir en componentes más pequeños cuando la UI crezca.
+`src/app/App.vue` tiene 292 líneas y delega cada pantalla en su propio componente:
+
+| Componente | Responsabilidad | Líneas |
+|---|---|---|
+| `LoginStep.vue` | Palabra secreta, mensajes de campo y de estado | 201 |
+| `WelcomeStep.vue` | Saludo con el nombre de la invitación | 100 |
+| `QuestionStep.vue` | Pregunta, opciones, progreso, pulsación larga | 365 |
+| `CompletionStep.vue` | Confirmación final | 61 |
+| `MultimediaViewer.vue` | Visor modal de foto y vídeo | 177 |
+| `AvatarPhotoViewer.vue` | Foto grupal del avatar | 155 |
+
+El shell conserva el estado entre pasos y pasa hacia abajo datos y eventos; los componentes no emiten nada que no sea una intención de la persona.
 
 ### Gestión de estado
 
@@ -63,24 +122,24 @@ El avance entre pantallas se controla con la variable `pasoActual` de tipo `Paso
 type Paso = 'login' | 'welcome' | 'questions' | 'done';
 ```
 
-Cada paso se renderiza con `v-if` en el template (`src/App.vue:383-533`):
+Cada paso se renderiza con `v-if` en el template de `src/app/App.vue`:
 
 | Paso | Condición | Descripción |
 |------|-----------|-------------|
 | `login` | `pasoActual === 'login'` | Input de palabra secreta + botón de entrada |
-| `welcome` | `pasoActual === 'welcome'` | Saludo personalizado con el nombre del usuario |
+| `welcome` | `pasoActual === 'welcome'` | Saludo personalizado con el nombre de la persona |
 | `questions` | `pasoActual === 'questions'` | Preguntas una a una con opciones |
 | `done` | `pasoActual === 'done'` | Mensaje de agradecimiento |
 
 Transiciones:
 - `login → welcome`: `validarPalabraSecreta()` invoca `validateInvitation` en Cloud Functions
-- `welcome → questions`: `avanzarDesdeBienvenida()` inicia el cuestionario (`src/App.vue:237-241`)
-- `questions → done`: `responderYPasarSiguiente()` guarda respuestas y marca código como usado (`src/App.vue:243-270`)
+- `welcome → questions`: `avanzarDesdeBienvenida()` inicia el cuestionario y cuenta `survey_started`
+- `questions → done`: `responderYPasarSiguiente()` guarda respuestas y pide al servidor marcar el código como usado
 
 ## Flujo de datos
 
 ```
-Usuario escribe palabra secreta
+Persona escribe la palabra secreta
   → validateInvitation(secreta)                ← Callable autenticada + App Check
     → Admin SDK: lectura de codigos/{secreta}
     → Respuesta: solo nombre visible del participante
@@ -88,17 +147,17 @@ Usuario escribe palabra secreta
     → ¿usado === true? → Error "ya has respondido"
     → ¿usado === false? → Avanza a welcome
 
-Usuario ve bienvenida y pulsa "Empezar la encuesta"
-  → Avanza a questions, índice = 0
+Ve la bienvenida y pulsa "Empezar la encuesta"
+  → Avanza a questions, índice = 0, survey_started +1
 
-Usuario responde 10 preguntas una a una
+Responde 10 preguntas una a una
   → Cada respuesta se acumula en respuestas[id] = opcionId
   → Navegación: next (acumula y avanza) / back (restaura respuesta anterior)
 
 En la última pregunta, pulsa "Enviar y cerrar"
   → submitSurvey({ invitationId, answers })         ← Callable Function
   → Firestore transaction: create respuesta + marcar invitación usada
-  → Avanza a done
+  → Avanza a done, submission_succeeded +1, invitation_used +1
 ```
 
 ## Modelo de datos (Firestore)
@@ -141,22 +200,39 @@ La UI valida invitaciones mediante la callable `validateInvitation`; el servidor
 
 `FirestoreKeywordsRepository.save` escribe en `palabrasClave` con un timestamp del servidor.
 
+## Manejo de errores
+
+`src/features/survey/application/networkError.ts` clasifica todo fallo en cinco tipos: `offline`, `timeout`, `permission`, `unavailable` y `unknown`. La clasificación es una decisión de negocio, no de presentación, así que vive en `application` y no en `app/`.
+
+El orden de las señales es deliberado: primero `navigator.onLine`, porque si el navegador sabe que no hay red no tiene sentido interpretar nada más; después el código de Firebase, comparado contra conjuntos cerrados; y por último el texto, solo cuando no hay código. Los envoltorios propios guardan la causa en `cause` y la clasificación la desenvuelve, para que el código real de Firebase no se pierda al cruzar una frontera de capa.
+
+Los errores de dominio (`invitation-already-used`, `invalid-invitation`) conservan su mensaje propio. Durante el envío, `invitation-already-used` y `submission-already-completed` se tratan como acierto, porque significan que un intento anterior sí se guardó. `docs/RECOVERY.md` explica por qué esa interpretación es fiable.
+
+## Observabilidad
+
+Dos piezas, con la misma postura de no recoger datos personales:
+
+- **`infrastructure/logging/logger.ts`**: niveles, redacción recursiva de secretos registrados y campos con nombres sensibles, límites de profundidad y tamaño. En producción solo escribe `error`. Las Cloud Functions pueden seguir usando `console.error` porque su destino es Cloud Logging; `tests/unit/contracts/logging.spec.ts` prohíbe el `console.*` en `src/`.
+- **`infrastructure/metrics/metrics.ts`**: contadores cerrados (`survey_started`, `submission_succeeded`, `submission_failed`, `invitation_used`, `multimedia_failed`). La ausencia de datos sensibles no depende de la prudencia de quien llama: los nombres son una constante y la API no admite contexto libre.
+
 ## Multimedia
 
-Las imágenes y vídeos de las preguntas se cargan con `import.meta.glob` de Vite (`src/App.vue:4`):
+Las imágenes y vídeos de las preguntas se cargan con `import.meta.glob` de Vite (`src/features/survey/domain/multimediaRegistry.ts`):
 
 ```typescript
-const multimediaAssets = import.meta.glob('./assets/{mensaje,foto,video}-*.{jpg,mp4}', 
-  { eager: true, query: '?url', import: 'default' });
+const multimediaAssets = import.meta.glob<string>(
+  '../../../assets/{mensaje,foto,video}-*.{jpg,mp4,webm}',
+  { eager: true, query: '?url', import: 'default' },
+);
 ```
 
-Esto permite que Vite procese y hashee los archivos en build. Las preguntas con multimedia (`mensaje`, `foto`, `video`) muestran miniaturas en las opciones y un visor modal con **detección de pulsación larga** (300ms) para ver a pantalla completa (`src/App.vue:163-187`).
+El registro resuelve en build y, si un archivo no existe, cae en `/media-unavailable.svg` y marca la entrada como `unavailable`; abrir ese visor incrementa `multimedia_failed`. Las preguntas con multimedia (`mensaje`, `foto`, `video`) muestran miniaturas en las opciones y un visor modal con **detección de pulsación larga** (300ms) para ver a pantalla completa, mientras que un clic normal selecciona la opción.
 
-El visor de foto del avatar (foto grupal) se abre con un click normal (`abrirVisorFoto`, línea 272).
+La foto grupal del avatar es la excepción: no pasa por el registro, y su ruta está escrita a mano en `src/style.css:105` y en `AvatarPhotoViewer.vue`.
 
 ## CSS y theming
 
-El tema usa un esquema de color verde:
+El tema usa un esquema de color verde definido como custom properties en `src/style.css`:
 
 ```css
 --color-primary: #90ee90;
@@ -165,10 +241,12 @@ El tema usa un esquema de color verde:
 --color-background: #f6fff6;
 ```
 
-Los estilos se dividen en:
-- **`src/style.css`**: estilos globales, custom properties, clases utilitarias (`.field`, `.button-primary`, `.footer`, `.hero-title`, `.progress-bar`, `.status`)
-- **`src/App.vue` `<style>`**: estilos scoped del componente (`.app-shell`, `.app-header`, `.photo-modal`, `.options-grid`, `.option-card`)
+Los tokens cubren color, tipografía, tamaño de línea y espaciado. Los estilos se dividen en:
+- **`src/style.css`**: tokens, estilos globales y clases utilitarias (`.field`, `.button-primary`, `.footer`, `.hero-title`, `.progress-bar`, `.status`)
+- **Cada SFC `<style>`**: estilos scoped (`.options-grid`, `.option-card`, `.photo-modal`…)
 - Diseño responsive con breakpoint en 640px
+
+`tests/unit/contracts/designTokens.spec.ts` y `styleScope.spec.ts` vigilan que los tokens y el CSS scoped no se dupliquen ni se pierdan.
 
 ## Testing
 
@@ -182,11 +260,11 @@ Los estilos se dividen en:
 
 | Nivel | Qué ejercita | Doble de frontera | Ejecución |
 |---|---|---|---|
-| `tests/unit/domain` | Reglas puras y catálogo de assets, sin Vue | Ninguno | `npm run test:unit -- --run` |
-| `tests/unit/application` | Casos de uso del cliente y handlers de Cloud Functions | Repositorios y stores en memoria | `npm run test:unit -- --run` |
+| `tests/unit/domain` | Reglas puras, catálogo de assets, aislamiento | Ninguno | `npm run test:unit -- --run` |
+| `tests/unit/application` | Casos de uso del cliente, clasificación de red y handlers de Cloud Functions | Repositorios y stores en memoria | `npm run test:unit -- --run` |
 | `tests/unit/components` | Cada SFC por separado con Vue Test Utils | Ninguno | `npm run test:unit -- --run` |
-| `tests/unit/infrastructure` | Adaptadores de Firebase | SDK de Firebase simulado | `npm run test:unit -- --run` |
-| `tests/unit/contracts` | Tokens, estilos, esquema Firestore y estructura del repo | Lectura de ficheros | `npm run test:unit -- --run` |
+| `tests/unit/infrastructure` | Logger, métricas y adaptadores de Firebase | SDK de Firebase simulado | `npm run test:unit -- --run` |
+| `tests/unit/contracts` | Tokens, estilos, logging, esquema Firestore, contratos de repositorio y estructura | Lectura de ficheros | `npm run test:unit -- --run` |
 | `tests/integration` | Composición de la app completa | Solo `AppServices` externos | `npm run test:integration -- --run` |
 | `tests/e2e` | Flujo real en Chromium, móvil y escritorio | `AppServices` simulados en el harness | `npm run test:e2e` |
 
@@ -196,33 +274,47 @@ Los estilos se dividen en:
 
 | Archivo | Nivel | Casos |
 |---|---|---|
-| `tests/integration/App.spec.ts` | Integración | Login (input, botón, errores), Welcome (nombre), Questions (selección, progreso, navegación, guardado, thank-you), Visor de foto |
-| `tests/integration/bootstrap.spec.ts` | Integración | Composición e invocación callable |
+| `tests/integration/App.spec.ts` | Integración | Login, bienvenida, preguntas, navegación atrás, payload exacto, payload de red, errores de red, métricas, logging, multiselección |
+| `tests/integration/bootstrap.spec.ts` | Integración | Composición, invocación callable y traducción de errores |
 | `tests/unit/application/submitSurvey.spec.ts` | Unitario | Validación, construcción del payload, orden de persistencia, reintento |
+| `tests/unit/application/networkError.spec.ts` | Unitario | Los cinco tipos de fallo, causas envueltas y mensajes |
 | `tests/unit/application/submitSurveyHandler.spec.ts` | Unitario | Autenticación, idempotencia y operaciones de servidor |
-| `tests/unit/domain/survey.rules.spec.ts` | Unitario | Respuestas completas, opciones inválidas, preguntas desconocidas |
+| `tests/unit/domain/isolation.spec.ts` | Unitario | Que el dominio no importe presentación ni infraestructura |
+| `tests/unit/infrastructure/logger.spec.ts` | Unitario | Niveles, redacción y límites del logger |
+| `tests/unit/infrastructure/metrics.spec.ts` | Unitario | Catálogo cerrado, incrementos inválidos y ausencia de contexto |
+| `tests/unit/contracts/*` | Unitario | Invariantes del repositorio |
 
 ## CI/CD
 
 El workflow de GitHub Actions (`.github/workflows/tests.yml`) ejecuta en push/PR a `main`:
+
+Job `test`:
 1. `actions/checkout@v4`
 2. `actions/setup-node@v4` con Node 20 y cache npm
-3. `npm ci`
-4. `npm run lint`
-5. `npm run test:unit -- --run`
-6. `npm run test:integration -- --run`
+3. `npm ci` y `npm ci --prefix functions`
+4. `npm --prefix functions run build`
+5. `npm run typecheck`
+6. `npm run lint`
+7. `npm run test:unit -- --run`
+8. `npm run test:integration -- --run`
+9. `npm run build`
 
-Un job `e2e` paralelo instala Chromium y ejecuta `npm run test:e2e`.
+Job `e2e` en paralelo instala Chromium, ejecuta `npm run test:e2e` y sube el informe de Playwright como artefacto.
 
 ## Decisiones arquitectónicas clave
 
 | Decisión | Alternativa | Motivo |
 |---|---|---|
-| **Componente único** (App.vue ~990 líneas) | Dividir en componentes | App pequeña, 4 pasos lineales. Refactorizar cuando crezca |
+| **Shell de 292 líneas + seis SFC** | Un único `App.vue` de ~990 líneas | Cada paso se prueba y se lee por separado; el shell solo orquesta |
+| **Wizard con funciones puras** | Lógica del wizard dentro de `computed` del componente | `surveyWizard.ts` se prueba sin montar Vue y sin mocks |
 | **Sin Vue Router** | `vue-router` | Solo 4 pantallas en secuencia fija, sin URL routing |
-| **Sin Pinia** | Pinia/Vuex | Todo el estado es local a un solo componente |
+| **Sin Pinia** | Pinia/Vuex | Todo el estado es local a un solo shell |
 | **`v-if` para pasos** | Componentes dinámicos | Simple, claro, sin abstracciones innecesarias |
-| **Capa de servicio** | Lógica Firestore en App.vue | Separación de concerns, testabilidad |
+| **Dominio sin framework** | Importar Vue en el dominio | Hace la regla de dependencia verificable con una prueba |
+| **Capa de servicio** | Lógica Firestore en el shell | Separación de responsabilidades y testabilidad |
 | **Alias español en servicios** | Solo nombres en inglés | API bilingüe para facilitar contribuciones |
 | **Mock de servicios en tests** | Mock de Firestore | Tests más simples y predecibles |
-| **Pulsación larga para multimedia** | Click normal | Permite seleccionar la opción con click y ver detalle con pulsación larga |
+| **Pulsación larga para multimedia** | Click normal | Permite seleccionar la opción con clic y ver el detalle con pulsación larga |
+| **Errores de red en `application`** | Clasificar en el componente | Es una decisión de negocio: qué se reintenta y qué ve la persona |
+| **Sin persistencia en el navegador** | `sessionStorage` con borrador | Los datos personales no sobreviven al cierre de la pestaña (`docs/RECOVERY.md`) |
+| **`console.error` permitido en Functions** | Regla global | Su destino es Cloud Logging, que ya conoce el contexto de la invocación de la invocación |

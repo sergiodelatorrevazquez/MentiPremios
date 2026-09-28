@@ -969,7 +969,7 @@ Resultado: se fijo el formato definitivo en los tres puntos donde el payload cam
 
 # Fase 11: observabilidad y operacion
 
-## TODO-062. Crear logging controlado
+## TODO-062. Crear logging controlado [COMPLETADO]
 
 Evitar `console.error` directo en componentes. Crear un logger que permita:
 
@@ -978,7 +978,9 @@ Evitar `console.error` directo en componentes. Crear un logger que permita:
 - No exponer datos personales innecesarios.
 - Desactivar logs detallados en produccion.
 
-## TODO-063. Anadir metricas basicas
+Resultado: se anadio `src/infrastructure/logging/logger.ts`, con una instancia `logger` que sustituye a los dos `console.error` de `App.vue` y ofrece cuatro niveles. La proteccion de datos tiene tres capas. Primera, `registerSecret` acepta la palabra secreta en cuanto el usuario la escribe, antes de usarla, y el logger la elimina de cualquier mensaje o contexto posterior, includedo el texto de un `Error`. Segunda, `redactValue` sustituye por `[redactado]` toda clave cuyo nombre, normalizado a minusculas y sin separadores, coincida con una lista de terminos sensibles o termine en uno de ellos: cubre `secret`, `palabra_secreta`, `participantName`, `nombre`, `usuario`, `uid`, `answers`, `respuestas`, `invitationId`, `responseId`, `apiKey` y los tokens de autenticacion, tambien en objetos anidados, y funciona en `snake_case`, `camelCase` y `kebab-case`. Tercera, los valores no serializables se describen en lugar de romperse: un `Error` se reduce a nombre y mensaje sin arrastrear `stack` ni propiedades propias, las funciones y simbolos se etiquetan, la recursion se corta a cuatro niveles, los arrays se limitan a veinte elementos y las cadenas a 200 caracteres indicando cuanto sobra. El logger se silencia por debajo de `error` en produccion mediante `minimumLevelFor(import.meta.env.PROD)`, de modo que alli no sale ni un `debug`. La redaccion ocurre al construir la entrada, no al escribirla, para que ningun destino, nuevo o antiguo, reciba el dato en claro; `setSink(null)` desactiva la salida por completo. En Cloud Functions se mantiene `console.error` porque ahi la consola es el sink real de Cloud Logging; lo delimita `tests/unit/contracts/logging.spec.ts`, que ademas falla si algun modulo de `src/` vuelve a escribir en consola por su cuenta. Ese contrato obliga a instalar `@typescript-eslint/eslint-plugin`: la regla base de ESLint marcaba como variables sin usar los parametros de tipo, y con el logger los falsos positivos pasaron de 25 a 36. Con la regla de typescript-eslint y eliminando tres handlers muertos de `App.vue` (`handleClick`, `handleMultimediaKeydown` y `handleModalKeydown`) mas los parametros `event` que nadie usaba, `npm run lint` queda por primera vez sin un solo warning. Al eliminar `handleClick` se destapo un defecto real: `longPressTriggered` solo se escribia, nunca se leia, asi que una pulsacion larga sobre una opcion con multimedia abria el visor y ademas seleccionaba la respuesta. Ahora `handleQuestionSelect` respeta la guarda, con dos pruebas que cubren tanto el no-seleccion tras la pulsacion larga como la seleccion normal posterior. Las suites quedan en 240 unitarias y 42 de integracion.
+
+## TODO-063. Anadir metricas basicas [COMPLETADO]
 
 Medir, sin datos sensibles:
 
@@ -988,9 +990,11 @@ Medir, sin datos sensibles:
 - Invitaciones usadas.
 - Fallos de multimedia.
 
-## TODO-064. Anadir manejo de errores de red
+Resultado: se anadio `src/infrastructure/metrics/metrics.ts` con los cinco contadores pedidos, `survey_started`, `submission_succeeded`, `submission_failed`, `invitation_used` y `multimedia_failed`. La garantia de que no haya datos sensibles no depende de la prudencia de quien llame, sino de la forma de la API: los nombres son una constante cerrada `METRIC_NAMES`, `increment` solo admite un nombre de esa lista y una cantidad opcional, y no existe forma de pasar contexto. Una prueba fija ademas que la aridad de `increment` es 1 y que ningun nombre del catalogo contiene `name`, `secret` ni `token`. Los incrementos invalidos (negativos, `NaN`, infinitos o de otro tipo) se descartan y avisan por el logger en lugar de contaminar el contador, y `snapshot()` devuelve una copia para que nadie pueda escribir en los contadores. En `App.vue` se incrementa `survey_started` al pasar de bienvenida a preguntas, `submission_succeeded` e `invitation_used` cuando el envio se acepta (el servidor marca la invitacion como usada en la misma transaccion que escribe la respuesta, asi que un envio correcto la consumio), `submission_failed` en cada intento fallido, y `multimedia_failed` al abrir el visor de un asset marcado como no disponible. Hay siete pruebas de integracion que comprueban la cuenta en el flujo real, incluidas dos que differentiates el acierto del fallo y que un reintento acertado no infla el contador de fallos. En desarrollo cada incremento pasa por el logger en `debug`; en produccion no hay destino, de modo que las metricas se acumulan en memoria y nadie las imprime. Las suites quedan en 252 unitarias y 48 de integracion.
 
-Distinguir:
+## TODO-064. Anadir manejo de errores de red [COMPLETADO]
+
+Diferenciar claramente:
 
 - Sin conexion.
 - Timeout.
@@ -998,7 +1002,9 @@ Distinguir:
 - Servicio no disponible.
 - Error desconocido.
 
-## TODO-065. Documentar recuperacion ante fallos
+Resultado: se anadio `src/features/survey/application/networkError.ts`, con `classifyNetworkError` como unica puerta de entrada y cinco categorias (`offline`, `timeout`, `permission`, `unavailable`, `unknown`). Vive en `application` y no en `app` porque es una decision de negocio —que se puede reintentar y que texto ve la persona—, no un detalle de presentacion. La clasificacion se apoya en tres senales por orden de fiabilidad: primero `navigator.onLine`, porque si el navegador sabe que no hay red no tiene sentido interpretar el resto; despues el codigo de Firebase o del navegador, que se compara contra conjuntos cerrados en lugar de subcadenas sueltas; y por ultimo el texto, solo cuando no hay codigo. Sin conexion gana siempre, incluso si el error dice `permission-denied`, porque apagar el movil produce los dos codigos a la vez y a la persona lo que le importa es que se vaya a arreglar al volver a tener cobertura. `unavailable` se separa de `offline` a proposito: uno significa "vuelve en un momento" y el otro "revisa tu red". Todos los tipos son reintentables, y las pruebas lo fijan para que nadie marque un caso terminal por descuido. Los envoltorios propios (`PersistenceError`) guardan ahora la causa original en `cause`, y `classifyNetworkError` la desenvuelve, porque si no se habria perdido el codigo real de Firebase en cuanto el error cruzaba una frontera de capa. `App.vue` usa la clasificacion en la validacion de la invitacion y en el envio, y anade el tipo a los logs sinSensitive; los errores de dominio (`invitation-already-used`, `invalid-invitation`) conservan su mensaje propio y no pasan por aqui. Las suites quedan en 273 unitarias y 53 de integracion.
+
+## TODO-065. Documentar recuperacion ante fallos [COMPLETADO]
 
 Definir que ocurre si:
 
@@ -1007,11 +1013,35 @@ Definir que ocurre si:
 - El servidor responde tarde.
 - El codigo queda marcado pero la pantalla no cambia.
 
+Resultado: se creo `docs/RECOVERY.md`, con los cuatro escenarios escritos como
+comportamiento y no como intencion, y una tabla que dice para cada uno si se
+pierden datos, que ve la persona y si tiene que reescribir. Escribirlo destapo
+un fallo real: si la transaccion llegaba a guardarse y lo que se perdia era la
+respuesta HTTP, el reintento devolvia "invitacion ya usada" y la aplicacion lo
+pintaba como error desconocido, pidiéndole a la persona que reescribiera veinte
+respuestas que ya estaban en Firestore. Ahora `App.vue` trata
+`invitation-already-used` y `submission-already-completed` durante el envio como
+un acierto con explicacion, sin contar `submission_failed`, y una prueba fija
+que ni el mensaje de error ni las metricas contradicen esa pantalla. La
+confianza de esa rama no es una suposicion: el servidor marca la invitacion
+como usada dentro de la misma transaccion que escribe la respuesta, asi que o
+pasan las dos cosas o no pasa ninguna, y no existe un estado intermedio que la
+pudiera hacer mentir. La escritura diferida reduce la ventana de ese caso pero
+no la cierra, y por eso el documento no la trata como una solucion. Para el
+cierre de pestana la decision es no guardar nada en el navegador y asumir que
+se pierde todo, y el documento explica por que: guardar la palabra secreta o
+las respuestas en `localStorage` convertiria un ordenador compartido en un
+sitio donde se leen datos de otra persona. Para la invitacion consumida con la
+pantalla sin cambiar, el documento justifica no sondear al servidor en cada
+cambio de pantalla porque serian diez peticiones para cerrar un caso que el
+propio envio ya cierra. Las pruebas que sostienen cada afirmacion estan
+citadas al final del propio documento.
+
 ---
 
 # Fase 12: documentacion
 
-## TODO-066. Actualizar `ARCHITECTURE.md`
+## TODO-066. Actualizar `ARCHITECTURE.md` [COMPLETADO]
 
 Documentar la arquitectura real despues de cada fase:
 
@@ -1022,7 +1052,31 @@ Documentar la arquitectura real despues de cada fase:
 - Casos de uso.
 - Adaptadores.
 
-## TODO-067. Actualizar `API.md`
+Resultado: el documento estaba describiendo una aplicacion que ya no existe.
+Se reescribio entero en lugar de parchearlo, porque las afirmaciones
+equivocadas no eran localizables: decia que todo el UI vivia en un `src/App.vue`
+de unas 990 lineas, cuando el shell ocupa 292 y la interfaz son seis SFC en
+`features/survey/presentation/`; colocaba los tests de assets en `domain/` con
+una lista de ficheros que ya no correspondia; y describia un patron de
+componentes que habia sido exactamente lo que se habia eliminado. El documento
+nuevo cubre los seis puntos pedidos, con la regla de dependencia
+`presentation → application → domain` y `infrastructure` inyectada desde
+`main.ts` a traves de `bootstrap.ts`, la tabla de componentes con su
+responsabilidad y sus lineas, los casos de uso, los adaptadores y el flujo de
+datos completo con las metricas en su sitio. Escribir la seccion de capas sirvio
+para comprobar que la regla "el dominio no importa Vue" llevaba varias
+iteraciones sin verificarse de forma automatizada; ahora
+`tests/unit/domain/isolation.spec.ts` la comprueba leyendo ficheros. Tambien se
+documentaron las dos piezas de observabilidad y el modulo de errores de red, que
+se habian anadido sin seccion propia. Al revisarlo aparecieron tres referencias
+rotas en otros ficheros, corregidas en el mismo commit: `DEV_SETUP.md` apuntaba
+a `src/App.vue:37-146` para anadir preguntas, proponia crear colecciones
+escribiendo `addDoc` desde el navegador (imposible, las reglas lo niegan) y
+describia cambiar la foto del avatar tocando un `.avatar-circle` sin URL, cuando
+la ruta esta escrita a mano en dos sitios. `API.md` tambien apuntaba al antiguo
+`src/App.vue`.
+
+## TODO-067. Actualizar `API.md` [COMPLETADO]
 
 Alinear la documentacion con:
 
@@ -1032,7 +1086,33 @@ Alinear la documentacion con:
 - Errores reales.
 - Operaciones disponibles.
 
-## TODO-068. Actualizar la guia de despliegue
+Resultado: el documento no estaba equivocado, estaba incompleto, y esa es
+la forma de error que tarda mas en saltar. Las colecciones se describian bien
+salvo por un campo: `codigos` no documentaba `responseId`, que es precisamente
+el campo del que depende la idempotencia del reenvio, el unico que explica por
+que un reintento puede distinguir "ya guardado" de "nunca guardado". El
+apartado de DTOs no existia, asi que se escribio con las reglas que el codigo
+impone de verdad: el JSON del envio no puede pasar de 4096 bytes, las claves del
+objeto tienen que ser exactamente dos, `invitationId` no puede llevar espacios en
+los extremos ni `/`, y `answers` tiene que traer las diez preguntas de la
+allowlist. Eso ultimo es la garantia que evita que alguien envie respuestas
+inventadas con `curl`, y no estaba escrita en ningun sitio. Se documento tambien
+que la allowlist vive en el servidor y no se deriva del catalogo del cliente, que
+los documentos v2 exigen exactamente cinco claves, y que el nombre se copia de
+la invitacion en lugar de venir del cliente, que es la razon por la que el DTO
+remoto no lo transporta. La seccion nueva de codigos de error conecta lo que
+lanza el servidor con lo que hace el cliente, tabla que no existia y que es la
+que hace util la clasificacion del TODO-064: cada `HttpsError` tiene su
+traduccion, y las que no la tienen caen en `classifyNetworkError`. Quedo escrito
+por que `invalid-argument` y `not-found` se colapsan en el mismo error de
+cliente, que es una decision y no un descuido. Y se corrigio la nota final sobre
+multimedia: decia que los archivos debian añadirse "para que las opciones
+funcionen correctamente", cuando lo que ya hay es un camino de reserva que
+funciona, muestra un marcador, marca la opcion como no disponible y cuenta
+`multimedia_failed`; el texto nuevo dice que el hueco es detectable desde el
+propio producto.
+
+## TODO-068. Actualizar la guia de despliegue [COMPLETADO]
 
 Documentar:
 
@@ -1043,7 +1123,38 @@ Documentar:
 - Rollback.
 - Gestion de assets.
 
-## TODO-069. Crear reglas de dependencia
+Resultado: la guia cubria variables, reglas, funciones y assets, pero las dos
+secciones que faltaban eran las que se pagan cuando ya ha salido un problema.
+Se escribio "Migraciones" sin inventar un framework que el proyecto no tiene:
+lo que hace falta son tresProcedimientos reales y sus trampas. La siembra, con
+la regla de que el ID tiene que ir en minusculas porque cliente y servidor
+normalizan con `trim()` y `toLowerCase()`, de modo que un documento con
+mayusculas es invisible y la unica forma de arreglarlo es renombrarlo, no tocar
+la interfaz. El cambio del catalogo, con la advertencia de que
+`SURVEY_OPTION_IDS` y `questions.ts` tienen que moverse en el mismo despliegue
+y de que el fallo no aparece en local, porque en local el catalogo de pruebas no
+pasa por la allowlist. Y los documentos v2 con un campo extra, que es el caso
+mas peligroso de los tres: el parser exige exactamente cinco claves, asi que
+anadir `updatedAt` a una respuesta ya guardada hace que el reintento deje de ser
+idempotente. Se escribio "Rollback" por comandos, con `firebase functions:rollback`
+para las funciones, redeploy del commit anterior para la web, y el aviso de que
+las reglas son la ultima linea de defensa y hay que mirarlas desplegarlas. Se
+documento tambien que no hay estados intermedios que reparar porque la
+transaccion es atomica, y como se arregla a mano una invitacion que quedo
+marcada. En "Gestion de assets" se escribieron las cuatro reglas que no eran
+obvias: anadir un asset exige reconstruir porque `import.meta.glob` se resuelve
+en build, los videos necesitan la pareja mp4 y webm, el hash del nombre impide
+corregir una imagen sin redesplegar, y la foto del avatar es la excepcion que
+no pasa por el registro. Ademas se corrigieron tres cosas que ya estaban
+equivocadas: el `firebase.json` del repositorio no declara hosting, asi que la
+opcion C necesita `firebase init hosting`; el yaml del CI estava copiado con la
+mitad de los pasos y no incluia typecheck, el build de functions, las pruebas
+de integracion, el build ni el job de e2e; y la lista de comprobacion pedia
+`npm test -- --run`, un script que no existe. Se anadio tambien el orden de
+despliegue, funciones antes que web, porque al reves la version nueva pide un
+DTO que el backend antiguo rechaza.
+
+## TODO-069. Crear reglas de dependencia [COMPLETADO]
 
 Documentar y revisar que:
 
@@ -1054,7 +1165,33 @@ presentation no accede directamente a Firestore
 infrastructure no contiene reglas de interfaz
 ```
 
-## TODO-070. Crear guia de contribucion
+Resultado: al revisar, dos de las cuatro reglas no existian. `application` podia
+importar un SFC y `presentation` podia llamar a `getFirestore` sin que nada se
+enterara, y `infrastructure` podia acabar decidiendo como se ve algo. La regla del
+dominio si existia, pero vivia en `tests/unit/domain/isolation.spec.ts` mezclada
+con comprobaciones que no son reglas de dependencias, y con un regex que
+buscaba `from 'vue'` y por eso no habria pillado un `import type` reescrito de
+otra forma. Se creo `tests/unit/contracts/dependencyRules.spec.ts`, que
+resuelve los especificadores relativos a rutas absolutas antes de decidir, asi
+que la comprobacion no depende de como este escrito el import: cubre
+`import`, `export ... from` e `import()` dinamico. Las cuatro reglas quedan
+escritas como tabla, con la comprobacion al lado. Lo importante es que se
+verifico que muerden: se anadieron a proposito un `import { ref } from 'vue'` al
+dominio, un `getFirestore` a `presentation`, un SFC a `application` y un `vue` a
+`infrastructure`, y cayeron seis pruebas; despues se restauraron los ficheros.
+Una guarda que no falla nunca es indistinguible de una que no existe, y esa es
+justamente la prueba que hay que hacer con una guarda. Se escribieron tambien
+las excepciones, porque una regla sin excepciones documentadas se cumple
+rompiendola: `app/` puede conocer el SDK de Firebase por ser el composition
+root, `useSurveyWizard.ts` es el unico fichero de `application/` que importa
+Vue, e `infrastructure/` puede importar tipos del dominio porque un adaptador
+implementa un contrato. Hay tres pruebas que fijan esas excepciones, para que no
+se conviertan en puerta giratoria. Las reglas que ya vivian en
+`isolation.spec.ts` se movieron al archivo nuevo, dejando ahi solo lo que no es
+una regla de dependencias —la pureza del wizard y que las reglas de validacion
+no muten el catalogo—, de modo que cada invariante tiene un unico sitio.
+
+## TODO-070. Crear guia de contribucion [COMPLETADO]
 
 Documentar:
 
@@ -1064,6 +1201,38 @@ Documentar:
 - Como ejecutar tests.
 - Como ejecutar typecheck.
 - Como anadir multimedia.
+
+Resultado: se creo `docs/CONTRIBUTING.md`, enlazado desde el README y de la
+tabla de documentacion, con las seis secciones pedidas en el orden en que
+alguien se las encuentra. Las tres primeras son tablas de "cambia esto → toca
+esto", que es el formato que de verdad resuelve la pregunta, y cada una lleva
+el aviso que hace fallar el cambio a medias: anadir una pregunta exige tocar a
+la vez el catalogo del cliente y la allowlist del servidor porque si no el
+envio falla con `invalid-argument`; anadir un campo a una respuesta guardada
+exige actualizar el parser en el mismo despliegue porque el parser exige
+exactamente cinco claves y un campo de mas convierte el documento en invalido;
+y un repositorio nuevo del cliente no puede escribir en Firestore porque las
+reglas lo niegan todo. Se documento tambien la diferencia entre el DTO que viaja
+por la red y el documento que se guarda, que son distintos y confundirlos rompe
+el contrato, y por que el nombre de la persona no lo envia el cliente. Las
+secciones de tests y typecheck dicen que comprobacion responde a cada capa y
+que un test que se puede pasar sin montar la app va a `unit`, con el criterio
+que hace decidible esa eleccion. La de multimedia explica por que el nombre del
+archivo es el contrato, por que un fallo de asset no rompe la build, y por que
+la foto del avatar es la excepcion. Se anadio una seccion de privacidad con las
+tres reglas que el proyecto sostiene con tests —nada de `console.*` en `src/`,
+metricas sin datos personales, nada en el navegador— y otra de commits con el
+"un commit por TODO" y la regla de que un PR de documentacion tenga la
+documentacion como parte dificil. Escribir la guia destapo un hueco: el primer
+paso deia "crea un .env.local" sin decir de donde salen los valores y sin ningun
+fichero de ejemplo, asi que se anadio `.env.example` con las siete variables y
+un comentario que aclara que nada de eso es secreto, porque el prefijo `VITE_`
+las hace publicas. `.gitignore` ignoraba `.env.*`, asi que hizo falta una
+excepcion para que la plantilla se pueda versionar. El criterio de
+finalizacion de este mismo documento se actualizo para incluir `npm run test:e2e`,
+que faltaba pese a ser una de las tres capas de test, y para anadir que las
+reglas de dependencia tienen que estar verificadas por pruebas y no por
+costumbre.
 
 ---
 
@@ -1119,9 +1288,11 @@ La migracion se considerara completada cuando:
 - `npm run typecheck` pase.
 - `npm run lint` pase sin warnings relevantes.
 - `npm test -- --run` pase.
+- `npm run test:e2e` pase.
 - `npm run build` pase.
 - El dominio no dependa de Vue ni Firebase.
 - La interfaz no acceda directamente a Firestore.
 - El envio sea atomico e idempotente.
 - Las reglas de Firebase no permitan acceso indiscriminado.
 - La documentacion refleje la arquitectura y el modelo de datos reales.
+- Las cuatro reglas de dependencia esten verificadas por pruebas, no por costumbre.
