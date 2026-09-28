@@ -450,7 +450,7 @@ Resultado: la aplicacion mantiene una capa de coordinacion en `src/app/App.vue` 
 
 # Fase 4: capa de aplicacion
 
-## TODO-023. Crear el caso de uso de validacion
+## TODO-023. Crear el caso de uso de validacion [COMPLETADO]
 
 Crear:
 
@@ -466,7 +466,9 @@ Debe encargarse de:
 - Distinguir invitacion ya utilizada.
 - Devolver una invitacion valida.
 
-## TODO-024. Crear el caso de uso de envio
+Resultado: la validacion de invitacion queda encapsulada en un caso de uso aislado, con pruebas en `tests/unit/validateInvitation.spec.ts` y manejo de errores de dominio.
+
+## TODO-024. Crear el caso de uso de envio [COMPLETADO]
 
 Crear:
 
@@ -484,7 +486,9 @@ Debe coordinar:
 
 La interfaz no debe llamar directamente a varias operaciones de Firebase.
 
-## TODO-025. Definir errores de aplicacion
+Resultado: el envio queda orquestado por una unica funcion de aplicacion, con validacion del cuestionario, construccion del payload y persistencia ordenada, cubierto por `tests/unit/submitSurvey.spec.ts`.
+
+## TODO-025. Definir errores de aplicacion [COMPLETADO]
 
 Crear errores diferenciados:
 
@@ -498,7 +502,9 @@ PersistenceError
 
 La UI traducira estos errores a mensajes en espanol.
 
-## TODO-026. Separar textos de usuario de errores tecnicos
+Resultado: se crean las clases en `src/features/survey/application/errors.ts` con codigo interno para distinguir cada caso y permitir a la capa de presentacion traducir mensajes sin depender de strings visuales.
+
+## TODO-026. Separar textos de usuario de errores tecnicos [COMPLETADO]
 
 La capa de aplicacion no debe depender de textos visuales concretos.
 
@@ -509,6 +515,8 @@ return { type: 'invitation-already-used' };
 ```
 
 La interfaz decide que mensaje mostrar.
+
+Resultado: la capa de aplicacion expone errores tipados con `code` y nombre de dominio; la UI no depende de mensajes en texto humano de la aplicacion y puede traducirlos con criterio de presentacion.
 
 ---
 

@@ -8,7 +8,7 @@ import {
   updateDoc,
   FirestoreError,
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../infrastructure/firebase/client';
 
 export type {
   CodigoInvitacion,
