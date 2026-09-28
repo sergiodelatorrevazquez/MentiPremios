@@ -71,6 +71,7 @@ npm run dev
 | Documento | Descripción |
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura, flujo de datos y decisiones técnicas |
+| [docs/RECOVERY.md](docs/RECOVERY.md) | Qué ocurre y qué se recupera cuando algo falla |
 | [docs/API.md](docs/API.md) | Modelo de datos Firestore y referencia del servicio |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Guía de uso para participantes |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Despliegue en producción (Vercel, Netlify, Firebase) |

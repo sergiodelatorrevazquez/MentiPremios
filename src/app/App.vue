@@ -14,7 +14,7 @@ import QuestionStep from '../features/survey/presentation/QuestionStep.vue';
 import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
 import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.vue';
 import AvatarPhotoViewer from '../features/survey/presentation/AvatarPhotoViewer.vue';
-import { InvitationAlreadyUsedError, InvalidInvitationError } from '../features/survey/application/errors';
+import { InvitationAlreadyUsedError, InvalidInvitationError, SubmissionAlreadyCompletedError } from '../features/survey/application/errors';
 import { classifyNetworkError } from '../features/survey/application/networkError';
 import { logger } from '../infrastructure/logging/logger';
 import { metrics } from '../infrastructure/metrics/metrics';
@@ -169,6 +169,18 @@ async function responderYPasarSiguiente() {
     metrics.increment('invitation_used');
     cambiarPaso('done');
   } catch (e) {
+    // Si el servidor dice que la invitación ya se usó, es que un intento
+    // anterior sí llegó a guardarse: la respuesta está a salvo aunque la
+    // respuesta HTTP se perdiera por el camino. Se trata como acierto para no
+    // pedir a la persona que escriba otra vez lo que ya está en Firestore.
+    if (e instanceof InvitationAlreadyUsedError || e instanceof SubmissionAlreadyCompletedError) {
+      logger.warn('el envío llegó tarde: la invitación ya estaba usada', { kind: 'already-used' });
+      mensaje.value = 'Tus respuestas ya estaban guardadas de un intento anterior. ¡Gracias!';
+      metrics.increment('submission_succeeded');
+      metrics.increment('invitation_used');
+      cambiarPaso('done');
+      return;
+    }
     // Solo el mensaje del error: el contexto lleva el error completo y el
     // logger se encarga de quitar palabra secreta, nombre y respuestas.
     const fallo = classifyNetworkError(e);

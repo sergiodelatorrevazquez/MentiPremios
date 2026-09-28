@@ -716,6 +716,28 @@ describe('App - errores de red', () => {
     expect(wrapper.find('.field-error').exists()).toBe(false);
   });
 
+  it('trata como acierto un envío que el servidor ya tenía guardado', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(mockAppServices.submitSurvey).mockRejectedValueOnce(
+      new InvitationAlreadyUsedError(),
+    );
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    expect(wrapper.find('.status--success').text()).toMatch(/ya estaban guardadas/i);
+    expect(wrapper.find('.status--error').exists()).toBe(false);
+    expect(metrics.value('submission_succeeded')).toBe(1);
+    expect(metrics.value('invitation_used')).toBe(1);
+    expect(metrics.value('submission_failed')).toBe(0);
+    consoleError.mockRestore();
+  });
+
   it('mantiene el mensaje específico si la invitación ya se usó', async () => {
     vi.mocked(mockAppServices.validateInvitation).mockRejectedValueOnce(
       new InvitationAlreadyUsedError(),

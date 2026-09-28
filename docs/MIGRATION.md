@@ -1004,7 +1004,7 @@ Diferenciar claramente:
 
 Resultado: se anadio `src/features/survey/application/networkError.ts`, con `classifyNetworkError` como unica puerta de entrada y cinco categorias (`offline`, `timeout`, `permission`, `unavailable`, `unknown`). Vive en `application` y no en `app` porque es una decision de negocio —que se puede reintentar y que texto ve la persona—, no un detalle de presentacion. La clasificacion se apoya en tres senales por orden de fiabilidad: primero `navigator.onLine`, porque si el navegador sabe que no hay red no tiene sentido interpretar el resto; despues el codigo de Firebase o del navegador, que se compara contra conjuntos cerrados en lugar de subcadenas sueltas; y por ultimo el texto, solo cuando no hay codigo. Sin conexion gana siempre, incluso si el error dice `permission-denied`, porque apagar el movil produce los dos codigos a la vez y a la persona lo que le importa es que se vaya a arreglar al volver a tener cobertura. `unavailable` se separa de `offline` a proposito: uno significa "vuelve en un momento" y el otro "revisa tu red". Todos los tipos son reintentables, y las pruebas lo fijan para que nadie marque un caso terminal por descuido. Los envoltorios propios (`PersistenceError`) guardan ahora la causa original en `cause`, y `classifyNetworkError` la desenvuelve, porque si no se habria perdido el codigo real de Firebase en cuanto el error cruzaba una frontera de capa. `App.vue` usa la clasificacion en la validacion de la invitacion y en el envio, y anade el tipo a los logs sinSensitive; los errores de dominio (`invitation-already-used`, `invalid-invitation`) conservan su mensaje propio y no pasan por aqui. Las suites quedan en 273 unitarias y 53 de integracion.
 
-## TODO-065. Documentar recuperacion ante fallos
+## TODO-065. Documentar recuperacion ante fallos [COMPLETADO]
 
 Definir que ocurre si:
 
@@ -1012,6 +1012,30 @@ Definir que ocurre si:
 - Falla la red despues del envio.
 - El servidor responde tarde.
 - El codigo queda marcado pero la pantalla no cambia.
+
+Resultado: se creo `docs/RECOVERY.md`, con los cuatro escenarios escritos como
+comportamiento y no como intencion, y una tabla que dice para cada uno si se
+pierden datos, que ve la persona y si tiene que reescribir. Escribirlo destapo
+un fallo real: si la transaccion llegaba a guardarse y lo que se perdia era la
+respuesta HTTP, el reintento devolvia "invitacion ya usada" y la aplicacion lo
+pintaba como error desconocido, pidiéndole a la persona que reescribiera veinte
+respuestas que ya estaban en Firestore. Ahora `App.vue` trata
+`invitation-already-used` y `submission-already-completed` durante el envio como
+un acierto con explicacion, sin contar `submission_failed`, y una prueba fija
+que ni el mensaje de error ni las metricas contradicen esa pantalla. La
+confianza de esa rama no es una suposicion: el servidor marca la invitacion
+como usada dentro de la misma transaccion que escribe la respuesta, asi que o
+pasan las dos cosas o no pasa ninguna, y no existe un estado intermedio que la
+pudiera hacer mentir. La escritura diferida reduce la ventana de ese caso pero
+no la cierra, y por eso el documento no la trata como una solucion. Para el
+cierre de pestana la decision es no guardar nada en el navegador y asumir que
+se pierde todo, y el documento explica por que: guardar la palabra secreta o
+las respuestas en `localStorage` convertiria un ordenador compartido en un
+sitio donde se leen datos de otra persona. Para la invitacion consumida con la
+pantalla sin cambiar, el documento justifica no sondear al servidor en cada
+cambio de pantalla porque serian diez peticiones para cerrar un caso que el
+propio envio ya cierra. Las pruebas que sostienen cada afirmacion estan
+citadas al final del propio documento.
 
 ---
 
