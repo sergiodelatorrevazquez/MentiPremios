@@ -1,5 +1,9 @@
 import { validateSurveyAnswers } from '../domain/survey.rules';
 import type { Pregunta, SurveySubmission } from '../domain/survey.types';
+import {
+  InvalidSubmissionError,
+  PersistenceError,
+} from './errors';
 
 export interface SubmitSurveyInput {
   invitationId: string;
@@ -21,7 +25,7 @@ export async function submitSurvey({
   const surveyValidation = validateSurveyAnswers(questions, answers);
 
   if (!surveyValidation.valid) {
-    throw new Error('invalid-submission');
+    throw new InvalidSubmissionError('invalid-submission');
   }
 
   const submission: SurveySubmission = {
@@ -32,8 +36,12 @@ export async function submitSurvey({
     ) as SurveySubmission['answers'],
   };
 
-  await persist(submission);
-  await markInvitationUsed(invitationId);
+  try {
+    await persist(submission);
+    await markInvitationUsed(invitationId);
+  } catch (error) {
+    throw new PersistenceError(error instanceof Error ? error.message : 'Unknown persistence error');
+  }
 
   return submission;
 }

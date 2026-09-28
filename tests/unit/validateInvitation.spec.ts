@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import {
+  InvalidInvitationError,
+  InvitationAlreadyUsedError,
+} from '../../src/features/survey/application/errors';
 import { validateInvitation } from '../../src/features/survey/application/validateInvitation';
 
 describe('validateInvitation', () => {
@@ -20,7 +24,7 @@ describe('validateInvitation', () => {
   it('throws when the invitation does not exist', async () => {
     await expect(
       validateInvitation('missing', async () => null),
-    ).rejects.toThrow('invitation-not-found');
+    ).rejects.toBeInstanceOf(InvalidInvitationError);
   });
 
   it('throws when the invitation was already used', async () => {
@@ -30,6 +34,6 @@ describe('validateInvitation', () => {
         nombre: 'Sergio',
         usado: true,
       })),
-    ).rejects.toThrow('invitation-already-used');
+    ).rejects.toBeInstanceOf(InvitationAlreadyUsedError);
   });
 });

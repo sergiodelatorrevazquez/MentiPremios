@@ -1,3 +1,8 @@
+import {
+  InvalidInvitationError,
+  InvitationAlreadyUsedError,
+} from './errors';
+
 export interface InvitationRecord {
   id: string;
   nombre: string;
@@ -11,17 +16,17 @@ export async function validateInvitation(
   const normalizedSecret = secret.trim().toLowerCase();
 
   if (!normalizedSecret) {
-    throw new Error('invalid-secret');
+    throw new InvalidInvitationError('invalid-secret');
   }
 
   const invitation = await finder(normalizedSecret);
 
   if (!invitation) {
-    throw new Error('invitation-not-found');
+    throw new InvalidInvitationError('invitation-not-found');
   }
 
   if (invitation.usado) {
-    throw new Error('invitation-already-used');
+    throw new InvitationAlreadyUsedError('invitation-already-used');
   }
 
   return invitation;

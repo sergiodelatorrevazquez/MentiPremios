@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { InvalidSubmissionError, PersistenceError } from '../../src/features/survey/application/errors';
 import { submitSurvey } from '../../src/features/survey/application/submitSurvey';
 import { QUESTION_IDS, type Pregunta } from '../../src/features/survey/domain/survey.types';
 
@@ -72,9 +73,28 @@ describe('submitSurvey', () => {
         persist,
         markInvitationUsed,
       }),
-    ).rejects.toThrow('invalid-submission');
+    ).rejects.toBeInstanceOf(InvalidSubmissionError);
 
     expect(persist).not.toHaveBeenCalled();
     expect(markInvitationUsed).not.toHaveBeenCalled();
+  });
+
+  it('wraps persistence failures in a domain error', async () => {
+    const persist = vi.fn().mockRejectedValue(new Error('db down'));
+    const markInvitationUsed = vi.fn();
+
+    await expect(
+      submitSurvey({
+        invitationId: 'inv-1',
+        participantName: 'Sergio',
+        questions: preguntas,
+        answers: {
+          tonto: 'tonto-1',
+          casper: 'casper-1',
+        },
+        persist,
+        markInvitationUsed,
+      }),
+    ).rejects.toBeInstanceOf(PersistenceError);
   });
 });
