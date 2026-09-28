@@ -1112,7 +1112,7 @@ funciona, muestra un marcador, marca la opcion como no disponible y cuenta
 `multimedia_failed`; el texto nuevo dice que el hueco es detectable desde el
 propio producto.
 
-## TODO-068. Actualizar la guia de despliegue
+## TODO-068. Actualizar la guia de despliegue [COMPLETADO]
 
 Documentar:
 
@@ -1122,6 +1122,37 @@ Documentar:
 - Migraciones.
 - Rollback.
 - Gestion de assets.
+
+Resultado: la guia cubria variables, reglas, funciones y assets, pero las dos
+secciones que faltaban eran las que se pagan cuando ya ha salido un problema.
+Se escribio "Migraciones" sin inventar un framework que el proyecto no tiene:
+lo que hace falta son tresProcedimientos reales y sus trampas. La siembra, con
+la regla de que el ID tiene que ir en minusculas porque cliente y servidor
+normalizan con `trim()` y `toLowerCase()`, de modo que un documento con
+mayusculas es invisible y la unica forma de arreglarlo es renombrarlo, no tocar
+la interfaz. El cambio del catalogo, con la advertencia de que
+`SURVEY_OPTION_IDS` y `questions.ts` tienen que moverse en el mismo despliegue
+y de que el fallo no aparece en local, porque en local el catalogo de pruebas no
+pasa por la allowlist. Y los documentos v2 con un campo extra, que es el caso
+mas peligroso de los tres: el parser exige exactamente cinco claves, asi que
+anadir `updatedAt` a una respuesta ya guardada hace que el reintento deje de ser
+idempotente. Se escribio "Rollback" por comandos, con `firebase functions:rollback`
+para las funciones, redeploy del commit anterior para la web, y el aviso de que
+las reglas son la ultima linea de defensa y hay que mirarlas desplegarlas. Se
+documento tambien que no hay estados intermedios que reparar porque la
+transaccion es atomica, y como se arregla a mano una invitacion que quedo
+marcada. En "Gestion de assets" se escribieron las cuatro reglas que no eran
+obvias: anadir un asset exige reconstruir porque `import.meta.glob` se resuelve
+en build, los videos necesitan la pareja mp4 y webm, el hash del nombre impide
+corregir una imagen sin redesplegar, y la foto del avatar es la excepcion que
+no pasa por el registro. Ademas se corrigieron tres cosas que ya estaban
+equivocadas: el `firebase.json` del repositorio no declara hosting, asi que la
+opcion C necesita `firebase init hosting`; el yaml del CI estava copiado con la
+mitad de los pasos y no incluia typecheck, el build de functions, las pruebas
+de integracion, el build ni el job de e2e; y la lista de comprobacion pedia
+`npm test -- --run`, un script que no existe. Se anadio tambien el orden de
+despliegue, funciones antes que web, porque al reves la version nueva pide un
+DTO que el backend antiguo rechaza.
 
 ## TODO-069. Crear reglas de dependencia
 
