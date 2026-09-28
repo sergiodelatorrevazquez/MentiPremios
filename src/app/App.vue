@@ -241,6 +241,7 @@ function handleModalKeydown(e: KeyboardEvent) {
           :can-go-back="puedeVolverAtras"
           :can-continue="puedeContinuarPregunta"
           :is-submitting="enviando"
+          :has-submission-error="!!error"
           @select-option="handleQuestionSelect"
           @long-press-start="handleQuestionLongPressStart"
           @long-press-end="handleQuestionLongPressEnd"

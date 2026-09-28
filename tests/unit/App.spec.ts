@@ -73,6 +73,27 @@ describe('App - Login', () => {
 
     expect(wrapper.find('.field-error').text()).toContain('Ya has respondido');
   });
+
+  it('muestra estado de comprobación y deshabilita login mientras espera', async () => {
+    let resolveValidation: ((value: { id: string; nombre: string; usado: false }) => void) | undefined;
+    vi.mocked(mockAppServices.validateInvitation).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveValidation = resolve; }),
+    );
+
+    const wrapper = mount(App);
+    await wrapper.find('input.field-input').setValue('test-code');
+    const submit = wrapper.find('button.button-primary');
+    const validation = submit.trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(submit.text()).toBe('Comprobando...');
+    expect(submit.attributes('disabled')).toBeDefined();
+
+    resolveValidation?.({ id: 'secreta-123', nombre: 'Sergio', usado: false });
+    await validation;
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.hero-title').text()).toContain('Sergio');
+  });
 });
 
 describe('App - Welcome', () => {
@@ -244,6 +265,29 @@ describe('App - Questions', () => {
 
     resolveSave?.();
     await wrapper.vm.$nextTick();
+  });
+
+  it('mantiene las respuestas y permite reintentar si falla el envío', async () => {
+    vi.mocked(mockAppServices.submitSurvey)
+      .mockRejectedValueOnce(new Error('temporarily unavailable'))
+      .mockResolvedValueOnce({} as SurveySubmission);
+
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    expect(wrapper.find('.status--error').exists()).toBe(true);
+    expect(wrapper.find('button.button-primary').text()).toBe('Reintentar envío');
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(mockAppServices.submitSurvey).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('.status--success').exists()).toBe(true);
   });
 });
 

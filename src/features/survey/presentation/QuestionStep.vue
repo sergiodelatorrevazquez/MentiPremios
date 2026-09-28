@@ -10,6 +10,7 @@ const props = defineProps<{
   canGoBack: boolean;
   canContinue: boolean;
   isSubmitting: boolean;
+  hasSubmissionError: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -57,7 +58,11 @@ function onGoBack() {
       {{ props.question.titulo }}
     </h1>
 
-    <div class="options-grid" :class="'options-grid--' + props.question.opciones.length">
+    <div
+      v-if="props.question.opciones.length > 0"
+      class="options-grid"
+      :class="'options-grid--' + props.question.opciones.length"
+    >
       <button
         v-for="opcion in props.question.opciones"
         :key="opcion.id"
@@ -108,6 +113,12 @@ function onGoBack() {
         <span class="option-text">{{ opcion.texto }}</span>
       </button>
     </div>
+    <div
+      v-else
+      class="status status--empty"
+    >
+      No hay opciones disponibles para esta pregunta.
+    </div>
 
     <div class="footer">
       <div class="footer-actions">
@@ -125,7 +136,7 @@ function onGoBack() {
           :disabled="!props.canContinue"
           @click="onSubmit"
         >
-          {{ props.currentQuestionIndex + 1 === props.totalQuestions ? (props.isSubmitting ? 'Guardando...' : 'Enviar y cerrar') : 'Siguiente pregunta' }}
+          {{ props.currentQuestionIndex + 1 === props.totalQuestions ? (props.isSubmitting ? 'Guardando...' : (props.hasSubmissionError ? 'Reintentar envío' : 'Enviar y cerrar')) : 'Siguiente pregunta' }}
         </button>
       </div>
     </div>

@@ -840,7 +840,7 @@ Mantener variables para:
 
 Resultado: `src/style.css` es la unica fuente de tokens para color, tipografia, line-height, espaciado, radios, sombras, foco y breakpoint movil; se eliminaron las declaraciones `:root` duplicadas de los SFC. `designTokens.spec.ts` verifica el contrato. CSS nativo no permite interpolar custom properties en condiciones `@media`, por lo que el breakpoint queda duplicado como literal `640px` en la regla responsive, documentado junto al token.
 
-## TODO-052. Anadir estados completos de interfaz
+## TODO-052. Anadir estados completos de interfaz [COMPLETADO]
 
 Verificar cada pantalla en estados:
 
@@ -851,6 +851,8 @@ Verificar cada pantalla en estados:
 - Exito.
 - Reintento.
 - Deshabilitado.
+
+Resultado: login expone inicial, validando/deshabilitado y errores recuperables; el wizard mantiene progreso y selección durante errores de persistencia, cambia la acción a `Reintentar envío` y confirma éxito al completar; `QuestionStep` muestra estado vacío si no hay opciones y conserva controles deshabilitados cuando no se puede avanzar. `App.spec.ts` y `QuestionStep.spec.ts` cubren estas transiciones y estados.
 
 ## TODO-053. Mejorar accesibilidad
 

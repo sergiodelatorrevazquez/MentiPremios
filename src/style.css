@@ -450,6 +450,12 @@ body {
   color: var(--color-error);
 }
 
+.status--empty {
+  border: 1px dashed rgba(11, 61, 11, 0.28);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
 .hero-title {
   margin: 0 0 16px;
   font-size: var(--font-size-display);
