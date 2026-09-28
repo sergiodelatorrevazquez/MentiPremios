@@ -26,4 +26,9 @@ describe('global design tokens', () => {
       expect(globalStyles).toContain(`${token}:`);
     }
   });
+
+  it('defines a visible keyboard focus treatment', () => {
+    expect(globalStyles).toMatch(/:focus-visible\s*\{/);
+    expect(globalStyles).toContain('outline: 3px solid var(--color-focus)');
+  });
 });

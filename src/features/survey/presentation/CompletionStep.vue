@@ -13,7 +13,11 @@ const props = defineProps<{
     <p class="section-description">
       Tus respuestas se han guardado en Firebase y se usarán para montar una gala de premios inolvidable con todo el grupo.
     </p>
-    <div class="status status--success">
+    <div
+      class="status status--success"
+      role="status"
+      aria-live="polite"
+    >
       {{ props.message ?? 'Tus respuestas se han guardado correctamente.' }}
     </div>
   </div>

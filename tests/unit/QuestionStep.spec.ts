@@ -45,6 +45,26 @@ describe('QuestionStep', () => {
     expect(wrapper.emitted('submit')).toHaveLength(1);
   });
 
+  it('exposes progress and selected-option state to assistive technology', () => {
+    const wrapper = mount(QuestionStep, {
+      props: {
+        question: preguntas[0],
+        selectedOptionId: preguntas[0].opciones[0].id,
+        currentQuestionIndex: 0,
+        totalQuestions: preguntas.length,
+        progress: 10,
+        canGoBack: false,
+        canContinue: true,
+        isSubmitting: false,
+        hasSubmissionError: false,
+      },
+    });
+
+    expect(wrapper.find('[role="progressbar"]').attributes('aria-valuenow')).toBe('10');
+    expect(wrapper.findAll('.option-card')[0].attributes('aria-pressed')).toBe('true');
+    expect(wrapper.findAll('.option-card')[1].attributes('aria-pressed')).toBe('false');
+  });
+
   it('does not preload a video preview before the user opens it', () => {
     const videoQuestion = preguntas.find((question) => question.id === 'video');
     const questionWithVideo = {

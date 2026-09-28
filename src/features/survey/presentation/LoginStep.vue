@@ -33,21 +33,29 @@ function onSubmit() {
     </p>
 
     <div class="field">
-      <div class="field-label">
-        <span>Clave</span>
-      </div>
+      <label
+        class="field-label"
+        for="secret-word"
+      >Clave</label>
       <input
+        id="secret-word"
         :value="props.modelValue"
         class="field-input"
         type="text"
         placeholder="Escribe aquí tu palabra secreta..."
         maxlength="50"
+        :aria-invalid="props.loginError ? 'true' : 'false'"
+        :aria-describedby="props.loginError ? 'secret-word-error' : undefined"
+        :aria-busy="props.isSubmitting"
         @input="onInput(($event.target as HTMLInputElement).value)"
         @keyup.enter="onSubmit"
       >
       <div
         v-if="props.loginError"
+        id="secret-word-error"
         class="field-error"
+        role="alert"
+        aria-live="assertive"
       >
         {{ props.loginError }}
       </div>
@@ -60,6 +68,7 @@ function onSubmit() {
       <button
         type="button"
         class="button-primary"
+        :aria-busy="props.isSubmitting"
         :disabled="props.modelValue.trim().length === 0 || props.isSubmitting"
         @click="onSubmit"
       >

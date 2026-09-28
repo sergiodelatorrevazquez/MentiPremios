@@ -260,6 +260,8 @@ function handleModalKeydown(e: KeyboardEvent) {
       <div
         v-if="error"
         class="status status--error"
+        role="alert"
+        aria-live="assertive"
       >
         {{ error }}
       </div>

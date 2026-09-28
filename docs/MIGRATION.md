@@ -854,7 +854,7 @@ Verificar cada pantalla en estados:
 
 Resultado: login expone inicial, validando/deshabilitado y errores recuperables; el wizard mantiene progreso y selección durante errores de persistencia, cambia la acción a `Reintentar envío` y confirma éxito al completar; `QuestionStep` muestra estado vacío si no hay opciones y conserva controles deshabilitados cuando no se puede avanzar. `App.spec.ts` y `QuestionStep.spec.ts` cubren estas transiciones y estados.
 
-## TODO-053. Mejorar accesibilidad
+## TODO-053. Mejorar accesibilidad [COMPLETADO]
 
 Revisar:
 
@@ -867,6 +867,7 @@ Revisar:
 - Contraste.
 - Lectores de pantalla.
 - Uso de video sin sonido.
+Resultado: el login asocia label y error con el input (`aria-invalid`, `aria-describedby`, `role=alert`); progreso y opciones exponen `progressbar`/`aria-pressed`; errores y éxito usan regiones vivas. Se añadió foco `:focus-visible`; ambos modales enfocan el botón de cierre al abrirse, contienen Tab, cierran con Escape y restauran foco al disparador. Miniaturas de video permanecen silenciadas y el visor no reproduce automáticamente; controles permiten decidir la reproducción. El texto oscuro sobre superficies claras y el indicador de foco azul mantienen contraste perceptible. Tests cubren estos contratos.
 
 ## TODO-054. Probar responsive
 

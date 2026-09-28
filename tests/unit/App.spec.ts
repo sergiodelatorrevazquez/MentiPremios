@@ -268,6 +268,7 @@ describe('App - Questions', () => {
   });
 
   it('mantiene las respuestas y permite reintentar si falla el envío', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(mockAppServices.submitSurvey)
       .mockRejectedValueOnce(new Error('temporarily unavailable'))
       .mockResolvedValueOnce({} as SurveySubmission);
@@ -288,6 +289,7 @@ describe('App - Questions', () => {
 
     expect(mockAppServices.submitSurvey).toHaveBeenCalledTimes(2);
     expect(wrapper.find('.status--success').exists()).toBe(true);
+    consoleError.mockRestore();
   });
 });
 

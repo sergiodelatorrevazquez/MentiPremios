@@ -29,4 +29,19 @@ describe('LoginStep', () => {
 
     expect(wrapper.emitted('submit')).toHaveLength(1);
   });
+  it('associates the secret input with its label and announced error', () => {
+    const wrapper = mount(LoginStep, {
+      props: {
+        modelValue: '',
+        loginError: 'Invalid secret',
+        isSubmitting: false,
+      },
+    });
+    const input = wrapper.find('#secret-word');
+
+    expect(wrapper.find('label[for="secret-word"]').exists()).toBe(true);
+    expect(input.attributes('aria-invalid')).toBe('true');
+    expect(input.attributes('aria-describedby')).toBe('secret-word-error');
+    expect(wrapper.find('[role="alert"]').attributes('aria-live')).toBe('assertive');
+  });
 });

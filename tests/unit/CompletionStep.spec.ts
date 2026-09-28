@@ -13,5 +13,6 @@ describe('CompletionStep', () => {
 
     expect(wrapper.text()).toContain('Gracias por participar, Sergio');
     expect(wrapper.text()).toContain('¡Respuestas guardadas correctamente en MentiPremios!');
+    expect(wrapper.find('[role="status"]').attributes('aria-live')).toBe('polite');
   });
 });

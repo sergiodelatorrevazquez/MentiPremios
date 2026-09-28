@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue';
 import type { Multimedia } from '../domain/survey.types';
 
 const props = defineProps<{
@@ -10,21 +11,63 @@ const emit = defineEmits<{
   (event: 'close'): void;
 }>();
 
+const modalElement = ref<HTMLElement | null>(null);
+let previouslyFocusedElement: HTMLElement | null = null;
+
+watch(() => props.modelValue, (isOpen) => {
+  if (isOpen) {
+    previouslyFocusedElement = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const closeButton = modalElement.value?.querySelector<HTMLElement>('.modal-close-btn');
+    (closeButton ?? modalElement.value)?.focus();
+  } else {
+    previouslyFocusedElement?.focus();
+    previouslyFocusedElement = null;
+  }
+}, { flush: 'post' });
+
 function onClose() {
   emit('close');
 }
 
 function onBackdropKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') onClose();
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    onClose();
+    return;
+  }
+
+  if (e.key !== 'Tab' || !modalElement.value) return;
+  const focusable = Array.from(modalElement.value.querySelectorAll<HTMLElement>(
+    'button:not(:disabled), video[controls], [href], [tabindex]:not([tabindex="-1"])',
+  ));
+  if (focusable.length === 0) {
+    e.preventDefault();
+    modalElement.value.focus();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 </script>
 
 <template>
   <div
     v-if="props.modelValue && props.media"
+    ref="modalElement"
     class="photo-modal"
     role="dialog"
     aria-modal="true"
+    :aria-label="props.media.alt ?? 'Visor multimedia'"
     tabindex="-1"
     @click="onClose"
     @keydown="onBackdropKeydown"

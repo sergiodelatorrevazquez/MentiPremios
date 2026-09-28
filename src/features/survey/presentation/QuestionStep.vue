@@ -44,7 +44,14 @@ function onGoBack() {
 
 <template>
   <div>
-    <div class="progress-bar">
+    <div
+      class="progress-bar"
+      role="progressbar"
+      aria-label="Progreso de la encuesta"
+      :aria-valuemin="0"
+      :aria-valuemax="100"
+      :aria-valuenow="props.progress"
+    >
       <span>Pregunta {{ props.currentQuestionIndex + 1 }} de {{ props.totalQuestions }}</span>
       <div class="progress-bar-track">
         <div
@@ -68,7 +75,11 @@ function onGoBack() {
         :key="opcion.id"
         type="button"
         class="option-card"
-        :class="{ 'option-card--selected': props.selectedOptionId === opcion.id, 'option-card--with-media': opcion.multimedia }"
+        :aria-pressed="props.selectedOptionId === opcion.id"
+        :class="{
+          'option-card--selected': props.selectedOptionId === opcion.id,
+          'option-card--with-media': opcion.multimedia,
+        }"
         @click="onOptionClick(opcion.id)"
         @mousedown="opcion.multimedia && onPressStart(opcion.multimedia)"
         @mouseup="onPressEnd()"
@@ -76,7 +87,10 @@ function onGoBack() {
         @touchstart="opcion.multimedia && onPressStart(opcion.multimedia)"
         @touchend="onPressEnd()"
       >
-        <div v-if="opcion.multimedia" class="option-media">
+        <div
+          v-if="opcion.multimedia"
+          class="option-media"
+        >
           <img
             v-if="opcion.multimedia.unavailable"
             class="option-media-thumbnail"
@@ -116,6 +130,7 @@ function onGoBack() {
     <div
       v-else
       class="status status--empty"
+      role="status"
     >
       No hay opciones disponibles para esta pregunta.
     </div>
