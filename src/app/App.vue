@@ -13,6 +13,7 @@ import WelcomeStep from '../features/survey/presentation/WelcomeStep.vue';
 import QuestionStep from '../features/survey/presentation/QuestionStep.vue';
 import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
 import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.vue';
+import AvatarPhotoViewer from '../features/survey/presentation/AvatarPhotoViewer.vue';
 
 import {
   guardarRespuestaUsuario,
@@ -201,34 +202,10 @@ function handleModalKeydown(e: KeyboardEvent) {
       </div>
     </header>
 
-    <div
-      v-if="visorFotoAbierto"
-      class="photo-modal"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      @click="cerrarVisorFoto"
-      @keydown="handleModalKeydown"
-    >
-      <div
-        class="photo-modal-inner"
-        @click.stop
-      >
-        <button
-          type="button"
-          class="modal-close-btn"
-          aria-label="Cerrar"
-          @click="cerrarVisorFoto"
-        >
-          ✕
-        </button>
-        <img
-          class="photo-modal-image"
-          src="../assets/foto-amigos.jpg"
-          alt="Foto de amigos"
-        >
-      </div>
-    </div>
+    <AvatarPhotoViewer
+      :model-value="visorFotoAbierto"
+      @close="cerrarVisorFoto"
+    />
 
     <MultimediaViewer
       :model-value="visorMultimediaAbierto"

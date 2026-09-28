@@ -432,9 +432,11 @@ Debe conservar:
 
 Resultado: el visor multimedia queda separado en `src/features/survey/presentation/MultimediaViewer.vue`, conectado desde `src/app/App.vue` y cubierto por pruebas en `tests/unit/MultimediaViewer.spec.ts`, manteniendo la vista completa de imagen o video y el cierre por click/escape.
 
-## TODO-021. Extraer el visor de la foto del avatar
+## TODO-021. Extraer el visor de la foto del avatar [COMPLETADO]
 
 Separar el modal de la foto del avatar del visor multimedia de respuestas si sus comportamientos son distintos.
+
+Resultado: el modal de la foto del avatar queda extraido a `src/features/survey/presentation/AvatarPhotoViewer.vue`, `src/app/App.vue` solo coordina su apertura/cierre y se cubre con `tests/unit/AvatarPhotoViewer.spec.ts` para mantener el comportamiento visual y de cierre.
 
 ## TODO-022. Mantener temporalmente el contrato de `App.vue`
 
