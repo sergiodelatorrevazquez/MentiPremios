@@ -61,7 +61,7 @@ respuestas/
 
 ### Colección `palabrasClave`
 
-Palabras clave opcionales asociadas a usuarios. La funcionalidad existe en el servicio pero **no se usa en la UI actual**.
+Palabras clave opcionales asociadas a usuarios. La funcionalidad existe en `FirestoreKeywordsRepository` pero **no se usa en la UI actual**.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
@@ -99,22 +99,27 @@ await saveUserAnswer({
 
 ---
 
-### `saveUserKeywords(payload)`
+### Repositorio opcional de palabras clave
+
+Esta funcionalidad no forma parte del flujo de encuesta. Se mantiene aislada en `FirestoreKeywordsRepository` (`src/infrastructure/firebase/firestoreKeywordsRepository.ts`).
 
 ```typescript
-async function saveUserKeywords(payload: PalabraClavePayload): Promise<void>
-
-interface PalabraClavePayload {
+interface KeywordSubmission {
   usuario: string;
   palabrasClave: string[];
 }
+
+interface KeywordsRepository {
+  save(submission: KeywordSubmission): Promise<void>;
+}
 ```
 
-**Operación Firestore**: `addDoc(collection(db, 'palabrasClave'), { ...payload, createdAt: serverTimestamp() })`
+El repositorio escribe en `palabrasClave` y añade `createdAt` con `serverTimestamp()`.
 
 **Uso**:
 ```typescript
-await saveUserKeywords({
+const repository = new FirestoreKeywordsRepository(db);
+await repository.save({
   usuario: 'Sergio',
   palabrasClave: ['divertido', 'leal', 'fiestero'],
 });

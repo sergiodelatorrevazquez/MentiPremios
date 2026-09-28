@@ -596,7 +596,7 @@ La eliminacion debe hacerse solo despues de actualizar consumidores y pruebas.
 
 Resultado: se eliminaron los cuatro exports en espanol, se actualizaron los tests y la documentacion al API en ingles, y se corrigio el mock del cliente Firebase usado por el test del servicio.
 
-## TODO-032. Eliminar funcionalidades no utilizadas o aislarlas
+## TODO-032. Eliminar funcionalidades no utilizadas o aislarlas [COMPLETADO]
 
 `palabrasClave` no forma parte del flujo actual.
 
@@ -607,6 +607,8 @@ Decidir entre:
 - Mantenerla documentada como funcionalidad futura.
 
 No debe permanecer mezclada con el flujo principal sin una razon clara.
+
+Resultado: se mantuvo `palabrasClave` como funcionalidad opcional y se aislo en `features/keywords` y `FirestoreKeywordsRepository`. Se conservaron el esquema y el timestamp existentes; `premiosService` ya no importa ni expone esta capacidad y la documentacion deja claro que no forma parte del flujo activo.
 
 ---
 

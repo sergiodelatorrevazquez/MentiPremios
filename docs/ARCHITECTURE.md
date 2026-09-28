@@ -124,16 +124,17 @@ Document ID: auto-generado por Firestore
 }
 ```
 
-## Capa de servicio (`src/services/premiosService.ts`)
+## Persistencia de premios e invitaciones
 
-Toda la interacción con Firestore está encapsulada en `premiosService.ts`. Las funciones exportadas tienen alias en castellano:
+`premiosService.ts` contiene las operaciones de compatibilidad para respuestas e invitaciones. La funcionalidad opcional de palabras clave está aislada en `FirestoreKeywordsRepository` y no se conecta al flujo de encuesta.
 
 | Función | Operación Firestore |
 |---|---|
 | `saveUserAnswer` | `setDoc(respuestas/{usuario}, premios)` |
-| `saveUserKeywords` | `addDoc(palabrasClave, {usuario, palabrasClave, createdAt})` |
 | `getCodeBySecretWord` | `getDoc(codigos/{secretWord})` |
 | `markCodeAsUsed` | `updateDoc(codigos/{secretWord}, {usado: true})` |
+
+`FirestoreKeywordsRepository.save` escribe en `palabrasClave` con un timestamp del servidor.
 
 Errores de Firestore se envuelven en `FirestoreServiceError` (`src/services/premiosService.ts:28-36`).
 

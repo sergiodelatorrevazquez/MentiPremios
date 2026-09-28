@@ -49,11 +49,6 @@ export interface PremioRespuesta {
   premios: Respuestas;
 }
 
-export interface PalabraClavePayload {
-  usuario: string;
-  palabrasClave: string[];
-}
-
 export interface CodigoInvitacion {
   nombre: string;
   usado: boolean;
