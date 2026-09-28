@@ -737,7 +737,7 @@ Usar `serverTimestamp()` en el documento definitivo de respuesta.
 
 Resultado: cada documento v2 se crea con `createdAt` y `submittedAt` usando `FieldValue.serverTimestamp()` de Admin SDK dentro de la transaccion. Los reintentos idempotentes no reescriben ni alteran las fechas. El test del handler comprueba ambos campos.
 
-## TODO-043. Anadir validacion de documentos leidos
+## TODO-043. Anadir validacion de documentos leidos [COMPLETADO]
 
 No hacer casts directos inseguros como:
 
@@ -746,6 +746,8 @@ snap.data() as CodigoInvitacion
 ```
 
 Crear parseadores o validadores para documentos incompletos o corruptos.
+
+Resultado: `firestoreSchemas.ts` valida invitaciones y sus `responseId`, mapas completos de opciones, respuestas legacy planas y documentos v2 con version, nombre, campos exactos y timestamps Firestore validos. Los handlers usan estos parseadores antes de devolver nombres o aceptar reintentos; los documentos ausentes, corruptos o de versiones desconocidas se rechazan. Hay pruebas de campos faltantes/extra, IDs inseguros, opciones invalidas, timestamps fuera de rango y formato legacy.
 
 ---
 

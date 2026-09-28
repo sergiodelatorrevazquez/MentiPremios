@@ -11,6 +11,12 @@ import { preguntas } from '../../src/features/survey/domain/questions';
 const validAnswers = Object.fromEntries(
   Object.entries(SURVEY_OPTION_IDS).map(([questionId, options]) => [questionId, options[0]]),
 ) as Record<string, string>;
+const storedTimestamp = {
+  seconds: 1,
+  nanoseconds: 0,
+  toDate: () => new Date(1000),
+  toMillis: () => 1000,
+};
 
 function createStore(options: {
   invitationExists?: boolean;
@@ -100,7 +106,13 @@ describe('submitSurvey callable handler', () => {
     const { store, transaction } = createStore({
       invitationUsed: true,
       invitationData: { nombre: 'Sergio', usado: true, responseId: 'response-opaque-123' },
-      existingResponse: { schemaVersion: 2, participantName: 'Sergio', answers },
+      existingResponse: {
+        schemaVersion: 2,
+        participantName: 'Sergio',
+        answers,
+        createdAt: storedTimestamp,
+        submittedAt: storedTimestamp,
+      },
     });
     const handler = createSubmitSurveyHandler(store);
 

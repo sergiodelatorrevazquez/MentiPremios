@@ -13,6 +13,8 @@ Use Firebase callable Cloud Functions running the Admin SDK as the only trusted 
 
 The `validateInvitation(secret)` and `submitSurvey(invitationId, answers)` callables are implemented in `functions/src/index.ts`. Both require authentication and App Check. Invitation validation normalizes and checks the bearer code server-side and returns only the participant display name. Submission validates the full question/option allowlist, payload shape and size, and writes the response and used state in one transaction.
 
+Firestore documents read by these handlers are parsed against explicit invitation, legacy-response, and v2-response shapes; malformed documents and unknown schema versions fail closed.
+
 The Firestore rules deny all browser reads and writes for invitations, responses, and keywords. Admin SDK operations remain server-side in Cloud Functions.
 
 ## Credential limitations

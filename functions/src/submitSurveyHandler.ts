@@ -1,4 +1,5 @@
 import { parseSurveySubmission } from './surveyValidation.js';
+import { parseInvitationDocument, parseStoredSurveyResponse } from './firestoreSchemas.js';
 
 export type SubmissionErrorCode =
   | 'unauthenticated'
@@ -49,21 +50,6 @@ function haveSameAnswers(
     ));
 }
 
-function getStoredAnswers(response: Record<string, unknown>): Record<string, unknown> | null {
-  if (response.schemaVersion === 2
-    && response.answers !== null
-    && typeof response.answers === 'object'
-    && !Array.isArray(response.answers)) {
-    return response.answers as Record<string, unknown>;
-  }
-
-  if (response.schemaVersion === undefined) {
-    return response;
-  }
-
-  return null;
-}
-
 export function createSubmitSurveyHandler(store: SubmissionStore) {
   return async ({ data, auth }: SubmitSurveyRequest): Promise<{ submitted: true }> => {
     if (!auth?.uid) {
@@ -81,24 +67,15 @@ export function createSubmitSurveyHandler(store: SubmissionStore) {
 
     return store.runTransaction(async (transaction) => {
       const invitation = await transaction.get(invitationReference);
-      const invitationData = invitation.data();
+      const invitationData = parseInvitationDocument(invitation.data());
 
-      if (!invitation.exists
-        || !invitationData
-        || typeof invitationData.nombre !== 'string'
-        || invitationData.nombre.trim().length === 0
-        || typeof invitationData.usado !== 'boolean') {
+      if (!invitation.exists || !invitationData) {
         throw new SubmissionEndpointError('not-found', 'Invitation not found.');
       }
 
       const invitationUsed = invitationData.usado;
       const linkedResponseId = invitationData.responseId;
-      const isLinkedResponseIdValid = typeof linkedResponseId === 'string'
-        && linkedResponseId.length > 0
-        && !linkedResponseId.includes('/');
-      if (linkedResponseId !== undefined && !isLinkedResponseIdValid) {
-        throw new SubmissionEndpointError('failed-precondition', 'Invitation data is invalid.');
-      }
+      const isLinkedResponseIdValid = linkedResponseId !== undefined;
 
       const responseId = isLinkedResponseIdValid ? linkedResponseId : generatedResponseId;
       const responseDocumentId = invitationUsed && !isLinkedResponseIdValid
@@ -109,8 +86,12 @@ export function createSubmitSurveyHandler(store: SubmissionStore) {
 
       if (previousResponse.exists) {
         const persistedResponse = previousResponse.data();
-        const persistedAnswers = persistedResponse && getStoredAnswers(persistedResponse);
-        if (invitationUsed && persistedAnswers && haveSameAnswers(persistedAnswers, answers)) {
+        const parsedResponse = parseStoredSurveyResponse(persistedResponse);
+        if (invitationUsed
+          && parsedResponse
+          && haveSameAnswers(parsedResponse.answers, answers)
+          && (parsedResponse.schemaVersion === 1
+            || parsedResponse.participantName === invitationData.nombre)) {
           return { submitted: true };
         }
         throw new SubmissionEndpointError('failed-precondition', 'Invitation already used.');

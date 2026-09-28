@@ -1,3 +1,5 @@
+import { parseInvitationDocument } from './firestoreSchemas.js';
+
 export type InvitationLookupErrorCode =
   | 'unauthenticated'
   | 'invalid-argument'
@@ -47,11 +49,8 @@ export function createValidateInvitationHandler(store: InvitationLookupStore) {
       throw new InvitationLookupError('not-found', 'Invalid invitation code.');
     }
 
-    const invitation = snapshot.data();
-    if (!invitation
-      || typeof invitation.nombre !== 'string'
-      || invitation.nombre.trim().length === 0
-      || typeof invitation.usado !== 'boolean') {
+    const invitation = parseInvitationDocument(snapshot.data());
+    if (!invitation) {
       throw new InvitationLookupError('not-found', 'Invalid invitation code.');
     }
 
