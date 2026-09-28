@@ -1154,7 +1154,7 @@ de integracion, el build ni el job de e2e; y la lista de comprobacion pedia
 despliegue, funciones antes que web, porque al reves la version nueva pide un
 DTO que el backend antiguo rechaza.
 
-## TODO-069. Crear reglas de dependencia
+## TODO-069. Crear reglas de dependencia [COMPLETADO]
 
 Documentar y revisar que:
 
@@ -1164,6 +1164,32 @@ application no importa componentes
 presentation no accede directamente a Firestore
 infrastructure no contiene reglas de interfaz
 ```
+
+Resultado: al revisar, dos de las cuatro reglas no existian. `application` podia
+importar un SFC y `presentation` podia llamar a `getFirestore` sin que nada se
+enterara, y `infrastructure` podia acabar decidiendo como se ve algo. La regla del
+dominio si existia, pero vivia en `tests/unit/domain/isolation.spec.ts` mezclada
+con comprobaciones que no son reglas de dependencias, y con un regex que
+buscaba `from 'vue'` y por eso no habria pillado un `import type` reescrito de
+otra forma. Se creo `tests/unit/contracts/dependencyRules.spec.ts`, que
+resuelve los especificadores relativos a rutas absolutas antes de decidir, asi
+que la comprobacion no depende de como este escrito el import: cubre
+`import`, `export ... from` e `import()` dinamico. Las cuatro reglas quedan
+escritas como tabla, con la comprobacion al lado. Lo importante es que se
+verifico que muerden: se anadieron a proposito un `import { ref } from 'vue'` al
+dominio, un `getFirestore` a `presentation`, un SFC a `application` y un `vue` a
+`infrastructure`, y cayeron seis pruebas; despues se restauraron los ficheros.
+Una guarda que no falla nunca es indistinguible de una que no existe, y esa es
+justamente la prueba que hay que hacer con una guarda. Se escribieron tambien
+las excepciones, porque una regla sin excepciones documentadas se cumple
+rompiendola: `app/` puede conocer el SDK de Firebase por ser el composition
+root, `useSurveyWizard.ts` es el unico fichero de `application/` que importa
+Vue, e `infrastructure/` puede importar tipos del dominio porque un adaptador
+implementa un contrato. Hay tres pruebas que fijan esas excepciones, para que no
+se conviertan en puerta giratoria. Las reglas que ya vivian en
+`isolation.spec.ts` se movieron al archivo nuevo, dejando ahi solo lo que no es
+una regla de dependencias —la pureza del wizard y que las reglas de validacion
+no muten el catalogo—, de modo que cada invariante tiene un unico sitio.
 
 ## TODO-070. Crear guia de contribucion
 

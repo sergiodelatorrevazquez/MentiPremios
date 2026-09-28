@@ -67,10 +67,29 @@ presentation  →  application  →  domain
 infrastructure  ────────────────┘   (la inyecta bootstrap.ts)
 ```
 
-- **`domain/`** no importa Vue, ni `app/`, ni `infrastructure/`. Contiene el catálogo de preguntas, los tipos, las reglas de validación y el registro de multimedia. `tests/unit/domain/isolation.spec.ts` lo verifica leyendo los ficheros, así que la regla no depende de que alguien la recuerde.
-- **`application/`** implementa los casos de uso sin Vue. `surveyWizard.ts` calcula el estado del wizard con funciones puras que devuelven un estado nuevo; `useSurveyWizard.ts` es el adaptador que las conecta a `ref` y `reactive`.
-- **`presentation/`** son los seis SFC, sin acceso a Firebase ni a casos de uso.
+Las cuatro reglas que se sostienen, con el fichero que las verifica:
+
+| Regla | Verificación |
+|---|---|
+| `domain` no importa Vue ni Firebase, ni sale del dominio | `dependencyRules.spec.ts` |
+| `application` no importa componentes | `dependencyRules.spec.ts` |
+| `presentation` no accede directamente a Firestore | `dependencyRules.spec.ts` |
+| `infrastructure` no contiene reglas de interfaz | `dependencyRules.spec.ts` |
+
+Y lo que cada capa hace:
+
+- **`domain/`** no importa Vue, ni `app/`, ni `infrastructure/`, ni ningún paquete que no sea `node:`. Contiene el catálogo de preguntas, los tipos, las reglas de validación y el registro de multimedia.
+- **`application/`** implementa los casos de uso sin componentes. `surveyWizard.ts` calcula el estado del wizard con funciones puras que devuelven un estado nuevo; `useSurveyWizard.ts` es el adaptador que las conecta a `ref` y `reactive`.
+- **`presentation/`** son los seis SFC, sin acceso a Firebase ni a casos de uso. Pueden leer los tipos del dominio, que es la dirección permitida de la flecha.
 - **`app/App.vue`** es el único punto que conoce todas las capas. Recibe `AppServices` por `inject` de la clave que `main.ts` provee a través de `bootstrap.ts`, así que el shell no importa Firebase ni el Admin SDK.
+
+**Excepciones, y por qué existen:**
+
+- `app/` sí importa `firebase/auth` y `firebase/functions`. Es el composition root: si nadie puede conocer el SDK, nadie puede construirlo.
+- `useSurveyWizard.ts` importa Vue, y es el único fichero de `application/` que lo hace. La lógica que vale la pena probar vive en `surveyWizard.ts`, sin Vue.
+- `infrastructure/` puede importar tipos del dominio. Un adaptador implementa un contrato, y ese contrato está en el dominio.
+
+`tests/unit/contracts/dependencyRules.spec.ts` comprueba las cuatro reglas leyendo los ficheros. Se verificó que muerden: al añadir un `import { ref } from 'vue'` al dominio, un `getFirestore` a `presentation`, un SFC a `application` y un `vue` a `infrastructure`, caen seis pruebas. Una guarda que no muerde es indistinguishable de una que no existe.
 
 ## Patrón de componentes
 
