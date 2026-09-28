@@ -28,34 +28,29 @@ codigos/
 
 ### Colección `respuestas`
 
-Respuestas a las preguntas de la encuesta.
+Respuestas a las preguntas de la encuesta. Los documentos legacy conservan su formato; los nuevos usan un ID opaco y el esquema versionado v2.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| **Document ID** | `string` | Nombre de usuario (se copia del campo `nombre` de `codigos`, normalizado) |
-| `usuario` | `string` | Nombre de la persona |
-| `premios` | `map` | Clave = ID de pregunta, Valor = ID de opción seleccionada |
-| `createdAt` | `timestamp` | Marca de tiempo del servidor (Firebase `serverTimestamp`) |
+| **Document ID** | `string` | ID aleatorio interno; no contiene el código de invitación |
+| `schemaVersion` | `number` | `2` para documentos nuevos; ausente en documentos legacy |
+| `participantName` | `string` | Nombre visible del participante |
+| `answers` | `map` | IDs de pregunta a IDs de opción |
+| `createdAt` | `timestamp` | Timestamp de Firestore asignado por el servidor al crear el documento |
+| `submittedAt` | `timestamp` | Timestamp de Firestore asignado por el servidor al completar el envío |
 
 **Ejemplo:**
 ```
-respuestas/
-  └── SERGIO2024/
-        ├── usuario: "Sergio"
-        ├── premios: {
-        │     tonto: "tonto-1",
-        │     casper: "casper-3",
-        │     comefeas: "comefeas-2",
-        │     soltero: "soltero-4",
-        │     anecdata: "anecdota-5",
-        │     meme: "meme-1",
-        │     mensaje: "mensaje-2",
-        │     foto: "foto-3",
-        │     video: "video-1",
-        │     correa: "correa-2"
-        │   }
-        └── createdAt: March 15, 2025 at 10:30:00 PM UTC-5
+respuestas/{id-aleatorio} {
+  schemaVersion: 2,
+  participantName: "Sergio",
+  answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ },
+  createdAt: Timestamp,
+  submittedAt: Timestamp
+}
 ```
+
+Los documentos legacy conservan un campo plano por pregunta bajo un ID igual al código. Las nuevas invitaciones guardan el enlace `responseId`; el código no se copia a documentos nuevos de respuesta. Ambos timestamps se generan con `FieldValue.serverTimestamp()` durante la transacción. No confundir el esquema persistido con el DTO de entrada de la callable, que usa `{ invitationId, answers }`.
 
 ---
 

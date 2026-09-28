@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore, type DocumentReference } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, type DocumentReference } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import {
   createSubmitSurveyHandler,
@@ -17,6 +17,8 @@ if (getApps().length === 0) initializeApp();
 const firestore = getFirestore();
 const store: SubmissionStore = {
   document: (collection, id) => firestore.doc(`${collection}/${id}`),
+  newId: (collection) => firestore.collection(collection).doc().id,
+  serverTimestamp: () => FieldValue.serverTimestamp(),
   runTransaction: (operation) => firestore.runTransaction((transaction) => operation({
     get: (reference) => transaction.get(reference as DocumentReference),
     create: (reference, data) => {

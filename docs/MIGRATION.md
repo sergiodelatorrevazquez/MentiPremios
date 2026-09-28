@@ -695,7 +695,7 @@ Resultado: la validacion se movio a la callable autenticada `validateInvitation`
 
 # Fase 7: modelo de datos y migracion
 
-## TODO-039. Corregir el esquema documentado de respuestas
+## TODO-039. Corregir el esquema documentado de respuestas [COMPLETADO]
 
 Alinear documentacion e implementacion respecto a:
 
@@ -706,7 +706,9 @@ Alinear documentacion e implementacion respecto a:
 - Fecha de creacion.
 - Fecha de envio.
 
-## TODO-040. Crear una estrategia para documentos existentes
+Resultado: `docs/API.md` y `docs/ARCHITECTURE.md` ahora reflejan lo que el handler persiste actualmente: `respuestas/{invitationId}` con un campo plano por pregunta, sin nombre ni timestamps. Se distingue explícitamente el DTO de la callable del documento almacenado y se señala la transición de esquema que sigue.
+
+## TODO-040. Crear una estrategia para documentos existentes [COMPLETADO]
 
 Antes de cambiar el formato, decidir si se requiere:
 
@@ -721,15 +723,21 @@ Por ejemplo:
 schemaVersion: 2
 ```
 
-## TODO-041. Evitar usar la palabra secreta como ID visible
+Resultado/decision: conservar `respuestas` como coleccion y tratar los documentos actuales sin `schemaVersion` como legacy v1. No se reescribiran ni borraran en una migracion masiva; permanecen disponibles para informes y exportaciones. Las nuevas respuestas usaran v2, con `schemaVersion: 2`, `participantName`, `answers`, `createdAt` y `submittedAt`; el ID sera opaco y se enlazara desde el documento de invitacion mediante `responseId`. La logica de reintentos reconocera la respuesta legacy asociada al ID antiguo sin copiar el codigo secreto a documentos nuevos. Cualquier backfill futuro requiere export/respaldo y un plan de rollback.
+
+## TODO-041. Evitar usar la palabra secreta como ID visible [COMPLETADO]
 
 Evaluar el uso de un ID interno aleatorio para respuestas. La palabra secreta no deberia aparecer innecesariamente en documentos o informes.
 
-## TODO-042. Anadir marcas de tiempo reales
+Resultado: las respuestas nuevas usan IDs aleatorios de Firestore; el documento de invitacion conserva el enlace `responseId`. El esquema nuevo incluye `schemaVersion: 2`, nombre y mapa de respuestas, sin copiar el secreto. Los reintentos legacy siguen comprobando el documento con el ID anterior y las pruebas cubren el enlace v2, la idempotencia y la ausencia de escrituras duplicadas.
+
+## TODO-042. Anadir marcas de tiempo reales [COMPLETADO]
 
 Usar `serverTimestamp()` en el documento definitivo de respuesta.
 
-## TODO-043. Anadir validacion de documentos leidos
+Resultado: cada documento v2 se crea con `createdAt` y `submittedAt` usando `FieldValue.serverTimestamp()` de Admin SDK dentro de la transaccion. Los reintentos idempotentes no reescriben ni alteran las fechas. El test del handler comprueba ambos campos.
+
+## TODO-043. Anadir validacion de documentos leidos [COMPLETADO]
 
 No hacer casts directos inseguros como:
 
@@ -738,6 +746,8 @@ snap.data() as CodigoInvitacion
 ```
 
 Crear parseadores o validadores para documentos incompletos o corruptos.
+
+Resultado: `firestoreSchemas.ts` valida invitaciones y sus `responseId`, mapas completos de opciones, respuestas legacy planas y documentos v2 con version, nombre, campos exactos y timestamps Firestore validos. Los handlers usan estos parseadores antes de devolver nombres o aceptar reintentos; los documentos ausentes, corruptos o de versiones desconocidas se rechazan. Hay pruebas de campos faltantes/extra, IDs inseguros, opciones invalidas, timestamps fuera de rango y formato legacy.
 
 ---
 

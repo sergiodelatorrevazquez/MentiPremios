@@ -109,14 +109,16 @@ Document ID: palabra secreta (string, ej: "galaxia-2025")
 
 ### Colección `respuestas`
 ```
-Document ID: nombre de usuario (string, ej: "SERGIO2024")
+Document ID: ID aleatorio opaco (v2); el esquema legacy usaba el código
 {
-  tonto: "tonto-1",       // map: clave = id de pregunta, valor = id de opción
-  casper: "casper-3",
-  comefeas: "comefeas-2",
-  // ... todas las preguntas
+  schemaVersion: 2,
+  participantName: "Sergio",
+  answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ },
+  createdAt: Timestamp,
+  submittedAt: Timestamp
 }
 ```
+Cada invitación v2 guarda `responseId` para mantener la relación y soportar reintentos. El documento no incluye el código secreto. Los legacy conservan el mapa plano bajo el ID antiguo y se reconocen sin reescritura. Los dos timestamps usan hora de servidor y se asignan en la transacción inicial.
 
 ### Colección `palabrasClave`
 ```

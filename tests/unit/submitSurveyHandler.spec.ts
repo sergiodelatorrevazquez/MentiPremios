@@ -11,6 +11,12 @@ import { preguntas } from '../../src/features/survey/domain/questions';
 const validAnswers = Object.fromEntries(
   Object.entries(SURVEY_OPTION_IDS).map(([questionId, options]) => [questionId, options[0]]),
 ) as Record<string, string>;
+const storedTimestamp = {
+  seconds: 1,
+  nanoseconds: 0,
+  toDate: () => new Date(1000),
+  toMillis: () => 1000,
+};
 
 function createStore(options: {
   invitationExists?: boolean;
@@ -38,6 +44,8 @@ function createStore(options: {
   };
   const store: SubmissionStore = {
     document: vi.fn((collection, id) => `${collection}/${id}`),
+    newId: vi.fn(() => 'random-response-id'),
+    serverTimestamp: vi.fn(() => 'server-timestamp'),
     runTransaction: vi.fn((operation) => operation(transaction)),
   };
 
@@ -63,8 +71,17 @@ describe('submitSurvey callable handler', () => {
     })).resolves.toEqual({ submitted: true });
 
     expect(store.runTransaction).toHaveBeenCalledOnce();
-    expect(transaction.create).toHaveBeenCalledWith('respuestas/secret-1', answers);
-    expect(transaction.update).toHaveBeenCalledWith('codigos/secret-1', { usado: true });
+    expect(transaction.create).toHaveBeenCalledWith('respuestas/random-response-id', {
+      schemaVersion: 2,
+      participantName: 'Sergio',
+      answers,
+      createdAt: 'server-timestamp',
+      submittedAt: 'server-timestamp',
+    });
+    expect(transaction.update).toHaveBeenCalledWith('codigos/secret-1', {
+      usado: true,
+      responseId: 'random-response-id',
+    });
   });
 
   it('returns success for an identical retry without writing again', async () => {
@@ -80,6 +97,31 @@ describe('submitSurvey callable handler', () => {
       data: { invitationId: 'secret-1', answers },
     })).resolves.toEqual({ submitted: true });
 
+    expect(transaction.create).not.toHaveBeenCalled();
+    expect(transaction.update).not.toHaveBeenCalled();
+  });
+
+  it('uses the response ID linked from the invitation for identical versioned retries', async () => {
+    const answers = { ...validAnswers };
+    const { store, transaction } = createStore({
+      invitationUsed: true,
+      invitationData: { nombre: 'Sergio', usado: true, responseId: 'response-opaque-123' },
+      existingResponse: {
+        schemaVersion: 2,
+        participantName: 'Sergio',
+        answers,
+        createdAt: storedTimestamp,
+        submittedAt: storedTimestamp,
+      },
+    });
+    const handler = createSubmitSurveyHandler(store);
+
+    await expect(handler({
+      auth: { uid: 'anonymous-user' },
+      data: { invitationId: 'secret-1', answers },
+    })).resolves.toEqual({ submitted: true });
+
+    expect(store.document).toHaveBeenCalledWith('respuestas', 'response-opaque-123');
     expect(transaction.create).not.toHaveBeenCalled();
     expect(transaction.update).not.toHaveBeenCalled();
   });
