@@ -413,7 +413,7 @@ src/features/survey/presentation/CompletionStep.vue
 
 Resultado: la pantalla final queda separada en `src/features/survey/presentation/CompletionStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/CompletionStep.spec.ts`, manteniendo el mismo mensaje de agradecimiento y finalizacion de la encuesta.
 
-## TODO-020. Extraer el visor multimedia
+## TODO-020. Extraer el visor multimedia [COMPLETADO]
 
 Crear:
 
@@ -429,6 +429,8 @@ Debe conservar:
 - Video.
 - Cierre del modal.
 - Accesibilidad.
+
+Resultado: el visor multimedia queda separado en `src/features/survey/presentation/MultimediaViewer.vue`, conectado desde `src/app/App.vue` y cubierto por pruebas en `tests/unit/MultimediaViewer.spec.ts`, manteniendo la vista completa de imagen o video y el cierre por click/escape.
 
 ## TODO-021. Extraer el visor de la foto del avatar
 

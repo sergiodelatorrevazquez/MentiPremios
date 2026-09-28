@@ -12,6 +12,7 @@ import LoginStep from '../features/survey/presentation/LoginStep.vue';
 import WelcomeStep from '../features/survey/presentation/WelcomeStep.vue';
 import QuestionStep from '../features/survey/presentation/QuestionStep.vue';
 import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
+import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.vue';
 
 import {
   guardarRespuestaUsuario,
@@ -229,44 +230,11 @@ function handleModalKeydown(e: KeyboardEvent) {
       </div>
     </div>
 
-    <div
-      v-if="visorMultimediaAbierto && multimediaActual"
-      class="photo-modal"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      @click="cerrarVisorMultimedia"
-      @keydown="handleMultimediaKeydown"
-    >
-      <div
-        class="photo-modal-inner"
-        @click.stop
-      >
-        <button
-          type="button"
-          class="modal-close-btn"
-          aria-label="Cerrar"
-          @click="cerrarVisorMultimedia"
-        >
-          ✕
-        </button>
-        <img
-          v-if="multimediaActual.tipo === 'imagen'"
-          class="photo-modal-image"
-          :src="multimediaActual.src"
-          :alt="multimediaActual.alt"
-        >
-        <video
-          v-else
-          class="photo-modal-video"
-          :src="multimediaActual.src"
-          :alt="multimediaActual.alt"
-          controls
-          autoplay
-          playsinline
-        />
-      </div>
-    </div>
+    <MultimediaViewer
+      :model-value="visorMultimediaAbierto"
+      :media="multimediaActual"
+      @close="cerrarVisorMultimedia"
+    />
 
     <main class="app-content">
       <template v-if="pasoActual === 'login'">
