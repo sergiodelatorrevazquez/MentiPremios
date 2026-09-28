@@ -1,4 +1,4 @@
-import { doc, getDoc, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, type Firestore } from 'firebase/firestore';
 
 export interface InvitationRecord {
   id: string;
@@ -8,6 +8,7 @@ export interface InvitationRecord {
 
 export interface InvitationRepository {
   findBySecret(secret: string): Promise<InvitationRecord | null>;
+  markAsUsed(invitationId: string): Promise<void>;
 }
 
 export class FirestoreInvitationRepository implements InvitationRepository {
@@ -28,5 +29,10 @@ export class FirestoreInvitationRepository implements InvitationRepository {
       nombre: data.nombre ?? '',
       usado: Boolean(data.usado),
     };
+  }
+
+  async markAsUsed(invitationId: string): Promise<void> {
+    const ref = doc(this.db, 'codigos', invitationId);
+    await updateDoc(ref, { usado: true });
   }
 }

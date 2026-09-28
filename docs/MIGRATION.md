@@ -562,7 +562,7 @@ Implementacion Firebase separada.
 
 Resultado: se implemento `FirestoreSurveySubmissionRepository`, tipado con el DTO canonico `SurveySubmission`. El repositorio traduce el envio al formato de persistencia legado escribiendo solo el mapa de respuestas en `respuestas/{invitationId}`, manteniendo el contrato existente mientras se migra la arquitectura. El test verifica la ruta y el contenido persistido.
 
-## TODO-030. Crear una composicion de dependencias
+## TODO-030. Crear una composicion de dependencias [COMPLETADO]
 
 Crear:
 
@@ -578,6 +578,8 @@ casos de uso
 ```
 
 La UI no deberia conocer `db`, `doc`, `setDoc` ni `updateDoc`.
+
+Resultado: `main.ts` crea los servicios y los proporciona mediante `APP_SERVICES_KEY`; `App.vue` consume los casos de uso sin importar el servicio Firebase legacy. `createAppServices` conecta validacion y envio con los repositorios Firebase, incluido el marcado de invitaciones usadas. Los tests cubren el wiring y el flujo de UI.
 
 ## TODO-031. Eliminar los alias bilingues del servicio
 

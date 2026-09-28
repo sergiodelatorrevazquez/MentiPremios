@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { FirestoreInvitationRepository } from '../../src/infrastructure/firebase/firestoreInvitationRepository';
 
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn(),
   getDoc: vi.fn(),
+  updateDoc: vi.fn(),
 }));
 
 describe('FirestoreInvitationRepository', () => {
@@ -35,5 +36,16 @@ describe('FirestoreInvitationRepository', () => {
     vi.mocked(getDoc).mockResolvedValue({ exists: () => false } as any);
 
     await expect(repository.findBySecret('missing')).resolves.toBeNull();
+  });
+
+  it('marks an invitation as used', async () => {
+    const db = {} as any;
+    const repository = new FirestoreInvitationRepository(db);
+    vi.mocked(doc).mockReturnValue('doc-ref' as any);
+
+    await repository.markAsUsed('codigo-1');
+
+    expect(doc).toHaveBeenCalledWith(db, 'codigos', 'codigo-1');
+    expect(updateDoc).toHaveBeenCalledWith('doc-ref', { usado: true });
   });
 });
