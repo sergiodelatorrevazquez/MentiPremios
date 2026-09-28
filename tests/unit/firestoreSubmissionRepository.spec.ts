@@ -18,16 +18,30 @@ describe('FirestoreSurveySubmissionRepository', () => {
       participantName: 'Sergio',
       answers: {
         tonto: 'tonto-1',
+        casper: 'casper-1',
+        comefeas: 'comefeas-1',
+        soltero: 'soltero-1',
+        anecdota: 'anecdota-1',
+        meme: 'meme-1',
+        mensaje: 'mensaje-1',
+        foto: 'foto-1',
+        video: 'video-1',
+        correa: 'correa-1',
       },
     });
 
     expect(doc).toHaveBeenCalledWith(db, 'respuestas', 'inv-1');
     expect(setDoc).toHaveBeenCalledWith('doc-ref', {
-      invitationId: 'inv-1',
-      participantName: 'Sergio',
-      answers: {
-        tonto: 'tonto-1',
-      },
+      tonto: 'tonto-1',
+      casper: 'casper-1',
+      comefeas: 'comefeas-1',
+      soltero: 'soltero-1',
+      anecdota: 'anecdota-1',
+      meme: 'meme-1',
+      mensaje: 'mensaje-1',
+      foto: 'foto-1',
+      video: 'video-1',
+      correa: 'correa-1',
     });
   });
 });

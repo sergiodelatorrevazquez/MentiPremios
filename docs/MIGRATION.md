@@ -548,7 +548,7 @@ Implementacion:
 src/infrastructure/firebase/firestoreInvitationRepository.ts
 ```
 
-## TODO-029. Crear el repositorio de respuestas
+## TODO-029. Crear el repositorio de respuestas [COMPLETADO]
 
 Crear una interfaz:
 
@@ -559,6 +559,8 @@ interface SurveySubmissionRepository {
 ```
 
 Implementacion Firebase separada.
+
+Resultado: se implemento `FirestoreSurveySubmissionRepository`, tipado con el DTO canonico `SurveySubmission`. El repositorio traduce el envio al formato de persistencia legado escribiendo solo el mapa de respuestas en `respuestas/{invitationId}`, manteniendo el contrato existente mientras se migra la arquitectura. El test verifica la ruta y el contenido persistido.
 
 ## TODO-030. Crear una composicion de dependencias
 
