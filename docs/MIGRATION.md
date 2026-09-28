@@ -654,7 +654,7 @@ Si el usuario reintenta despues de un error de red, el servidor debe devolver un
 
 Resultado: la transaccion tambien lee `respuestas/{invitationId}`. Si la invitacion ya esta usada y el mapa persistido coincide exactamente, el endpoint devuelve el mismo exito sin escrituras; si difiere o el estado es inconsistente, rechaza el reintento sin sobrescribir datos.
 
-## TODO-036. Validar las respuestas en servidor
+## TODO-036. Validar las respuestas en servidor [COMPLETADO]
 
 No confiar unicamente en la UI. Validar:
 
@@ -665,6 +665,8 @@ No confiar unicamente en la UI. Validar:
 - Invitacion no usada.
 - Formato de datos.
 - Tamano maximo de los datos.
+
+Resultado: `parseSurveySubmission` valida exactamente el conjunto de preguntas/opciones permitido, IDs y campos inesperados, formato de valores y un maximo de 4 KiB. El handler tambien exige documentos de invitacion con `nombre` y `usado` bien formados. Un test de paridad alerta si el catalogo del frontend cambia sin actualizar la allowlist del servidor.
 
 ## TODO-037. Crear reglas de Firestore restrictivas
 

@@ -1,3 +1,5 @@
+import { parseSurveySubmission } from './surveyValidation.js';
+
 export type SubmissionErrorCode =
   | 'unauthenticated'
   | 'invalid-argument'
@@ -32,10 +34,6 @@ export interface SubmitSurveyRequest {
   auth: { uid: string } | null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function haveSameAnswers(
   persistedAnswers: Record<string, unknown>,
   submittedAnswers: Record<string, unknown>,
@@ -55,27 +53,29 @@ export function createSubmitSurveyHandler(store: SubmissionStore) {
       throw new SubmissionEndpointError('unauthenticated', 'Authentication is required.');
     }
 
-    if (!isRecord(data)
-      || typeof data.invitationId !== 'string'
-      || data.invitationId.trim().length === 0
-      || !isRecord(data.answers)) {
+    const submission = parseSurveySubmission(data);
+    if (!submission) {
       throw new SubmissionEndpointError('invalid-argument', 'Invalid survey submission.');
     }
 
-    const invitationId = data.invitationId;
-    const answers = data.answers;
+    const { invitationId, answers } = submission;
     const invitationReference = store.document('codigos', invitationId);
     const responseReference = store.document('respuestas', invitationId);
 
     return store.runTransaction(async (transaction) => {
       const invitation = await transaction.get(invitationReference);
       const previousResponse = await transaction.get(responseReference);
+      const invitationData = invitation.data();
 
-      if (!invitation.exists) {
+      if (!invitation.exists
+        || !invitationData
+        || typeof invitationData.nombre !== 'string'
+        || invitationData.nombre.trim().length === 0
+        || typeof invitationData.usado !== 'boolean') {
         throw new SubmissionEndpointError('not-found', 'Invitation not found.');
       }
 
-      const invitationUsed = invitation.data()?.usado === true;
+      const invitationUsed = invitationData.usado;
       if (previousResponse.exists) {
         const persistedAnswers = previousResponse.data();
         if (invitationUsed && persistedAnswers && haveSameAnswers(persistedAnswers, answers)) {

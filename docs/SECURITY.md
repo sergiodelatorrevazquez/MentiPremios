@@ -11,7 +11,7 @@ Use Firebase callable Cloud Functions running the Admin SDK as the only trusted 
 - Treat a retry with the same answers as the same successful submission; reject conflicting retries without overwriting.
 - Return only the participant display name needed by the welcome screen from invitation validation.
 
-The initial `submitSurvey(invitationId, answers)` callable is implemented in `functions/src/index.ts`. Full catalog validation, idempotency, restrictive client rules, and server-side invitation lookup are completed by the following Phase 6 tasks.
+The `submitSurvey(invitationId, answers)` callable is implemented in `functions/src/index.ts`. It validates the full question/option allowlist, payload shape and size, and invitation document before writing. Restrictive client rules and server-side invitation lookup remain in TODO-037 and TODO-038.
 
 ## Credential limitations
 

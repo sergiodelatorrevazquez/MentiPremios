@@ -5,21 +5,29 @@ import {
   type SubmissionStore,
   type SubmissionTransaction,
 } from '../../functions/src/submitSurveyHandler';
+import { SURVEY_OPTION_IDS } from '../../functions/src/surveySchema';
+import { preguntas } from '../../src/features/survey/domain/questions';
 
-function createStore({
-  invitationExists = true,
-  invitationUsed = false,
-  existingResponse,
-}: {
+const validAnswers = Object.fromEntries(
+  Object.entries(SURVEY_OPTION_IDS).map(([questionId, options]) => [questionId, options[0]]),
+) as Record<string, string>;
+
+function createStore(options: {
   invitationExists?: boolean;
   invitationUsed?: boolean;
   existingResponse?: Record<string, unknown>;
+  invitationData?: Record<string, unknown>;
 } = {}) {
+  const {
+    invitationExists = true,
+    invitationUsed = false,
+    existingResponse,
+  } = options;
   const transaction: SubmissionTransaction = {
     get: vi.fn()
       .mockResolvedValueOnce({
         exists: invitationExists,
-        data: () => ({ usado: invitationUsed }),
+        data: () => options.invitationData ?? { nombre: 'Sergio', usado: invitationUsed },
       })
       .mockResolvedValueOnce({
         exists: existingResponse !== undefined,
@@ -37,10 +45,17 @@ function createStore({
 }
 
 describe('submitSurvey callable handler', () => {
+  it('keeps the server allowlist aligned with the frontend question catalog', () => {
+    const frontendOptions = Object.fromEntries(
+      preguntas.map((question) => [question.id, question.opciones.map((option) => option.id)]),
+    );
+    expect(frontendOptions).toEqual(SURVEY_OPTION_IDS);
+  });
+
   it('creates the response and marks the invitation used in one transaction', async () => {
     const { store, transaction } = createStore();
     const handler = createSubmitSurveyHandler(store);
-    const answers = { tonto: 'tonto-1' };
+    const answers = validAnswers;
 
     await expect(handler({
       auth: { uid: 'anonymous-user' },
@@ -53,7 +68,7 @@ describe('submitSurvey callable handler', () => {
   });
 
   it('returns success for an identical retry without writing again', async () => {
-    const answers = { tonto: 'tonto-1', casper: 'casper-2' };
+    const answers = { ...validAnswers, casper: 'casper-2' };
     const { store, transaction } = createStore({
       invitationUsed: true,
       existingResponse: answers,
@@ -72,13 +87,13 @@ describe('submitSurvey callable handler', () => {
   it('rejects a retry with answers different from the original submission', async () => {
     const { store, transaction } = createStore({
       invitationUsed: true,
-      existingResponse: { tonto: 'tonto-1' },
+      existingResponse: validAnswers,
     });
     const handler = createSubmitSurveyHandler(store);
 
     await expect(handler({
       auth: { uid: 'anonymous-user' },
-      data: { invitationId: 'secret-1', answers: { tonto: 'tonto-2' } },
+      data: { invitationId: 'secret-1', answers: { ...validAnswers, tonto: 'tonto-2' } },
     })).rejects.toMatchObject({ code: 'failed-precondition' });
 
     expect(transaction.create).not.toHaveBeenCalled();
@@ -110,17 +125,36 @@ describe('submitSurvey callable handler', () => {
     expect(store.runTransaction).not.toHaveBeenCalled();
   });
 
+  it('rejects missing questions, invalid options, unexpected fields and oversized payloads', async () => {
+    const invalidRequests = [
+      { invitationId: 'secret-1', answers: { ...validAnswers, tonto: undefined } },
+      { invitationId: 'secret-1', answers: { ...validAnswers, unknown: 'unknown-1' } },
+      { invitationId: 'secret-1', answers: { ...validAnswers, tonto: 'casper-1' } },
+      { invitationId: 'secret-1', answers: validAnswers, participantName: 'Sergio' },
+      { invitationId: 'x'.repeat(5000), answers: validAnswers },
+    ];
+
+    for (const data of invalidRequests) {
+      const { store } = createStore();
+      const handler = createSubmitSurveyHandler(store);
+      await expect(handler({ auth: { uid: 'anonymous-user' }, data }))
+        .rejects.toMatchObject({ code: 'invalid-argument' });
+      expect(store.runTransaction).not.toHaveBeenCalled();
+    }
+  });
+
   it('does not write when the invitation is missing or already used', async () => {
     for (const storeState of [
       { invitationExists: false },
       { invitationUsed: true },
+      { invitationData: { nombre: '', usado: false } },
     ]) {
       const { store, transaction } = createStore(storeState);
       const handler = createSubmitSurveyHandler(store);
 
       await expect(handler({
         auth: { uid: 'anonymous-user' },
-        data: { invitationId: 'secret-1', answers: { tonto: 'tonto-1' } },
+        data: { invitationId: 'secret-1', answers: validAnswers },
       })).rejects.toBeInstanceOf(SubmissionEndpointError);
 
       expect(transaction.create).not.toHaveBeenCalled();
