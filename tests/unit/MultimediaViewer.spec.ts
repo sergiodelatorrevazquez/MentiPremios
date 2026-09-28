@@ -93,4 +93,27 @@ describe('MultimediaViewer', () => {
     wrapper.unmount();
     opener.remove();
   });
+
+  it('locks the page only while there is media to show', async () => {
+    const wrapper = mount(MultimediaViewer, {
+      attachTo: document.body,
+      props: { modelValue: true, media: null },
+    });
+    await nextTick();
+    expect(wrapper.find('.photo-modal').exists()).toBe(false);
+    expect(document.body.style.overflow).toBe('');
+
+    await wrapper.setProps({ media: { tipo: 'imagen' as const, src: '/image.jpg', alt: 'Imagen' } });
+    await nextTick();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    await wrapper.setProps({ modelValue: false, media: null });
+    await nextTick();
+    expect(document.body.style.overflow).toBe('');
+
+    await wrapper.setProps({ modelValue: true, media: { tipo: 'imagen' as const, src: '/image.jpg', alt: 'Imagen' } });
+    await nextTick();
+    wrapper.unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
 });

@@ -149,6 +149,7 @@ function onGoBack() {
           type="button"
           class="button-primary"
           :disabled="!props.canContinue"
+          :aria-busy="props.isSubmitting"
           @click="onSubmit"
         >
           {{ props.currentQuestionIndex + 1 === props.totalQuestions ? (props.isSubmitting ? 'Guardando...' : (props.hasSubmissionError ? 'Reintentar envío' : 'Enviar y cerrar')) : 'Siguiente pregunta' }}
@@ -164,6 +165,7 @@ function onGoBack() {
   font-size: 40px;
   line-height: 1.2;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .progress-bar {
@@ -200,10 +202,11 @@ function onGoBack() {
 .options-grid--4,
 .options-grid--6,
 .options-grid--8 {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .option-card {
+  min-width: 0;
   background: var(--color-surface);
   border: 2px solid rgba(11, 61, 11, 0.2);
   border-radius: 14px;
@@ -258,6 +261,7 @@ function onGoBack() {
 
 .option-text {
   display: block;
+  overflow-wrap: anywhere;
 }
 
 .footer {
@@ -274,6 +278,9 @@ function onGoBack() {
   display: flex;
   gap: 12px;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .button-primary {
@@ -335,6 +342,24 @@ function onGoBack() {
 @media (max-width: 640px) {
   .hero-title {
     font-size: 28px;
+  }
+
+  .progress-bar-track {
+    width: 80px;
+  }
+
+  .options-grid--4,
+  .options-grid--6,
+  .options-grid--8 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .footer-actions {
+    flex-direction: column;
+  }
+
+  .footer-actions > button {
+    width: 100%;
   }
 }
 </style>

@@ -82,6 +82,7 @@ npm run dev
 npm test -- --run       # Una ejecución
 npm test                # Modo watch
 npm run test:ui         # Dashboard interactivo
+npm run test:e2e        # Tests responsive en navegador real
 ```
 
 ## 🔧 Scripts
@@ -93,6 +94,7 @@ npm run test:ui         # Dashboard interactivo
 | `npm run preview` | Vista previa de la build |
 | `npm run lint` | ESLint |
 | `npm test` | Tests unitarios |
+| `npm run test:e2e` | Tests responsive (Playwright) |
 
 ## 🏗️ Estructura del proyecto
 
@@ -106,6 +108,8 @@ src/
 └── style.css                # Estilos globales
 
 functions/src/               # Callables autenticadas para invitaciones y envíos
+tests/unit/                  # Tests de UI, casos de uso y repositorios
+tests/e2e/                   # Tests responsive en navegador real
 ```
 
 ## 🤝 Contribuir

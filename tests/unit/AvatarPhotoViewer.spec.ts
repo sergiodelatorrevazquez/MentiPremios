@@ -55,4 +55,24 @@ describe('AvatarPhotoViewer', () => {
     wrapper.unmount();
     opener.remove();
   });
+
+  it('locks the page behind the dialog and releases it on close and unmount', async () => {
+    const wrapper = mount(AvatarPhotoViewer, {
+      attachTo: document.body,
+      props: { modelValue: false },
+    });
+
+    await wrapper.setProps({ modelValue: true });
+    await nextTick();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    await wrapper.setProps({ modelValue: false });
+    await nextTick();
+    expect(document.body.style.overflow).toBe('');
+
+    await wrapper.setProps({ modelValue: true });
+    await nextTick();
+    wrapper.unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
 });

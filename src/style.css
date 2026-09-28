@@ -331,7 +331,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding: 60px 18px 18px;
   background: rgba(0, 0, 0, 0.85);
 }
 
@@ -345,17 +345,18 @@ body {
 .photo-modal-video {
   display: block;
   max-width: 100%;
-  max-height: calc(100vh - 36px);
+  max-height: calc(100vh - 78px);
+  max-height: calc(100dvh - 78px);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
 
 .modal-close-btn {
   position: absolute;
-  top: -40px;
+  top: -52px;
   right: 0;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
@@ -443,6 +444,7 @@ body {
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .status--success {
@@ -466,6 +468,7 @@ body {
   font-size: var(--font-size-display);
   line-height: 1.2;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .hero-kicker {
@@ -564,9 +567,27 @@ body {
 
 .option-text {
   display: block;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 640px) {
+  .app-header {
+    padding: 10px 12px;
+  }
+
+  .app-header-left {
+    gap: 10px;
+  }
+
+  .app-title {
+    font-size: 16px;
+  }
+
+  .avatar-circle {
+    width: 36px;
+    height: 36px;
+  }
+
   .app-content {
     padding: 18px 14px 22px;
   }
@@ -575,12 +596,25 @@ body {
     font-size: 28px;
   }
 
+  .options-grid--4,
+  .options-grid--6,
+  .options-grid--8 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .footer-actions {
     width: 100%;
+    flex-direction: column;
   }
 
   .footer-actions > button {
     min-width: 0;
+    width: 100%;
     flex: 1 1 auto;
+  }
+
+  .button-primary,
+  .button-secondary {
+    min-height: 44px;
   }
 }

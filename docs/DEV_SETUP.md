@@ -71,6 +71,7 @@ Abre la URL que muestra Vite (normalmente `http://localhost:5173`).
 | `npm test` | Ejecuta tests en modo watch |
 | `npm test -- --run` | Ejecuta tests una sola vez (modo CI) |
 | `npm run test:ui` | Abre Vitest UI (dashboard interactivo) |
+| `npm run test:e2e` | Tests responsive en Chromium real (Playwright) |
 | `npm run lint` | Ejecuta ESLint en `src/` |
 
 ---
@@ -88,6 +89,7 @@ src/
 
 functions/src/               # Cloud Functions callable
 tests/unit/                  # Tests de UI, casos de uso, repositorios y handlers
+tests/e2e/                   # Tests responsive en navegador real
 ```
 
 ---
@@ -121,6 +123,30 @@ npm run test:ui
 
 - `App.spec.ts` usa servicios de aplicación provistos por el bootstrap
 - Los handlers de Functions usan stores falsos para probar su lógica sin Firebase Emulator
+
+### Tests responsive (Playwright)
+
+```bash
+# Solo la primera vez: descarga el navegador
+npx playwright install chromium
+
+# Ejecuta la suite en móvil y escritorio
+npm run test:e2e
+```
+
+`tests/e2e/responsive.spec.ts` recorre el flujo real en dos viewports (`mobile`, Pixel 5, y `desktop`) y comprueba que no hay scroll horizontal, que las opciones y los botones mantienen un objetivo táctil de `44px` y que los modales mantienen el botón de cierre dentro de la pantalla con un medio vertical.
+
+El punto de entrada es `tests/e2e/harness/`, una página que monta `App.vue` con `AppServices` simulados y **no** importa `infrastructure/firebase/client.ts`, por lo que no necesita credenciales ni conexión. Los escenarios se fuerzan por query string:
+
+| Query | Efecto |
+|---|---|
+| `?scenario=invalid` | Palabra secreta incorrecta |
+| `?scenario=used` | Invitación ya utilizada |
+| `?scenario=submit-error` | El envío falla y la acción pasa a `Reintentar envío` |
+| `?scenario=slow&delay=4000` | Retrasa la respuesta para poder inspeccionar los estados de carga |
+| `?name=...` | Nombre de participante largo |
+
+`vite.config.ts` acota `test.include` a `tests/unit/**/*.spec.ts`, de modo que Vitest no intenta ejecutar estas specs.
 
 ---
 

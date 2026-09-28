@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import type { Multimedia } from '../domain/survey.types';
 
 const props = defineProps<{
@@ -11,21 +11,28 @@ const emit = defineEmits<{
   (event: 'close'): void;
 }>();
 
+const isOpen = computed(() => props.modelValue && props.media !== null);
 const modalElement = ref<HTMLElement | null>(null);
 let previouslyFocusedElement: HTMLElement | null = null;
 
-watch(() => props.modelValue, (isOpen) => {
-  if (isOpen) {
+watch(isOpen, (open) => {
+  if (open) {
     previouslyFocusedElement = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
     const closeButton = modalElement.value?.querySelector<HTMLElement>('.modal-close-btn');
     (closeButton ?? modalElement.value)?.focus();
+    document.body.style.overflow = 'hidden';
   } else {
+    document.body.style.overflow = '';
     previouslyFocusedElement?.focus();
     previouslyFocusedElement = null;
   }
 }, { flush: 'post' });
+
+onUnmounted(() => {
+  document.body.style.overflow = '';
+});
 
 function onClose() {
   emit('close');
@@ -119,7 +126,7 @@ function onBackdropKeydown(e: KeyboardEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding: 60px 18px 18px;
 }
 
 .photo-modal-inner {
@@ -132,17 +139,18 @@ function onBackdropKeydown(e: KeyboardEvent) {
 .photo-modal-video {
   display: block;
   max-width: 100%;
-  max-height: calc(100vh - 36px);
+  max-height: calc(100vh - 78px);
+  max-height: calc(100dvh - 78px);
   border-radius: 16px;
   box-shadow: 0 30px 120px rgba(0, 0, 0, 0.55);
 }
 
 .modal-close-btn {
   position: absolute;
-  top: -40px;
+  top: -52px;
   right: 0;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.9);
@@ -153,5 +161,17 @@ function onBackdropKeydown(e: KeyboardEvent) {
 
 .modal-close-btn:hover {
   background: white;
+}
+
+@media (max-width: 640px) {
+  .photo-modal {
+    padding: 60px 8px 8px;
+  }
+
+  .photo-modal-image,
+  .photo-modal-video {
+    max-height: calc(100vh - 68px);
+    max-height: calc(100dvh - 68px);
+  }
 }
 </style>

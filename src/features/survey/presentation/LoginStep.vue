@@ -94,6 +94,7 @@ function onSubmit() {
   font-size: 40px;
   line-height: 1.2;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .section-description {
@@ -144,6 +145,7 @@ function onSubmit() {
   border: 1px solid var(--color-error-border);
   color: var(--color-error);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .footer {
