@@ -899,7 +899,7 @@ tests/integration/
 
 Resultado: se reorganizaron las 21 specs existentes con `git mv` para conservar el historial y se dividio la suite en tres niveles ejecutables por separado. `tests/unit/` agrupa por capa hexagonal y quedo en cinco carpetas, dos mas de las previstas porque las specs que ya existian no encajaban en ninguna: `infrastructure` para `firestoreKeywordsRepository.spec.ts`, que prueba un adaptador de Firebase con el SDK simulado, y `contracts` para las cinco specs que verifican invariantes del repositorio mas que una capa (`designTokens`, `favicon`, `styleScope`, `firestoreSchemas` y `responsiveLayout`). `App.spec.ts` y `bootstrap.spec.ts` son los unicos casos de integracion porque componen la app o el composition root reales y solo falsean la frontera externa. Los handlers de Cloud Functions se dejaron en `unit/application`: son adaptadores finos sobre los mismos casos de uso que ya prueban las specs del cliente, con stores falsos en lugar de Firestore real, asi que siguen siendo unitarias y no hace falta abrir un cuarto nivel. Se anadieron `test:unit` y `test:integration` a `package.json`, `vite.config.ts` incluye ahora los dos niveles de Vitest, y el job `test` de CI ejecuta los pasos por separado para que un fallo senale el nivel. `tests/unit/contracts/testLayout.spec.ts` cierra el circuito: falla si `tests/` expone un directorio que no sea `e2e`, `integration` o `unit`, si `tests/unit/` gana una capa desconocida, si una spec aparece en la raiz de `unit` o si `vite.config.ts` deja de cubrir un nivel o arrastra las specs de Playwright, de modo que la estructura no se deshaga con un `mv` descuidado. Los imports y las rutas `__dirname` de las specs movidas se ajustaron a la nueva profundidad.
 
-## TODO-056. Probar el dominio sin Vue
+## TODO-056. Probar el dominio sin Vue [COMPLETADO]
 
 Anadir pruebas para:
 
@@ -909,7 +909,9 @@ Anadir pruebas para:
 - Transiciones.
 - Respuestas completas.
 
-## TODO-057. Probar los casos de uso
+Resultado: se ampliaron las pruebas puras hasta cubrir las cinco areas y se anadio `tests/unit/domain/isolation.spec.ts`, que verifica por codigo fuente que el dominio no importa Vue, ni infraestructura, ni ninguna dependencia externa, y que el wizard construye un estado nuevo en vez de mutar el recibido. `tests/unit/domain/questions.spec.ts` fija las reglas del catalogo: cobertura exacta de `QUESTION_IDS`, unicidad de identificadores de pregunta y de opcion dentro y entre preguntas, derivacion del identificador de opcion a partir del de su pregunta, textos no vacios, numero de opciones dentro de las reticulas que la interfaz soporta (4, 6 y 8), contenido multimedia limitado a `mensaje`, `foto` y `video` con un unico tipo de medio por pregunta y ausencia de campos no declarados. `tests/unit/domain/survey.rules.spec.ts` crecio de 4 a 15 pruebas sobre `validateSurveyAnswers`, ahora con catalogos reales y arbitraros: acumula todos los errores en una sola pasada, rechaza cadena vacia y `undefined` explicito, distingue error de opcion invalida del de pregunta desconocida, valida contra el catalogo recibido y no contra uno global, no muta sus entradas y exige exactamente una respuesta por pregunta. `tests/unit/application/surveyWizard.spec.ts` paso de 9 a 19 pruebas sobre transiciones, progreso y respuestas completas, incluyendo indices fuera de rango, catalogo vacio, ida y vuelta entre preguntas, eleccion de la ultima opcion de cada pregunta y comprobacion de que el cuestionario resultante supera `validateSurveyAnswers`. Al mutar el codigo para verificar que los tests detectan la regresion, fallan 8 pruebas entre las tres specs. La suite unitaria queda en 137 pruebas.
+
+## TODO-057. Probar los casos de uso [COMPLETADO]
 
 Cubrir:
 
@@ -921,11 +923,15 @@ Cubrir:
 - Reintento.
 - Doble envio.
 
-## TODO-058. Probar repositorios con contrato
+Resultado: `tests/unit/application/validateInvitation.spec.ts` paso de 3 a 10 pruebas y cubre los siete casos sobre el caso de uso puro: invitacion inexistente (`invitation-not-found`), invitacion ya utilizada (`invitation-already-used`), fallo del repositorio propagado sin envolver ni confundir con `InvalidInvitationError`, normalizacion del secreto antes de consultar, rechazo de un secreto vacio o solo espacios sin llegar al finder, y devolucion del registro sin modificar. `tests/unit/application/submitSurvey.spec.ts` paso de 3 a 17 pruebas: envio correcto (incluido un `persist` sincrono, el orden de las claves y las diez preguntas reales), envio invalido (respuestas incompletas, opcion ajena a la pregunta, preguntas desconocidas o sobrantes) sin escribir nada, error de repositorio envuelto en `PersistenceError` tanto para `Error` como para rechazos no-`Error`, reintento tras un fallo con el mismo resultado y sin escritura cuando sigue siendo invalido, y doble envio, donde se documenta que el caso de uso persiste en cada invocacion y que la deduplicacion vive en el handler. Tambien queda cubierta la union vacia: `validateSurveyAnswers` solo comprueba consistencia con el catalogo recibido, asi que un catalogo vacio con cero respuestas es mutuo-validado y el endpoint lo cierra con la allowlist de `SURVEY_OPTION_IDS`. `tests/integration/bootstrap.spec.ts` paso de 3 a 10 pruebas para la traduccion de errores entre el endpoint y la UI: `not-found` e `invalid-argument` se convierten en `InvalidInvitationError`, `failed-precondition` en `InvitationAlreadyUsedError`, un fallo de backend no mapeado se propaga intacto, una respuesta mal formada se rechaza en vez de aceptarse, y quedan cubiertos el reintento de un envio, el doble envio ya consumido como `PersistenceError`, el inicio de sesion anonimo frente al reuse de sesion existente y la normalizacion del secreto antes de la llamada remota. Las suites quedan en 158 unitarias y 33 de integracion.
+
+## TODO-058. Probar repositorios con contrato [COMPLETADO]
 
 Comprobar que los adaptadores Firebase cumplen las interfaces de aplicacion.
 
-## TODO-059. Mejorar pruebas de componentes
+Resultado: se anadio `tests/unit/contracts/repositoryContracts.spec.ts`, que comprueba la conformidad de los adaptadores con los contratos que consumen. Para el repositorio de palabras clave se asigna `FirestoreKeywordsRepository` a `KeywordsRepository`, de modo que una deviation en la firma rompe la compilacion, y se verifica que recibe el `KeywordSubmission` del dominio y no un DTO propio. Para los adaptadores de Cloud Function se comprueba que los stores falsos usados en las pruebas satisfacen `InvitationLookupStore` y `SubmissionStore` tal y como los declaran los handlers, y que el endpoint de envio acepta exactamente el payload que produce `submitSurvey` (solo `invitationId` y `answers`): `participantName` lo resuelve el servidor desde la invitacion, y se verifica que incluirlo hace fallar `parseSurveySubmission`. Tambien se fija que la allowlist `SURVEY_OPTION_IDS` coincide con el catalogo del cliente. `tests/unit/infrastructure/firestoreKeywordsRepository.spec.ts` paso de 1 a 5 pruebas de comportamiento del adaptador: escritura con timestamp del servidor, timestamp que no pisa los campos del envio, envio sin palabras clave, propagacion del error del SDK y ausencia de escritura cuando falla la construccion de la referencia. La suite unitaria queda en 168 pruebas.
+
+## TODO-059. Mejorar pruebas de componentes [COMPLETADO]
 
 Cada componente extraido debe probar:
 
@@ -935,11 +941,15 @@ Cada componente extraido debe probar:
 - Estados de carga.
 - Estados de error.
 
-## TODO-060. Corregir el test de navegacion atras
+Resultado: las seis specs de componentes se reescribieron agrupadas por las cinco categorias pedidas. `QuestionStep.spec.ts` paso de 6 a 19 pruebas: renderizado del titulo, de las reticulas 4/6/8, de la posicion y el progreso, y de la ausencia de precarga del video; props para la opcion seleccionada, la miniatura de reserva, la imagen disponible y el estado del boton principal; eventos para `select-option`, `submit`, `go-back` (tambien cuando esta deshabilitado), el inicio de pulsacion solo en opciones con multimedia y el final en mouseup, mouseleave y touchend; estados de carga con el texto "Guardando..." y `aria-busy`, y de error con el texto "Reintentar envio" tanto al llegar como tras limpiar el error, mas el estado vacio. `LoginStep.spec.ts` paso de 3 a 12, anadiendo `update:modelValue`, la tecla Enter, el estado `Comprobando...` con el boton deshabilitado y los tres casos de error (secreto vacio, error anunciado y ligado por `aria-describedby`, y texto conservado para corregirlo). `MultimediaViewer.spec.ts` paso de 5 a 13 y `AvatarPhotoViewer.spec.ts` de 3 a 9, cubriendo el cierre por fondo, contenido, boton y Escape, el `aria-label` por defecto, la imagen de reserva, el bloqueo y liberación del desplazamiento, la liberación en `onUnmounted` y la trampa de foco con restauracion. `WelcomeStep.spec.ts` paso de 2 a 7 y `CompletionStep.spec.ts` de 1 a 8, dejando constancia de que son pasos sin carga ni error propios: se comprueba que no existen para documentar la ausencia de estados. Durante la expansion se detectaron dos matices de los componentes y se ajustaron las pruebas para reflejar el comportamiento real: el vigilante de apertura no es inmediato, asi que el bloqueo de desplazamiento solo se aplica al pasar de cerrado a abierto, y el clic en el fondo emite `close` mientras el clic en el contenido no. La suite unitaria queda en 215 pruebas.
+
+## TODO-060. Corregir el test de navegacion atras [COMPLETADO]
 
 No basta con verificar que vuelve al primer indice. Debe verificar que la opcion previamente seleccionada continua seleccionada.
 
-## TODO-061. Verificar el payload enviado
+Resultado: el test de `tests/integration/App.spec.ts` que antes elegia siempre la primera opcion, y por tanto habria pasado incluso con un bug que restaurara cualquier seleccion, ahora elige la tercera opcion y comprueba que sigue siendo esa la marcada, tanto por clase CSS como por `aria-pressed`, y que las otras dos quedan sin marcar. Se anadieron tres casos mas: que la respuesta guardada sobreviva a un ciclo de retroceder y avanzar, que las respuestas de varias preguntas se acumulen al retroceder dos veces y sigan presentes en el envio final, y que al cambiar una respuesta anterior por otra la nueva llegue al envio (`tonto-3` en lugar de `tonto-1`). El test del envio completo se apoya ahora en esas respuestas acumuladas, asi que la navegacion atras deja de ser un detalle sin cubrir. La suite de integracion queda en 36 pruebas.
+
+## TODO-061. Verificar el payload enviado [COMPLETADO]
 
 El test debe comprobar exactamente:
 
@@ -952,6 +962,8 @@ El test debe comprobar exactamente:
 ```
 
 o el formato definitivo que se elija.
+
+Resultado: se fijo el formato definitivo en los tres puntos donde el payload cambia de forma. El test de `tests/integration/App.spec.ts` paso de `toHaveBeenCalledWith(expect.objectContaining(...))` a una comparacion exacta, de modo que un campo inesperado en el objeto enviado hace fallar la prueba. Al hacerlo aparecio una cuarta clave, `questions`, que `App.vue` pasa a `submitSurvey` porque el caso de uso la necesita para validar contra el catalogo; se documento que el formato en memoria es `{ invitationId, participantName, questions, answers }` y que el de red queda reducido a `{ invitationId, answers }`, porque el nombre lo resuelve el servidor desde la invitacion. Los dos puntos de la reduccion ya estaban fijados por pruebas: `tests/integration/bootstrap.spec.ts` comprueba la llamada remota y `tests/unit/contracts/repositoryContracts.spec.ts` que `parseSurveySubmission` rechaza cualquier envio con `participantName`. Se anadio un test que verifica las claves del payload, que hay exactamente diez respuestas y que todas apuntan a la opcion elegida, usando la segunda opcion de cada pregunta. La suite de integracion queda en 37 pruebas.
 
 ---
 
