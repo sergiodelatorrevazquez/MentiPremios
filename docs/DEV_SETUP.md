@@ -79,20 +79,15 @@ Abre la URL que muestra Vite (normalmente `http://localhost:5173`).
 
 ```
 src/
-├── App.vue                  # Componente principal (wizard completo)
+├── app/                     # Shell y composition root
+├── features/survey/         # Dominio, casos de uso y presentación
+├── features/keywords/       # Contrato opcional
+├── infrastructure/firebase/ # Cliente y repositorios
 ├── main.ts                  # Punto de entrada de la app
-├── firebase.ts              # Inicialización de Firebase
-├── style.css                # Estilos globales
-├── vue-shim.d.ts            # Tipos para archivos .vue
-├── assets/                  # Imágenes y vídeos
-│   ├── foto-amigos.jpg
-│   └── mensaje-1.jpg
-└── services/
-    └── premiosService.ts    # Acceso a Firestore
+└── assets/                  # Imágenes y vídeos
 
-tests/unit/
-├── App.spec.ts              # Tests del componente App
-└── premiosService.spec.ts   # Tests del servicio
+functions/src/               # Cloud Functions callable
+tests/unit/                  # Tests de UI, casos de uso, repositorios y handlers
 ```
 
 ---
@@ -118,15 +113,14 @@ npm run test:ui
 - Questions: renderizado de opciones, selección, progreso, navegación siguiente/anterior, guardado al completar, pantalla de gracias
 - Visor de foto: apertura y cierre del modal
 
-**`tests/unit/premiosService.spec.ts`** — Tests unitarios del servicio:
-- Guardar respuestas con `setDoc`
-- Obtener código por palabra secreta
-- Marcar código como usado
+**`tests/unit/bootstrap.spec.ts`** — Comprueba que la UI se conecta a las callables de validación y envío.
+
+**`tests/unit/validateInvitationHandler.spec.ts`** y **`tests/unit/submitSurveyHandler.spec.ts`** — Verifican autenticación, validación de datos, idempotencia y operaciones de servidor.
 
 ### Mocking
 
-- `App.spec.ts` mockea todo el módulo `premiosService` con `vi.mock`
-- `premiosService.spec.ts` mockea `firebase/firestore` y el módulo `firebase.ts`
+- `App.spec.ts` usa servicios de aplicación provistos por el bootstrap
+- Los handlers de Functions usan stores falsos para probar su lógica sin Firebase Emulator
 
 ---
 

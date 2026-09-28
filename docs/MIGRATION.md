@@ -616,7 +616,7 @@ Resultado: se mantuvo `palabrasClave` como funcionalidad opcional y se aislo en 
 
 Esta fase requiere especial cuidado porque afecta al modelo de seguridad.
 
-## TODO-033. Definir el modelo de seguridad real
+## TODO-033. Definir el modelo de seguridad real [COMPLETADO]
 
 Decidir si el sistema usara:
 
@@ -627,7 +627,9 @@ Decidir si el sistema usara:
 
 La palabra secreta no deberia considerarse una autorizacion fuerte por si sola.
 
-## TODO-034. Crear un endpoint unico de envio
+Resultado: se eligieron Cloud Functions callable con Admin SDK, Firebase Authentication anonima y App Check obligatorio. Firestore quedara accesible solo desde el servidor para las colecciones de invitaciones y respuestas. La decision y sus limites quedan documentados en `docs/SECURITY.md`: el codigo sigue siendo una credencial bearer y App Check mitiga abuso, pero no acredita identidad real.
+
+## TODO-034. Crear un endpoint unico de envio [COMPLETADO]
 
 El cliente debe llamar a una unica operacion:
 
@@ -644,11 +646,15 @@ El servidor debe:
 5. Marcar la invitacion como usada.
 6. Ejecutarlo todo de forma atomica.
 
-## TODO-035. Hacer el envio idempotente
+Resultado: se anadio la callable `submitSurvey` en `functions/`, protegida por Firebase Auth y App Check. Lee la invitacion, rechaza codigos inexistentes/usados y crea la respuesta junto con `usado: true` en una unica transaccion. El cliente ya envia por esta callable; la validacion exhaustiva queda en TODO-036. CI compila las Functions y el predeploy de Firebase ejecuta su build.
+
+## TODO-035. Hacer el envio idempotente [COMPLETADO]
 
 Si el usuario reintenta despues de un error de red, el servidor debe devolver un resultado consistente en lugar de crear duplicados.
 
-## TODO-036. Validar las respuestas en servidor
+Resultado: la transaccion tambien lee `respuestas/{invitationId}`. Si la invitacion ya esta usada y el mapa persistido coincide exactamente, el endpoint devuelve el mismo exito sin escrituras; si difiere o el estado es inconsistente, rechaza el reintento sin sobrescribir datos.
+
+## TODO-036. Validar las respuestas en servidor [COMPLETADO]
 
 No confiar unicamente en la UI. Validar:
 
@@ -660,7 +666,9 @@ No confiar unicamente en la UI. Validar:
 - Formato de datos.
 - Tamano maximo de los datos.
 
-## TODO-037. Crear reglas de Firestore restrictivas
+Resultado: `parseSurveySubmission` valida exactamente el conjunto de preguntas/opciones permitido, IDs y campos inesperados, formato de valores y un maximo de 4 KiB. El handler tambien exige documentos de invitacion con `nombre` y `usado` bien formados. Un test de paridad alerta si el catalogo del frontend cambia sin actualizar la allowlist del servidor.
+
+## TODO-037. Crear reglas de Firestore restrictivas [COMPLETADO]
 
 Eliminar las reglas de desarrollo:
 
@@ -675,9 +683,13 @@ Las reglas deben impedir:
 - Reutilizacion de codigos.
 - Escrituras con campos inesperados.
 
-## TODO-038. Separar lectura de invitacion y autorizacion
+Resultado: `firestore.rules` usa denegacion por defecto y bloquea todas las lecturas/escrituras cliente de `codigos`, `respuestas` y `palabrasClave`. `firebase.json` referencia las reglas y el despliegue esta documentado.
+
+## TODO-038. Separar lectura de invitacion y autorizacion [COMPLETADO]
 
 Si se mantiene el acceso por palabra secreta, disenar cuidadosamente que datos puede devolver el cliente y que operaciones deben permanecer server-side.
+
+Resultado: la validacion se movio a la callable autenticada `validateInvitation`, que normaliza el codigo, verifica que exista y no este usado, y devuelve unicamente `participantName`. Se retiro la lectura Firestore del cliente, se eliminaron los servicios legacy de lectura/escritura directa y las reglas deniegan tambien `get` individual de invitaciones. Las pruebas cubren autenticacion, estados de invitacion, normalizacion y respuesta minima.
 
 ---
 

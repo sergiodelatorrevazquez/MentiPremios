@@ -1,8 +1,8 @@
-# API de MentiPremios — Firestore y Servicios
+# API de MentiPremios — Cloud Functions y Firestore
 
 ## Modelo de datos (Firestore)
 
-El proyecto utiliza **Firebase Firestore** con 3 colecciones. No se requiere autenticación de usuarios — el acceso se controla mediante palabras secretas.
+El proyecto utiliza **Firebase Firestore** con tres colecciones. El navegador usa autenticación anónima y App Check para invocar Cloud Functions; las reglas no permiten acceso Firestore directo desde el cliente.
 
 ---
 
@@ -72,123 +72,21 @@ Palabras clave opcionales asociadas a usuarios. La funcionalidad existe en `Fire
 
 ---
 
-## Servicio: `src/services/premiosService.ts`
+## Cloud Functions
 
-Las funciones del servicio se exportan con nombres en inglés.
+Las operaciones de invitación y envío se ejecutan en Cloud Functions callable. Todas requieren Firebase Authentication y App Check.
 
-### `saveUserAnswer(payload)`
+### `validateInvitation`
 
-```typescript
-async function saveUserAnswer(payload: PremioRespuesta): Promise<void>
+Entrada: `{ secret: string }`. El servidor normaliza el código, comprueba que la invitación exista y no esté usada, y devuelve únicamente `{ participantName: string }`. El documento y su ID no se exponen al cliente.
 
-interface PremioRespuesta {
-  usuario: string;              // nombre de usuario (se usa como document ID)
-  premios: Record<string, string>;  // { preguntaId: opcionId }
-}
-```
+### `submitSurvey`
 
-**Operación Firestore**: `setDoc(doc(db, 'respuestas', payload.usuario), payload.premios)`
+Entrada: `{ invitationId: string, answers: Record<QuestionId, OptionId> }`. El servidor vuelve a validar la invitación y persiste la respuesta y el estado de uso dentro de una transacción. Los reintentos idénticos son idempotentes; uno conflictivo se rechaza.
 
-**Uso**:
-```typescript
-await saveUserAnswer({
-  usuario: 'SERGIO2024',
-  premios: { tonto: 'tonto-1', casper: 'casper-3' },
-});
-```
+## Repositorio opcional de palabras clave
 
----
-
-### Repositorio opcional de palabras clave
-
-Esta funcionalidad no forma parte del flujo de encuesta. Se mantiene aislada en `FirestoreKeywordsRepository` (`src/infrastructure/firebase/firestoreKeywordsRepository.ts`).
-
-```typescript
-interface KeywordSubmission {
-  usuario: string;
-  palabrasClave: string[];
-}
-
-interface KeywordsRepository {
-  save(submission: KeywordSubmission): Promise<void>;
-}
-```
-
-El repositorio escribe en `palabrasClave` y añade `createdAt` con `serverTimestamp()`.
-
-**Uso**:
-```typescript
-const repository = new FirestoreKeywordsRepository(db);
-await repository.save({
-  usuario: 'Sergio',
-  palabrasClave: ['divertido', 'leal', 'fiestero'],
-});
-```
-
----
-
-### `getCodeBySecretWord(secretWord)`
-
-```typescript
-async function getCodeBySecretWord(
-  secretWord: string
-): Promise<(CodigoInvitacion & { id: string }) | null>
-
-interface CodigoInvitacion {
-  nombre: string;
-  usado: boolean;
-}
-```
-
-**Operación Firestore**: `getDoc(doc(db, 'codigos', secretWord))`
-
-**Retorna**:
-- `{ id, nombre, usado }` si el documento existe
-- `null` si el documento no existe
-
-**Uso**:
-```typescript
-const codigo = await getCodeBySecretWord('secreto-de-sergio');
-if (!codigo) {
-  // Palabra incorrecta
-} else if (codigo.usado) {
-  // Ya respondió
-} else {
-  // Acceso concedido
-}
-```
-
----
-
-### `markCodeAsUsed(secretWord)`
-
-```typescript
-async function markCodeAsUsed(secretWord: string): Promise<void>
-```
-
-**Operación Firestore**: `updateDoc(doc(db, 'codigos', secretWord), { usado: true })`
-
-**Uso**:
-```typescript
-await markCodeAsUsed('secreto-de-sergio');
-```
-
----
-
-## Manejo de errores
-
-Todas las funciones envuelven llamadas a Firestore en try/catch. Los errores se transforman en `FirestoreServiceError` (`src/services/premiosService.ts:28-36`):
-
-```typescript
-export class FirestoreServiceError extends Error {
-  constructor(message: string, public code?: string) {
-    super(message);
-    this.name = 'FirestoreServiceError';
-  }
-}
-```
-
-El `code` contiene el código de error de Firestore (ej: `unavailable`, `not-found`, `permission-denied`).
+Esta funcionalidad no forma parte del flujo de encuesta ni se expone al navegador. `FirestoreKeywordsRepository` conserva el contrato en infraestructura para un futuro uso server-side; las reglas actuales bloquean escrituras directas del cliente.
 
 ---
 

@@ -29,9 +29,12 @@ VITE_FIREBASE_PROJECT_ID=tu-proyecto
 VITE_FIREBASE_STORAGE_BUCKET=tu-proyecto.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
 VITE_FIREBASE_APP_ID=1:123456789:web:abc123
+VITE_FIREBASE_APP_CHECK_SITE_KEY=tu-clave-recaptcha-v3
 ```
 
 > **Importante**: `.env.local` está en `.gitignore` y **no debe subirse al repositorio**.
+
+Habilita el proveedor **Anonymous** en Firebase Authentication y registra la app web en App Check con reCAPTCHA v3. Las callable Functions exigen Auth y un token de App Check válido.
 
 ### 1.3 Crear colecciones en Firestore
 
@@ -57,29 +60,15 @@ La colección queda aislada para uso opcional y se crea automáticamente al guar
 
 ### 1.4 Reglas de seguridad de Firestore
 
-Para un uso básico (modo prueba), usa estas reglas:
+El archivo `firestore.rules` está configurado en `firebase.json` y aplica denegación por defecto. El navegador no puede leer invitaciones ni consultar colecciones, ni leer/escribir respuestas. La validación de códigos y el envío se realizan mediante callables autenticadas con App Check.
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
+Despliega las reglas con:
+
+```bash
+firebase deploy --only firestore:rules
 ```
 
-> ⚠️ **Modo prueba** permite leer y escribir a cualquiera. Para producción, restringe el acceso:
-> ```
-> match /codigos/{secretWord} {
->   allow read: if true;
->   allow update: if resource.data.usado == false;
-> }
-> match /respuestas/{userId} {
->   allow create: if true;
-> }
-> ```
+Las Cloud Functions usan Admin SDK y no quedan limitadas por estas reglas; por eso la validación y el envío transaccional permanecen server-side.
 
 ---
 
@@ -135,6 +124,19 @@ firebase init hosting
 npm run build
 firebase deploy --only hosting
 ```
+
+### Desplegar Cloud Functions
+
+El backend callable requiere un proyecto Firebase asociado y un plan que permita Cloud Functions. Selecciona el proyecto una vez y despliega:
+
+```bash
+npm install -g firebase-tools
+firebase use --add
+npm ci --prefix functions
+firebase deploy --only functions
+```
+
+El predeploy compila el código de `functions/` con Node 20. La aplicación web invoca `submitSurvey` en `us-central1`; configura `VITE_FIREBASE_APP_CHECK_SITE_KEY` también en el proveedor de hosting antes de generar la build.
 
 ---
 

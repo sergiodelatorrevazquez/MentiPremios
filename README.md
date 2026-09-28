@@ -98,14 +98,14 @@ npm run test:ui         # Dashboard interactivo
 
 ```
 src/
-├── App.vue                  # Wizard completo (4 pasos)
+├── app/                     # Shell y composition root
+├── features/survey/         # Dominio, casos de uso y presentación
+├── features/keywords/       # Contrato opcional
+├── infrastructure/firebase/ # Cliente y repositorio opcional
 ├── main.ts                  # Bootstrap de Vue
-├── firebase.ts              # Inicialización Firebase
-├── style.css                # Estilos globales
-├── vue-shim.d.ts            # Tipos .vue
-├── assets/                  # Imágenes y vídeos
-└── services/
-    └── premiosService.ts    # Capa de acceso a Firestore
+└── style.css                # Estilos globales
+
+functions/src/               # Callables autenticadas para invitaciones y envíos
 ```
 
 ## 🤝 Contribuir
