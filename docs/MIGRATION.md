@@ -753,7 +753,7 @@ Resultado: `firestoreSchemas.ts` valida invitaciones y sus `responseId`, mapas c
 
 # Fase 8: multimedia
 
-## TODO-044. Resolver assets inexistentes
+## TODO-044. Resolver assets inexistentes [COMPLETADO]
 
 Decidir entre:
 
@@ -763,7 +763,9 @@ Decidir entre:
 
 Nunca dejar `src` indefinidos.
 
-## TODO-045. Crear un registro tipado de multimedia
+Resultado: se conserva el catálogo de opciones y se muestra `public/media-unavailable.svg` para recursos ausentes. El descriptor mantiene tipo y alt, marca `unavailable` y siempre tiene una URL definida; miniaturas y visor renderizan el fallback como imagen aunque la opción original fuera un video. Tests cubren fallback y ausencia de fuentes `undefined`.
+
+## TODO-045. Crear un registro tipado de multimedia [COMPLETADO]
 
 En lugar de acceder a claves manualmente:
 
@@ -773,7 +775,9 @@ multimediaAssets['./assets/foto-1.jpg']
 
 Crear una funcion que valide si el recurso existe.
 
-## TODO-046. Anadir pruebas de recursos
+Resultado: `multimediaRegistry.ts` define las rutas admitidas como union literal y un registro completo tipado con tipo, URL, disponibilidad y ruta física. `resolveMultimediaAsset` valida la entrada y usa el placeholder de TODO-044 cuando falta el archivo; el catálogo ya no indexa un glob arbitrario ni fuerza casts a `string`.
+
+## TODO-046. Anadir pruebas de recursos [COMPLETADO]
 
 Comprobar que todas las opciones multimedia tienen:
 
@@ -782,11 +786,15 @@ Comprobar que todas las opciones multimedia tienen:
 - Texto alternativo para imagenes.
 - Recurso existente.
 
-## TODO-047. Corregir el favicon
+Resultado: `multimediaFallback.spec.ts` recorre las rutas esperadas y todas las opciones, comprueba tipo, alt, URL no vacia, extension correspondiente y existencia fisica del asset o placeholder. Tambien impide que la imagen del avatar entre accidentalmente en el catalogo de respuestas.
+
+## TODO-047. Corregir el favicon [COMPLETADO]
 
 Mover la imagen a `public/` o actualizar el enlace del favicon para que apunte a un recurso generado por Vite.
 
-## TODO-048. Revisar carga y peso de videos
+Resultado: el favicon ya referencia `/foto-amigos.jpg`, que existe en `public/` y Vite copia tal cual a `dist`. No se cambia a import transformado porque `index.html` es un HTML de entrada estatico. `favicon.spec.ts` comprueba que el enlace siempre resuelva a un archivo publico.
+
+## TODO-048. Revisar carga y peso de videos [COMPLETADO]
 
 Evaluar:
 
@@ -795,6 +803,8 @@ Evaluar:
 - Previsualizaciones.
 - Formatos compatibles.
 - Rendimiento movil.
+
+Resultado/decision: el inventario actual no contiene videos; solo existe `mensaje-1.jpg` (16,043 bytes), y la foto del avatar (450,398 bytes, duplicada entre `public` y `src/assets`) no forma parte de respuestas. No hay archivos de video cuyo peso pueda medirse o recomprimirse. Las tarjetas usan `preload="none"`; el visor, montado solo al abrirse, usa `preload="metadata"`, controles, `playsinline` y no autoplay. El registro acepta MP4 (`video/mp4`) como fuente compatible y WebM (`video/webm`) como alternativa; al incorporar videos se medirá cada archivo y se generará una previsualizacion ligera/poster antes de activar el catalogo. Tests verifican los formatos, la carga diferida y que el visor no inicie reproducción automáticamente.
 
 ---
 

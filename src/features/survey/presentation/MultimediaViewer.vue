@@ -42,20 +42,27 @@ function onBackdropKeydown(e: KeyboardEvent) {
         ✕
       </button>
       <img
-        v-if="props.media.tipo === 'imagen'"
+        v-if="props.media.unavailable || props.media.tipo === 'imagen'"
         class="photo-modal-image"
         :src="props.media.src"
         :alt="props.media.alt"
+        decoding="async"
       >
       <video
         v-else
         class="photo-modal-video"
-        :src="props.media.src"
-        :alt="props.media.alt"
+        :aria-label="props.media.alt"
         controls
-        autoplay
         playsinline
-      />
+        preload="metadata"
+      >
+        <source
+          v-for="source in props.media.sources"
+          :key="source.src"
+          :src="source.src"
+          :type="source.type"
+        >
+      </video>
     </div>
   </div>
 </template>
