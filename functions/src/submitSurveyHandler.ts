@@ -27,6 +27,7 @@ export interface SubmissionTransaction {
 export interface SubmissionStore {
   document(collection: string, id: string): unknown;
   newId(collection: string): string;
+  serverTimestamp(): unknown;
   runTransaction<T>(operation: (transaction: SubmissionTransaction) => Promise<T>): Promise<T>;
 }
 
@@ -123,6 +124,8 @@ export function createSubmitSurveyHandler(store: SubmissionStore) {
         schemaVersion: 2,
         participantName: invitationData.nombre,
         answers,
+        createdAt: store.serverTimestamp(),
+        submittedAt: store.serverTimestamp(),
       });
       transaction.update(invitationReference, { usado: true, responseId });
 

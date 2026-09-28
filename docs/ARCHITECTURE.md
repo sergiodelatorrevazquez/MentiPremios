@@ -113,10 +113,12 @@ Document ID: ID aleatorio opaco (v2); el esquema legacy usaba el código
 {
   schemaVersion: 2,
   participantName: "Sergio",
-  answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ }
+  answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ },
+  createdAt: Timestamp,
+  submittedAt: Timestamp
 }
 ```
-Cada invitación v2 guarda `responseId` para mantener la relación y soportar reintentos. El documento no incluye el código secreto. Los legacy conservan el mapa plano bajo el ID antiguo y se reconocen sin reescritura; los timestamps se añaden en TODO-042.
+Cada invitación v2 guarda `responseId` para mantener la relación y soportar reintentos. El documento no incluye el código secreto. Los legacy conservan el mapa plano bajo el ID antiguo y se reconocen sin reescritura. Los dos timestamps usan hora de servidor y se asignan en la transacción inicial.
 
 ### Colección `palabrasClave`
 ```

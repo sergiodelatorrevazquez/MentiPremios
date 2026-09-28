@@ -39,6 +39,7 @@ function createStore(options: {
   const store: SubmissionStore = {
     document: vi.fn((collection, id) => `${collection}/${id}`),
     newId: vi.fn(() => 'random-response-id'),
+    serverTimestamp: vi.fn(() => 'server-timestamp'),
     runTransaction: vi.fn((operation) => operation(transaction)),
   };
 
@@ -68,6 +69,8 @@ describe('submitSurvey callable handler', () => {
       schemaVersion: 2,
       participantName: 'Sergio',
       answers,
+      createdAt: 'server-timestamp',
+      submittedAt: 'server-timestamp',
     });
     expect(transaction.update).toHaveBeenCalledWith('codigos/secret-1', {
       usado: true,

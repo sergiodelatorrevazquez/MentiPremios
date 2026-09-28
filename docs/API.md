@@ -36,17 +36,21 @@ Respuestas a las preguntas de la encuesta. Los documentos legacy conservan su fo
 | `schemaVersion` | `number` | `2` para documentos nuevos; ausente en documentos legacy |
 | `participantName` | `string` | Nombre visible del participante |
 | `answers` | `map` | IDs de pregunta a IDs de opción |
+| `createdAt` | `timestamp` | Timestamp de Firestore asignado por el servidor al crear el documento |
+| `submittedAt` | `timestamp` | Timestamp de Firestore asignado por el servidor al completar el envío |
 
 **Ejemplo:**
 ```
 respuestas/{id-aleatorio} {
   schemaVersion: 2,
   participantName: "Sergio",
-  answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ }
+  answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ },
+  createdAt: Timestamp,
+  submittedAt: Timestamp
 }
 ```
 
-Los documentos legacy conservan un campo plano por pregunta bajo un ID igual al código. Las nuevas invitaciones guardan el enlace `responseId`; el código no se copia a documentos nuevos de respuesta. Los timestamps se añadirán en TODO-042. No confundir el esquema persistido con el DTO de entrada de la callable, que usa `{ invitationId, answers }`.
+Los documentos legacy conservan un campo plano por pregunta bajo un ID igual al código. Las nuevas invitaciones guardan el enlace `responseId`; el código no se copia a documentos nuevos de respuesta. Ambos timestamps se generan con `FieldValue.serverTimestamp()` durante la transacción. No confundir el esquema persistido con el DTO de entrada de la callable, que usa `{ invitationId, answers }`.
 
 ---
 

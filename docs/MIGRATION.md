@@ -731,9 +731,11 @@ Evaluar el uso de un ID interno aleatorio para respuestas. La palabra secreta no
 
 Resultado: las respuestas nuevas usan IDs aleatorios de Firestore; el documento de invitacion conserva el enlace `responseId`. El esquema nuevo incluye `schemaVersion: 2`, nombre y mapa de respuestas, sin copiar el secreto. Los reintentos legacy siguen comprobando el documento con el ID anterior y las pruebas cubren el enlace v2, la idempotencia y la ausencia de escrituras duplicadas.
 
-## TODO-042. Anadir marcas de tiempo reales
+## TODO-042. Anadir marcas de tiempo reales [COMPLETADO]
 
 Usar `serverTimestamp()` en el documento definitivo de respuesta.
+
+Resultado: cada documento v2 se crea con `createdAt` y `submittedAt` usando `FieldValue.serverTimestamp()` de Admin SDK dentro de la transaccion. Los reintentos idempotentes no reescriben ni alteran las fechas. El test del handler comprueba ambos campos.
 
 ## TODO-043. Anadir validacion de documentos leidos
 
