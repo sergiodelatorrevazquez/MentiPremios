@@ -375,13 +375,15 @@ Responsabilidades:
 
 Resultado: la pantalla de login queda separada en `src/features/survey/presentation/LoginStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/LoginStep.spec.ts` sin cambiar el flujo actual.
 
-## TODO-017. Extraer la pantalla de bienvenida
+## TODO-017. Extraer la pantalla de bienvenida [COMPLETADO]
 
 Crear:
 
 ```text
 src/features/survey/presentation/WelcomeStep.vue
 ```
+
+Resultado: la pantalla de bienvenida queda separada en `src/features/survey/presentation/WelcomeStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/WelcomeStep.spec.ts`. El flujo sigue siendo el mismo: nombre del participante + inicio de la encuesta.
 
 ## TODO-018. Extraer la pantalla de preguntas
 

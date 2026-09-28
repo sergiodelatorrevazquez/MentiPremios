@@ -9,6 +9,7 @@ import type {
 import { preguntas as catalogoPreguntas } from '../features/survey/domain/questions';
 import { useSurveyWizard } from '../features/survey/application/useSurveyWizard';
 import LoginStep from '../features/survey/presentation/LoginStep.vue';
+import WelcomeStep from '../features/survey/presentation/WelcomeStep.vue';
 
 import {
   guardarRespuestaUsuario,
@@ -265,25 +266,10 @@ function handleModalKeydown(e: KeyboardEvent) {
       </template>
 
       <template v-else-if="pasoActual === 'welcome' && codigo">
-        <h1 class="hero-title">
-          {{ codigo.nombre }}
-        </h1>
-        <p class="section-description">
-          Cuando pulses el botón ya empezarán a salir las preguntas una a una, y por si no te acuerdas, tienes que votar a Miguel como correa obligatoriamente.
-        </p>
-
-        <div class="footer">
-          <div class="footer-text">
-            Cuando pulses en continuar empezarán a mostrarse las preguntas, una detrás de otra.
-          </div>
-          <button
-            type="button"
-            class="button-primary"
-            @click="avanzarDesdeBienvenida"
-          >
-            Empezar la encuesta
-          </button>
-        </div>
+        <WelcomeStep
+          :participant-name="codigo.nombre"
+          @continue="avanzarDesdeBienvenida"
+        />
       </template>
 
       <template v-else-if="pasoActual === 'questions' && codigo && preguntaActual">
