@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { preguntas } from '../../src/features/survey/domain/questions';
-import { MULTIMEDIA_ASSET_PATHS, multimediaAssetRegistry } from '../../src/features/survey/domain/multimediaRegistry';
+import { preguntas } from '../../../src/features/survey/domain/questions';
+import { MULTIMEDIA_ASSET_PATHS, multimediaAssetRegistry } from '../../../src/features/survey/domain/multimediaRegistry';
 
-const workspaceRoot = resolve(__dirname, '../..');
+const workspaceRoot = resolve(__dirname, '../../../');
 
 describe('multimedia asset fallback', () => {
   it('uses the controlled placeholder for assets missing from the catalog', () => {

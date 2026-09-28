@@ -3,8 +3,8 @@ import {
   parseInvitationDocument,
   parseStoredSurveyResponse,
   parseSurveyAnswers,
-} from '../../functions/src/firestoreSchemas';
-import { SURVEY_OPTION_IDS } from '../../functions/src/surveySchema';
+} from '../../../functions/src/firestoreSchemas';
+import { SURVEY_OPTION_IDS } from '../../../functions/src/surveySchema';
 
 const validAnswers = Object.fromEntries(
   Object.entries(SURVEY_OPTION_IDS).map(([questionId, options]) => [questionId, options[0]]),

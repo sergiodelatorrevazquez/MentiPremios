@@ -10,6 +10,7 @@ const props = defineProps<{
   canGoBack: boolean;
   canContinue: boolean;
   isSubmitting: boolean;
+  hasSubmissionError: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -43,7 +44,14 @@ function onGoBack() {
 
 <template>
   <div>
-    <div class="progress-bar">
+    <div
+      class="progress-bar"
+      role="progressbar"
+      aria-label="Progreso de la encuesta"
+      :aria-valuemin="0"
+      :aria-valuemax="100"
+      :aria-valuenow="props.progress"
+    >
       <span>Pregunta {{ props.currentQuestionIndex + 1 }} de {{ props.totalQuestions }}</span>
       <div class="progress-bar-track">
         <div
@@ -57,13 +65,21 @@ function onGoBack() {
       {{ props.question.titulo }}
     </h1>
 
-    <div class="options-grid" :class="'options-grid--' + props.question.opciones.length">
+    <div
+      v-if="props.question.opciones.length > 0"
+      class="options-grid"
+      :class="'options-grid--' + props.question.opciones.length"
+    >
       <button
         v-for="opcion in props.question.opciones"
         :key="opcion.id"
         type="button"
         class="option-card"
-        :class="{ 'option-card--selected': props.selectedOptionId === opcion.id, 'option-card--with-media': opcion.multimedia }"
+        :aria-pressed="props.selectedOptionId === opcion.id"
+        :class="{
+          'option-card--selected': props.selectedOptionId === opcion.id,
+          'option-card--with-media': opcion.multimedia,
+        }"
         @click="onOptionClick(opcion.id)"
         @mousedown="opcion.multimedia && onPressStart(opcion.multimedia)"
         @mouseup="onPressEnd()"
@@ -71,7 +87,10 @@ function onGoBack() {
         @touchstart="opcion.multimedia && onPressStart(opcion.multimedia)"
         @touchend="onPressEnd()"
       >
-        <div v-if="opcion.multimedia" class="option-media">
+        <div
+          v-if="opcion.multimedia"
+          class="option-media"
+        >
           <img
             v-if="opcion.multimedia.unavailable"
             class="option-media-thumbnail"
@@ -108,6 +127,13 @@ function onGoBack() {
         <span class="option-text">{{ opcion.texto }}</span>
       </button>
     </div>
+    <div
+      v-else
+      class="status status--empty"
+      role="status"
+    >
+      No hay opciones disponibles para esta pregunta.
+    </div>
 
     <div class="footer">
       <div class="footer-actions">
@@ -123,9 +149,10 @@ function onGoBack() {
           type="button"
           class="button-primary"
           :disabled="!props.canContinue"
+          :aria-busy="props.isSubmitting"
           @click="onSubmit"
         >
-          {{ props.currentQuestionIndex + 1 === props.totalQuestions ? (props.isSubmitting ? 'Guardando...' : 'Enviar y cerrar') : 'Siguiente pregunta' }}
+          {{ props.currentQuestionIndex + 1 === props.totalQuestions ? (props.isSubmitting ? 'Guardando...' : (props.hasSubmissionError ? 'Reintentar envío' : 'Enviar y cerrar')) : 'Siguiente pregunta' }}
         </button>
       </div>
     </div>
@@ -133,25 +160,12 @@ function onGoBack() {
 </template>
 
 <style scoped>
-:root {
-  --color-primary: #90ee90;
-  --color-primary-dark: #5fe55f;
-  --color-primary-darker: #4bdc4b;
-  --color-text: #0b3d0b;
-  --color-text-muted: rgba(11, 61, 11, 0.8);
-  --color-background: #f6fff6;
-  --color-surface: #ffffff;
-  --color-error-bg: #fee2e2;
-  --color-error-border: #fecaca;
-  --color-error: #b91c1c;
-  --radius-full: 999px;
-}
-
 .hero-title {
   margin: 0 0 16px;
   font-size: 40px;
   line-height: 1.2;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .progress-bar {
@@ -188,10 +202,11 @@ function onGoBack() {
 .options-grid--4,
 .options-grid--6,
 .options-grid--8 {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .option-card {
+  min-width: 0;
   background: var(--color-surface);
   border: 2px solid rgba(11, 61, 11, 0.2);
   border-radius: 14px;
@@ -246,6 +261,7 @@ function onGoBack() {
 
 .option-text {
   display: block;
+  overflow-wrap: anywhere;
 }
 
 .footer {
@@ -262,6 +278,9 @@ function onGoBack() {
   display: flex;
   gap: 12px;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .button-primary {
@@ -323,6 +342,24 @@ function onGoBack() {
 @media (max-width: 640px) {
   .hero-title {
     font-size: 28px;
+  }
+
+  .progress-bar-track {
+    width: 80px;
+  }
+
+  .options-grid--4,
+  .options-grid--6,
+  .options-grid--8 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .footer-actions {
+    flex-direction: column;
+  }
+
+  .footer-actions > button {
+    width: 100%;
   }
 }
 </style>

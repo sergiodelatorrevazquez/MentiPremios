@@ -68,9 +68,12 @@ Abre la URL que muestra Vite (normalmente `http://localhost:5173`).
 | `npm run dev` | Inicia servidor de desarrollo Vite (hot-reload) |
 | `npm run build` | Compila para producción en `dist/` |
 | `npm run preview` | Sirve la build de producción localmente |
-| `npm test` | Ejecuta tests en modo watch |
-| `npm test -- --run` | Ejecuta tests una sola vez (modo CI) |
+| `npm test` | Ejecuta unitarias e integración en modo watch |
+| `npm test -- --run` | Ejecuta todo una sola vez (modo CI) |
+| `npm run test:unit` | Solo `tests/unit`, en watch |
+| `npm run test:integration` | Solo `tests/integration`, en watch |
 | `npm run test:ui` | Abre Vitest UI (dashboard interactivo) |
+| `npm run test:e2e` | Tests responsive en Chromium real (Playwright) |
 | `npm run lint` | Ejecuta ESLint en `src/` |
 
 ---
@@ -87,19 +90,46 @@ src/
 └── assets/                  # Imágenes y vídeos
 
 functions/src/               # Cloud Functions callable
-tests/unit/                  # Tests de UI, casos de uso, repositorios y handlers
+
+tests/
+├── unit/
+│   ├── domain/              # Reglas puras y catálogo de assets, sin Vue
+│   ├── application/         # Casos de uso y handlers con dobles en memoria
+│   ├── components/          # Cada SFC aislado con Vue Test Utils
+│   ├── infrastructure/      # Adaptadores con el SDK de Firebase simulado
+│   └── contracts/           # Invariantes del repo: tokens, estilos, esquema
+├── integration/             # App completa con solo los adaptadores externos falsos
+└── e2e/                     # Chromium real sobre el harness
 ```
+
+### Dónde colocar una prueba nueva
+
+| Lo que se prueba | Ubicación | Doble de frontera |
+|---|---|---|
+| Una regla pura del dominio | `tests/unit/domain/` | Ninguno |
+| Un caso de uso o un handler de Cloud Functions | `tests/unit/application/` | Repositorio o store en memoria |
+| Un componente Vue aislado | `tests/unit/components/` | Ninguno |
+| Un adaptador de Firebase | `tests/unit/infrastructure/` | `vi.mock` del SDK |
+| Una invariante de tokens, estilos, assets o esquema | `tests/unit/contracts/` | Lectura de ficheros |
+| Varios niveles de la arquitectura a la vez | `tests/integration/` | Solo `AppServices` externos |
+| Comportamiento en navegador | `tests/e2e/` | `AppServices` simulados en el harness |
+
+`tests/unit/contracts/testLayout.spec.ts` falla si una spec aparece fuera de un nivel o de una capa reconocida, de modo que la pirámide no se deshace por descuido.
 
 ---
 
 ## Ejecutar tests
 
 ```bash
-# Una sola ejecución
+# Una sola ejecución de todo
 npm test -- --run
 
 # Modo watch (re-ejecuta al cambiar archivos)
 npm test
+
+# Por nivel
+npm run test:unit -- --run
+npm run test:integration -- --run
 
 # Con interfaz gráfica
 npm run test:ui
@@ -107,20 +137,47 @@ npm run test:ui
 
 ### Tests existentes
 
-**`tests/unit/App.spec.ts`** — Tests de integración del wizard:
+**`tests/integration/App.spec.ts`** — Tests de integración del wizard:
 - Login: renderizado inicial, input, botón habilitado/deshabilitado, errores de palabra incorrecta y ya usada
 - Welcome: muestra el nombre del usuario
 - Questions: renderizado de opciones, selección, progreso, navegación siguiente/anterior, guardado al completar, pantalla de gracias
 - Visor de foto: apertura y cierre del modal
 
-**`tests/unit/bootstrap.spec.ts`** — Comprueba que la UI se conecta a las callables de validación y envío.
+**`tests/integration/bootstrap.spec.ts`** — Comprueba que la UI se conecta a las callables de validación y envío.
 
-**`tests/unit/validateInvitationHandler.spec.ts`** y **`tests/unit/submitSurveyHandler.spec.ts`** — Verifican autenticación, validación de datos, idempotencia y operaciones de servidor.
+**`tests/unit/application/validateInvitationHandler.spec.ts`** y **`tests/unit/application/submitSurveyHandler.spec.ts`** — Verifican autenticación, validación de datos, idempotencia y operaciones de servidor.
+
+**`tests/unit/contracts/`** — Tokens de diseño, `scoped` de estilos, esquema de documentos Firestore, favicon, contrato responsive y estructura del propio repo.
 
 ### Mocking
 
-- `App.spec.ts` usa servicios de aplicación provistos por el bootstrap
+- `tests/integration/App.spec.ts` usa servicios de aplicación provistos por el bootstrap
+- `tests/unit/infrastructure/` simula el SDK de Firebase con `vi.mock`
 - Los handlers de Functions usan stores falsos para probar su lógica sin Firebase Emulator
+
+### Tests responsive (Playwright)
+
+```bash
+# Solo la primera vez: descarga el navegador
+npx playwright install chromium
+
+# Ejecuta la suite en móvil y escritorio
+npm run test:e2e
+```
+
+`tests/e2e/responsive.spec.ts` recorre el flujo real en dos viewports (`mobile`, Pixel 5, y `desktop`) y comprueba que no hay scroll horizontal, que las opciones y los botones mantienen un objetivo táctil de `44px` y que los modales mantienen el botón de cierre dentro de la pantalla con un medio vertical.
+
+El punto de entrada es `tests/e2e/harness/`, una página que monta `App.vue` con `AppServices` simulados y **no** importa `infrastructure/firebase/client.ts`, por lo que no necesita credenciales ni conexión. Los escenarios se fuerzan por query string:
+
+| Query | Efecto |
+|---|---|
+| `?scenario=invalid` | Palabra secreta incorrecta |
+| `?scenario=used` | Invitación ya utilizada |
+| `?scenario=submit-error` | El envío falla y la acción pasa a `Reintentar envío` |
+| `?scenario=slow&delay=4000` | Retrasa la respuesta para poder inspeccionar los estados de carga |
+| `?name=...` | Nombre de participante largo |
+
+`vite.config.ts` acota `test.include` a `tests/unit/**/*.spec.ts` y `tests/integration/**/*.spec.ts`, de modo que Vitest no intenta ejecutar las specs de Playwright.
 
 ---
 

@@ -4,9 +4,9 @@ import {
   SubmissionEndpointError,
   type SubmissionStore,
   type SubmissionTransaction,
-} from '../../functions/src/submitSurveyHandler';
-import { SURVEY_OPTION_IDS } from '../../functions/src/surveySchema';
-import { preguntas } from '../../src/features/survey/domain/questions';
+} from '../../../functions/src/submitSurveyHandler';
+import { SURVEY_OPTION_IDS } from '../../../functions/src/surveySchema';
+import { preguntas } from '../../../src/features/survey/domain/questions';
 
 const validAnswers = Object.fromEntries(
   Object.entries(SURVEY_OPTION_IDS).map(([questionId, options]) => [questionId, options[0]]),

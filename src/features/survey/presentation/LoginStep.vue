@@ -33,21 +33,29 @@ function onSubmit() {
     </p>
 
     <div class="field">
-      <div class="field-label">
-        <span>Clave</span>
-      </div>
+      <label
+        class="field-label"
+        for="secret-word"
+      >Clave</label>
       <input
+        id="secret-word"
         :value="props.modelValue"
         class="field-input"
         type="text"
         placeholder="Escribe aquí tu palabra secreta..."
         maxlength="50"
+        :aria-invalid="props.loginError ? 'true' : 'false'"
+        :aria-describedby="props.loginError ? 'secret-word-error' : undefined"
+        :aria-busy="props.isSubmitting"
         @input="onInput(($event.target as HTMLInputElement).value)"
         @keyup.enter="onSubmit"
       >
       <div
         v-if="props.loginError"
+        id="secret-word-error"
         class="field-error"
+        role="alert"
+        aria-live="assertive"
       >
         {{ props.loginError }}
       </div>
@@ -60,6 +68,7 @@ function onSubmit() {
       <button
         type="button"
         class="button-primary"
+        :aria-busy="props.isSubmitting"
         :disabled="props.modelValue.trim().length === 0 || props.isSubmitting"
         @click="onSubmit"
       >
@@ -70,20 +79,6 @@ function onSubmit() {
 </template>
 
 <style scoped>
-:root {
-  --color-primary: #90ee90;
-  --color-primary-dark: #5fe55f;
-  --color-primary-darker: #4bdc4b;
-  --color-text: #0b3d0b;
-  --color-text-muted: rgba(11, 61, 11, 0.8);
-  --color-background: #f6fff6;
-  --color-surface: #ffffff;
-  --color-error-bg: #fee2e2;
-  --color-error-border: #fecaca;
-  --color-error: #b91c1c;
-  --radius-full: 999px;
-}
-
 .hero-kicker {
   margin: 0 0 8px;
   font-size: 16px;
@@ -99,6 +94,7 @@ function onSubmit() {
   font-size: 40px;
   line-height: 1.2;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .section-description {
@@ -149,6 +145,7 @@ function onSubmit() {
   border: 1px solid var(--color-error-border);
   color: var(--color-error);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .footer {

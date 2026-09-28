@@ -49,7 +49,7 @@ Documentar y probar el flujo actual completo:
 
 **Condicion:** no modificar la logica existente durante este paso.
 
-Resultado: se documentaron los escenarios en `docs/MIGRATION_BASELINE.md` y se ampliaron las pruebas de `tests/unit/App.spec.ts` para cubrir el flujo completo, la restauracion de respuestas y el visor multimedia.
+Resultado: se documentaron los escenarios en `docs/MIGRATION_BASELINE.md` y se ampliaron las pruebas de `tests/integration/App.spec.ts` para cubrir el flujo completo, la restauracion de respuestas y el visor multimedia.
 
 ## TODO-002. Corregir el chequeo de tipos [COMPLETADO]
 
@@ -218,7 +218,7 @@ Ubicacion propuesta:
 src/features/survey/domain/survey.rules.ts
 ```
 
-Resultado: se creo `validateSurveyAnswers` con errores de dominio tipados para respuestas faltantes, preguntas desconocidas, opciones invalidas y cantidad incorrecta. Sus casos principales estan cubiertos en `tests/unit/survey.rules.spec.ts`.
+Resultado: se creo `validateSurveyAnswers` con errores de dominio tipados para respuestas faltantes, preguntas desconocidas, opciones invalidas y cantidad incorrecta. Sus casos principales estan cubiertos en `tests/unit/domain/survey.rules.spec.ts`.
 
 ## TODO-009. Definir el DTO canonico de respuestas [COMPLETADO]
 
@@ -279,7 +279,7 @@ src/features/survey/application/surveyWizard.ts
 
 Debe ser una funcion o modulo testeable sin Vue.
 
-Resultado: se creo `src/features/survey/application/surveyWizard.ts` con estado y transiciones puras para iniciar, seleccionar, avanzar, retroceder, consultar la pregunta actual y calcular el progreso. Sus transiciones estan cubiertas en `tests/unit/surveyWizard.spec.ts`.
+Resultado: se creo `src/features/survey/application/surveyWizard.ts` con estado y transiciones puras para iniciar, seleccionar, avanzar, retroceder, consultar la pregunta actual y calcular el progreso. Sus transiciones estan cubiertas en `tests/unit/application/surveyWizard.spec.ts`.
 
 ## TODO-011. Eliminar el estado duplicado de respuestas [COMPLETADO]
 
@@ -297,7 +297,7 @@ respuestas[preguntaActual.id]
 
 **Condicion:** volver atras debe restaurar exactamente la seleccion anterior.
 
-Resultado: `respuestasAnteriores` ya no existe. `App.vue` usa `respuestas` como unica fuente de verdad y restaura la seleccion desde el ID de la pregunta anterior. La misma transicion esta cubierta en `tests/unit/surveyWizard.spec.ts` y en la linea base de `tests/unit/App.spec.ts`.
+Resultado: `respuestasAnteriores` ya no existe. `App.vue` usa `respuestas` como unica fuente de verdad y restaura la seleccion desde el ID de la pregunta anterior. La misma transicion esta cubierta en `tests/unit/application/surveyWizard.spec.ts` y en la linea base de `tests/integration/App.spec.ts`.
 
 ## TODO-012. Crear el composable del wizard [COMPLETADO]
 
@@ -325,7 +325,7 @@ Anadir pruebas para:
 - Envio incompleto.
 - Bloqueo durante envio.
 
-Resultado: `tests/unit/surveyWizard.spec.ts` cubre estado inicial, inicio, avance, retroceso, restauracion, limites, respuesta faltante, ultima pregunta y progreso. `tests/unit/App.spec.ts` mantiene la cobertura de las transiciones visibles de login, bienvenida y envio.
+Resultado: `tests/unit/application/surveyWizard.spec.ts` cubre estado inicial, inicio, avance, retroceso, restauracion, limites, respuesta faltante, ultima pregunta y progreso. `tests/integration/App.spec.ts` mantiene la cobertura de las transiciones visibles de login, bienvenida y envio.
 
 ## TODO-014. Evitar envios duplicados desde la interfaz [COMPLETADO]
 
@@ -373,7 +373,7 @@ Responsabilidades:
 - Mensajes de error.
 - Estado de carga.
 
-Resultado: la pantalla de login queda separada en `src/features/survey/presentation/LoginStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/LoginStep.spec.ts` sin cambiar el flujo actual.
+Resultado: la pantalla de login queda separada en `src/features/survey/presentation/LoginStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/components/LoginStep.spec.ts` sin cambiar el flujo actual.
 
 ## TODO-017. Extraer la pantalla de bienvenida [COMPLETADO]
 
@@ -383,7 +383,7 @@ Crear:
 src/features/survey/presentation/WelcomeStep.vue
 ```
 
-Resultado: la pantalla de bienvenida queda separada en `src/features/survey/presentation/WelcomeStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/WelcomeStep.spec.ts`. El flujo sigue siendo el mismo: nombre del participante + inicio de la encuesta.
+Resultado: la pantalla de bienvenida queda separada en `src/features/survey/presentation/WelcomeStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/components/WelcomeStep.spec.ts`. El flujo sigue siendo el mismo: nombre del participante + inicio de la encuesta.
 
 ## TODO-018. Extraer la pantalla de preguntas [COMPLETADO]
 
@@ -401,7 +401,7 @@ Responsabilidades:
 - Seleccion.
 - Botones anterior y siguiente.
 
-Resultado: la pantalla de preguntas queda separada en `src/features/survey/presentation/QuestionStep.vue`, conectada a `src/app/App.vue` y cubierta por pruebas en `tests/unit/QuestionStep.spec.ts` manteniendo la misma logica de seleccion, progreso, retroceso y envio.
+Resultado: la pantalla de preguntas queda separada en `src/features/survey/presentation/QuestionStep.vue`, conectada a `src/app/App.vue` y cubierta por pruebas en `tests/unit/components/QuestionStep.spec.ts` manteniendo la misma logica de seleccion, progreso, retroceso y envio.
 
 ## TODO-019. Extraer la pantalla final [COMPLETADO]
 
@@ -411,7 +411,7 @@ Crear:
 src/features/survey/presentation/CompletionStep.vue
 ```
 
-Resultado: la pantalla final queda separada en `src/features/survey/presentation/CompletionStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/CompletionStep.spec.ts`, manteniendo el mismo mensaje de agradecimiento y finalizacion de la encuesta.
+Resultado: la pantalla final queda separada en `src/features/survey/presentation/CompletionStep.vue`, conectada desde `src/app/App.vue` y cubierta por pruebas en `tests/unit/components/CompletionStep.spec.ts`, manteniendo el mismo mensaje de agradecimiento y finalizacion de la encuesta.
 
 ## TODO-020. Extraer el visor multimedia [COMPLETADO]
 
@@ -430,13 +430,13 @@ Debe conservar:
 - Cierre del modal.
 - Accesibilidad.
 
-Resultado: el visor multimedia queda separado en `src/features/survey/presentation/MultimediaViewer.vue`, conectado desde `src/app/App.vue` y cubierto por pruebas en `tests/unit/MultimediaViewer.spec.ts`, manteniendo la vista completa de imagen o video y el cierre por click/escape.
+Resultado: el visor multimedia queda separado en `src/features/survey/presentation/MultimediaViewer.vue`, conectado desde `src/app/App.vue` y cubierto por pruebas en `tests/unit/components/MultimediaViewer.spec.ts`, manteniendo la vista completa de imagen o video y el cierre por click/escape.
 
 ## TODO-021. Extraer el visor de la foto del avatar [COMPLETADO]
 
 Separar el modal de la foto del avatar del visor multimedia de respuestas si sus comportamientos son distintos.
 
-Resultado: el modal de la foto del avatar queda extraido a `src/features/survey/presentation/AvatarPhotoViewer.vue`, `src/app/App.vue` solo coordina su apertura/cierre y se cubre con `tests/unit/AvatarPhotoViewer.spec.ts` para mantener el comportamiento visual y de cierre.
+Resultado: el modal de la foto del avatar queda extraido a `src/features/survey/presentation/AvatarPhotoViewer.vue`, `src/app/App.vue` solo coordina su apertura/cierre y se cubre con `tests/unit/components/AvatarPhotoViewer.spec.ts` para mantener el comportamiento visual y de cierre.
 
 ## TODO-022. Mantener temporalmente el contrato de `App.vue` [COMPLETADO]
 
@@ -466,7 +466,7 @@ Debe encargarse de:
 - Distinguir invitacion ya utilizada.
 - Devolver una invitacion valida.
 
-Resultado: la validacion de invitacion queda encapsulada en un caso de uso aislado, con pruebas en `tests/unit/validateInvitation.spec.ts` y manejo de errores de dominio.
+Resultado: la validacion de invitacion queda encapsulada en un caso de uso aislado, con pruebas en `tests/unit/application/validateInvitation.spec.ts` y manejo de errores de dominio.
 
 ## TODO-024. Crear el caso de uso de envio [COMPLETADO]
 
@@ -486,7 +486,7 @@ Debe coordinar:
 
 La interfaz no debe llamar directamente a varias operaciones de Firebase.
 
-Resultado: el envio queda orquestado por una unica funcion de aplicacion, con validacion del cuestionario, construccion del payload y persistencia ordenada, cubierto por `tests/unit/submitSurvey.spec.ts`.
+Resultado: el envio queda orquestado por una unica funcion de aplicacion, con validacion del cuestionario, construccion del payload y persistencia ordenada, cubierto por `tests/unit/application/submitSurvey.spec.ts`.
 
 ## TODO-025. Definir errores de aplicacion [COMPLETADO]
 
@@ -810,7 +810,7 @@ Resultado/decision: el inventario actual no contiene videos; solo existe `mensaj
 
 # Fase 9: estilos y experiencia visual
 
-## TODO-049. Centralizar los estilos globales
+## TODO-049. Centralizar los estilos globales [COMPLETADO]
 
 Decidir que estilos son globales y cuales pertenecen a componentes.
 
@@ -819,11 +819,15 @@ Eliminar duplicaciones entre:
 - `src/style.css`.
 - El bloque de estilos de `App.vue`.
 
-## TODO-050. Aplicar `scoped` donde corresponda
+Resultado: las reglas compartidas del shell, wizard, controles, opciones y visor se consolidaron en `src/style.css`; se retiró el bloque global de `App.vue`. Los estilos de la aplicación se cargan desde un único entrypoint y los componentes mantienen su presentación propia para TODO-050.
+
+## TODO-050. Aplicar `scoped` donde corresponda [COMPLETADO]
 
 Los estilos especificos de componentes deben estar aislados para evitar efectos colaterales.
 
-## TODO-051. Crear tokens visuales centralizados
+Resultado: los SFC conservan sus estilos locales con `scoped`; el antiguo bloque global de `App.vue` se encuentra en `src/style.css`. `tests/unit/contracts/styleScope.spec.ts` recorre los componentes para evitar introducir nuevos bloques `<style>` globales.
+
+## TODO-051. Crear tokens visuales centralizados [COMPLETADO]
 
 Mantener variables para:
 
@@ -834,7 +838,9 @@ Mantener variables para:
 - Tipografia.
 - Breakpoints.
 
-## TODO-052. Anadir estados completos de interfaz
+Resultado: `src/style.css` es la unica fuente de tokens para color, tipografia, line-height, espaciado, radios, sombras, foco y breakpoint movil; se eliminaron las declaraciones `:root` duplicadas de los SFC. `designTokens.spec.ts` verifica el contrato. CSS nativo no permite interpolar custom properties en condiciones `@media`, por lo que el breakpoint queda duplicado como literal `640px` en la regla responsive, documentado junto al token.
+
+## TODO-052. Anadir estados completos de interfaz [COMPLETADO]
 
 Verificar cada pantalla en estados:
 
@@ -846,7 +852,9 @@ Verificar cada pantalla en estados:
 - Reintento.
 - Deshabilitado.
 
-## TODO-053. Mejorar accesibilidad
+Resultado: login expone inicial, validando/deshabilitado y errores recuperables; el wizard mantiene progreso y selección durante errores de persistencia, cambia la acción a `Reintentar envío` y confirma éxito al completar; `QuestionStep` muestra estado vacío si no hay opciones y conserva controles deshabilitados cuando no se puede avanzar. `App.spec.ts` y `QuestionStep.spec.ts` cubren estas transiciones y estados.
+
+## TODO-053. Mejorar accesibilidad [COMPLETADO]
 
 Revisar:
 
@@ -859,8 +867,9 @@ Revisar:
 - Contraste.
 - Lectores de pantalla.
 - Uso de video sin sonido.
+Resultado: el login asocia label y error con el input (`aria-invalid`, `aria-describedby`, `role=alert`); progreso y opciones exponen `progressbar`/`aria-pressed`; errores y éxito usan regiones vivas. Se añadió foco `:focus-visible`; ambos modales enfocan el botón de cierre al abrirse, contienen Tab, cierran con Escape y restauran foco al disparador. Miniaturas de video permanecen silenciadas y el visor no reproduce automáticamente; controles permiten decidir la reproducción. El texto oscuro sobre superficies claras y el indicador de foco azul mantienen contraste perceptible. Tests cubren estos contratos.
 
-## TODO-054. Probar responsive
+## TODO-054. Probar responsive [COMPLETADO]
 
 Verificar movil y escritorio para:
 
@@ -871,11 +880,13 @@ Verificar movil y escritorio para:
 - Mensajes largos.
 - Botones durante carga.
 
+Resultado: la revision revelo seis defectos reales que se corrigieron. El boton de cerrar de los modales estaba a `top: -40px` sobre un overlay con `padding: 18px`, por lo que con un medio alto caia fuera de la pantalla y era inalcanzable; ahora el overlay reserva `padding-top: 60px` y el boton usa `top: -52px` con un tamaño de `44px`, y un test verifica la relacion entre ambos valores para que la banda siga siendo suficiente. El alto maximo del medio pasa de `100vh` a `calc(100dvh - …)` con fallback `100vh`, porque `100vh` excede el viewport visible cuando el navegador movil muestra u oculta la barra de direccion. `QuestionStep.vue` usaba `repeat(2, 1fr)`, lo que anulaba el `minmax(0, 1fr)` de `src/style.css` y dejaba el grid sin proteccion frente a etiquetas largas; ahora las opciones pasan a una sola columna por debajo de `640px`, las acciones del pie se apilan a ancho completo, `.option-text` y `.hero-title` usan `overflow-wrap: anywhere`, los botones alcanzan `44px` de alto y la cabecera reduce su padding y el tamano del titulo en movil. Los visores fijan `document.body.style.overflow` mientras estan abiertos y lo restauran al cerrar o desmontarse. `tests/unit/contracts/responsiveLayout.spec.ts` recorre `src/**` con un parser de CSS y fija el contrato: un unico breakpoint coherente con `--breakpoint-mobile`, regla movil en cada componente, banda suficiente para el boton de cierre, guardas de envoltura de texto, ausencia de anchos fijos superiores a `320px` y de `repeat(n, 1fr)` sin `minmax(0, …)`. `tests/e2e/responsive.spec.ts` anade Playwright con proyectos `mobile` (Pixel 5) y `desktop`, y recorre el flujo real sobre `tests/e2e/harness/`, que monta `App.vue` con `AppServices` simulados y no importa `infrastructure/firebase/client.ts`, de modo que la app arranca sin credenciales ni red; comprueba overflow horizontal, objetivos tactiles de `44px`, cierre accesible con un medio vertical de `1:4` y etiquetas largas de carga y reintento. `vite.config.ts` acota `test.include` a `tests/unit/**/*.spec.ts` para que Vitest no intente ejecutar las specs de Playwright, y `.github/workflows/tests.yml` anade un job `e2e` en paralelo.
+
 ---
 
 # Fase 10: pruebas
 
-## TODO-055. Separar pruebas por nivel
+## TODO-055. Separar pruebas por nivel [COMPLETADO]
 
 Crear:
 
@@ -885,6 +896,8 @@ tests/unit/application/
 tests/unit/components/
 tests/integration/
 ```
+
+Resultado: se reorganizaron las 21 specs existentes con `git mv` para conservar el historial y se dividio la suite en tres niveles ejecutables por separado. `tests/unit/` agrupa por capa hexagonal y quedo en cinco carpetas, dos mas de las previstas porque las specs que ya existian no encajaban en ninguna: `infrastructure` para `firestoreKeywordsRepository.spec.ts`, que prueba un adaptador de Firebase con el SDK simulado, y `contracts` para las cinco specs que verifican invariantes del repositorio mas que una capa (`designTokens`, `favicon`, `styleScope`, `firestoreSchemas` y `responsiveLayout`). `App.spec.ts` y `bootstrap.spec.ts` son los unicos casos de integracion porque componen la app o el composition root reales y solo falsean la frontera externa. Los handlers de Cloud Functions se dejaron en `unit/application`: son adaptadores finos sobre los mismos casos de uso que ya prueban las specs del cliente, con stores falsos en lugar de Firestore real, asi que siguen siendo unitarias y no hace falta abrir un cuarto nivel. Se anadieron `test:unit` y `test:integration` a `package.json`, `vite.config.ts` incluye ahora los dos niveles de Vitest, y el job `test` de CI ejecuta los pasos por separado para que un fallo senale el nivel. `tests/unit/contracts/testLayout.spec.ts` cierra el circuito: falla si `tests/` expone un directorio que no sea `e2e`, `integration` o `unit`, si `tests/unit/` gana una capa desconocida, si una spec aparece en la raiz de `unit` o si `vite.config.ts` deja de cubrir un nivel o arrastra las specs de Playwright, de modo que la estructura no se deshaga con un `mv` descuidado. Los imports y las rutas `__dirname` de las specs movidas se ajustaron a la nueva profundidad.
 
 ## TODO-056. Probar el dominio sin Vue
 

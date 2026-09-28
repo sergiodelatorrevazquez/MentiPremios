@@ -158,7 +158,8 @@ jobs:
         with: { node-version: '20', cache: 'npm' }
       - run: npm ci
       - run: npm run lint
-      - run: npm test -- --run
+      - run: npm run test:unit -- --run
+      - run: npm run test:integration -- --run
 ```
 
 **Nota**: Este workflow **no despliega**. Si quieres despliegue automático, añade un paso de deploy al workflow o configura Vercel/Netlify para que escuche al branch `main`.

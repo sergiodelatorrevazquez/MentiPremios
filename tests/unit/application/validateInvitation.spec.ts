@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   InvalidInvitationError,
   InvitationAlreadyUsedError,
-} from '../../src/features/survey/application/errors';
-import { validateInvitation } from '../../src/features/survey/application/validateInvitation';
+} from '../../../src/features/survey/application/errors';
+import { validateInvitation } from '../../../src/features/survey/application/validateInvitation';
 
 describe('validateInvitation', () => {
   it('normalizes the input and returns a valid invitation', async () => {

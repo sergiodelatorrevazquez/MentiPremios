@@ -3,7 +3,7 @@ import {
   createValidateInvitationHandler,
   InvitationLookupError,
   type InvitationLookupStore,
-} from '../../functions/src/validateInvitationHandler';
+} from '../../../functions/src/validateInvitationHandler';
 
 function makeStore(data: Record<string, unknown> | undefined, exists = true) {
   const store: InvitationLookupStore = {

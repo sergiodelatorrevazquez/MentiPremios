@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import QuestionStep from '../../src/features/survey/presentation/QuestionStep.vue';
-import { preguntas } from '../../src/features/survey/domain/questions';
+import QuestionStep from '../../../src/features/survey/presentation/QuestionStep.vue';
+import { preguntas } from '../../../src/features/survey/domain/questions';
 
 describe('QuestionStep', () => {
   it('renders question text and option list', () => {
@@ -15,6 +15,7 @@ describe('QuestionStep', () => {
         canGoBack: false,
         canContinue: false,
         isSubmitting: false,
+        hasSubmissionError: false,
       },
     });
 
@@ -33,6 +34,7 @@ describe('QuestionStep', () => {
         canGoBack: false,
         canContinue: true,
         isSubmitting: false,
+        hasSubmissionError: false,
       },
     });
 
@@ -41,6 +43,26 @@ describe('QuestionStep', () => {
 
     expect(wrapper.emitted('select-option')).toBeTruthy();
     expect(wrapper.emitted('submit')).toHaveLength(1);
+  });
+
+  it('exposes progress and selected-option state to assistive technology', () => {
+    const wrapper = mount(QuestionStep, {
+      props: {
+        question: preguntas[0],
+        selectedOptionId: preguntas[0].opciones[0].id,
+        currentQuestionIndex: 0,
+        totalQuestions: preguntas.length,
+        progress: 10,
+        canGoBack: false,
+        canContinue: true,
+        isSubmitting: false,
+        hasSubmissionError: false,
+      },
+    });
+
+    expect(wrapper.find('[role="progressbar"]').attributes('aria-valuenow')).toBe('10');
+    expect(wrapper.findAll('.option-card')[0].attributes('aria-pressed')).toBe('true');
+    expect(wrapper.findAll('.option-card')[1].attributes('aria-pressed')).toBe('false');
   });
 
   it('does not preload a video preview before the user opens it', () => {
@@ -74,6 +96,7 @@ describe('QuestionStep', () => {
         canGoBack: false,
         canContinue: false,
         isSubmitting: false,
+        hasSubmissionError: false,
       },
     });
 
@@ -83,5 +106,43 @@ describe('QuestionStep', () => {
     expect(preview.attributes('aria-label')).toBe('Video 1');
     expect(preview.findAll('source').map((source) => source.attributes('type')))
       .toEqual(['video/mp4', 'video/webm']);
+  });
+
+  it('shows an empty state when a question has no available options', () => {
+    const wrapper = mount(QuestionStep, {
+      props: {
+        question: { ...preguntas[0], opciones: [] },
+        selectedOptionId: null,
+        currentQuestionIndex: 0,
+        totalQuestions: preguntas.length,
+        progress: 10,
+        canGoBack: false,
+        canContinue: false,
+        isSubmitting: false,
+        hasSubmissionError: false,
+      },
+    });
+
+    expect(wrapper.find('.status--empty').text()).toContain('No hay opciones disponibles');
+    expect(wrapper.findAll('.option-card')).toHaveLength(0);
+    expect(wrapper.find('button.button-primary').attributes('disabled')).toBeDefined();
+  });
+
+  it('labels a failed final submission as a retry', () => {
+    const wrapper = mount(QuestionStep, {
+      props: {
+        question: preguntas[9],
+        selectedOptionId: 'correa-1',
+        currentQuestionIndex: 9,
+        totalQuestions: preguntas.length,
+        progress: 100,
+        canGoBack: true,
+        canContinue: true,
+        isSubmitting: false,
+        hasSubmissionError: true,
+      },
+    });
+
+    expect(wrapper.find('button.button-primary').text()).toBe('Reintentar envío');
   });
 });
