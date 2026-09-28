@@ -1041,7 +1041,7 @@ citadas al final del propio documento.
 
 # Fase 12: documentacion
 
-## TODO-066. Actualizar `ARCHITECTURE.md`
+## TODO-066. Actualizar `ARCHITECTURE.md` [COMPLETADO]
 
 Documentar la arquitectura real despues de cada fase:
 
@@ -1051,6 +1051,30 @@ Documentar la arquitectura real despues de cada fase:
 - Reglas de importacion.
 - Casos de uso.
 - Adaptadores.
+
+Resultado: el documento estaba describiendo una aplicacion que ya no existe.
+Se reescribio entero en lugar de parchearlo, porque las afirmaciones
+equivocadas no eran localizables: decia que todo el UI vivia en un `src/App.vue`
+de unas 990 lineas, cuando el shell ocupa 292 y la interfaz son seis SFC en
+`features/survey/presentation/`; colocaba los tests de assets en `domain/` con
+una lista de ficheros que ya no correspondia; y describia un patron de
+componentes que habia sido exactamente lo que se habia eliminado. El documento
+nuevo cubre los seis puntos pedidos, con la regla de dependencia
+`presentation → application → domain` y `infrastructure` inyectada desde
+`main.ts` a traves de `bootstrap.ts`, la tabla de componentes con su
+responsabilidad y sus lineas, los casos de uso, los adaptadores y el flujo de
+datos completo con las metricas en su sitio. Escribir la seccion de capas sirvio
+para comprobar que la regla "el dominio no importa Vue" llevaba varias
+iteraciones sin verificarse de forma automatizada; ahora
+`tests/unit/domain/isolation.spec.ts` la comprueba leyendo ficheros. Tambien se
+documentaron las dos piezas de observabilidad y el modulo de errores de red, que
+se habian anadido sin seccion propia. Al revisarlo aparecieron tres referencias
+rotas en otros ficheros, corregidas en el mismo commit: `DEV_SETUP.md` apuntaba
+a `src/App.vue:37-146` para anadir preguntas, proponia crear colecciones
+escribiendo `addDoc` desde el navegador (imposible, las reglas lo niegan) y
+describia cambiar la foto del avatar tocando un `.avatar-circle` sin URL, cuando
+la ruta esta escrita a mano en dos sitios. `API.md` tambien apuntaba al antiguo
+`src/App.vue`.
 
 ## TODO-067. Actualizar `API.md`
 

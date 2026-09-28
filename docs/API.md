@@ -85,7 +85,7 @@ Esta funcionalidad no forma parte del flujo de encuesta ni se expone al navegado
 
 ---
 
-## Preguntas de la encuesta (definidas en `src/App.vue:37-146`)
+## Preguntas de la encuesta (definidas en `src/features/survey/domain/questions.ts`)
 
 | ID | Título | Opciones | Multimedia |
 |---|---|---|---|
