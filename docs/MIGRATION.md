@@ -821,9 +821,11 @@ Eliminar duplicaciones entre:
 
 Resultado: las reglas compartidas del shell, wizard, controles, opciones y visor se consolidaron en `src/style.css`; se retiró el bloque global de `App.vue`. Los estilos de la aplicación se cargan desde un único entrypoint y los componentes mantienen su presentación propia para TODO-050.
 
-## TODO-050. Aplicar `scoped` donde corresponda
+## TODO-050. Aplicar `scoped` donde corresponda [COMPLETADO]
 
 Los estilos especificos de componentes deben estar aislados para evitar efectos colaterales.
+
+Resultado: los SFC conservan sus estilos locales con `scoped`; el antiguo bloque global de `App.vue` se encuentra en `src/style.css`. `tests/unit/styleScope.spec.ts` recorre los componentes para evitar introducir nuevos bloques `<style>` globales.
 
 ## TODO-051. Crear tokens visuales centralizados
 
