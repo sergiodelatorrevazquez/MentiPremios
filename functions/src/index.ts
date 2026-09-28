@@ -17,6 +17,7 @@ if (getApps().length === 0) initializeApp();
 const firestore = getFirestore();
 const store: SubmissionStore = {
   document: (collection, id) => firestore.doc(`${collection}/${id}`),
+  newId: (collection) => firestore.collection(collection).doc().id,
   runTransaction: (operation) => firestore.runTransaction((transaction) => operation({
     get: (reference) => transaction.get(reference as DocumentReference),
     create: (reference, data) => {

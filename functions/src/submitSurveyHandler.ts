@@ -26,6 +26,7 @@ export interface SubmissionTransaction {
 
 export interface SubmissionStore {
   document(collection: string, id: string): unknown;
+  newId(collection: string): string;
   runTransaction<T>(operation: (transaction: SubmissionTransaction) => Promise<T>): Promise<T>;
 }
 
@@ -47,6 +48,21 @@ function haveSameAnswers(
     ));
 }
 
+function getStoredAnswers(response: Record<string, unknown>): Record<string, unknown> | null {
+  if (response.schemaVersion === 2
+    && response.answers !== null
+    && typeof response.answers === 'object'
+    && !Array.isArray(response.answers)) {
+    return response.answers as Record<string, unknown>;
+  }
+
+  if (response.schemaVersion === undefined) {
+    return response;
+  }
+
+  return null;
+}
+
 export function createSubmitSurveyHandler(store: SubmissionStore) {
   return async ({ data, auth }: SubmitSurveyRequest): Promise<{ submitted: true }> => {
     if (!auth?.uid) {
@@ -60,11 +76,10 @@ export function createSubmitSurveyHandler(store: SubmissionStore) {
 
     const { invitationId, answers } = submission;
     const invitationReference = store.document('codigos', invitationId);
-    const responseReference = store.document('respuestas', invitationId);
+    const generatedResponseId = store.newId('respuestas');
 
     return store.runTransaction(async (transaction) => {
       const invitation = await transaction.get(invitationReference);
-      const previousResponse = await transaction.get(responseReference);
       const invitationData = invitation.data();
 
       if (!invitation.exists
@@ -76,8 +91,24 @@ export function createSubmitSurveyHandler(store: SubmissionStore) {
       }
 
       const invitationUsed = invitationData.usado;
+      const linkedResponseId = invitationData.responseId;
+      const isLinkedResponseIdValid = typeof linkedResponseId === 'string'
+        && linkedResponseId.length > 0
+        && !linkedResponseId.includes('/');
+      if (linkedResponseId !== undefined && !isLinkedResponseIdValid) {
+        throw new SubmissionEndpointError('failed-precondition', 'Invitation data is invalid.');
+      }
+
+      const responseId = isLinkedResponseIdValid ? linkedResponseId : generatedResponseId;
+      const responseDocumentId = invitationUsed && !isLinkedResponseIdValid
+        ? invitationId
+        : responseId;
+      const responseReference = store.document('respuestas', responseDocumentId);
+      const previousResponse = await transaction.get(responseReference);
+
       if (previousResponse.exists) {
-        const persistedAnswers = previousResponse.data();
+        const persistedResponse = previousResponse.data();
+        const persistedAnswers = persistedResponse && getStoredAnswers(persistedResponse);
         if (invitationUsed && persistedAnswers && haveSameAnswers(persistedAnswers, answers)) {
           return { submitted: true };
         }
@@ -88,8 +119,12 @@ export function createSubmitSurveyHandler(store: SubmissionStore) {
         throw new SubmissionEndpointError('failed-precondition', 'Invitation already used.');
       }
 
-      transaction.create(responseReference, answers);
-      transaction.update(invitationReference, { usado: true });
+      transaction.create(responseReference, {
+        schemaVersion: 2,
+        participantName: invitationData.nombre,
+        answers,
+      });
+      transaction.update(invitationReference, { usado: true, responseId });
 
       return { submitted: true };
     });

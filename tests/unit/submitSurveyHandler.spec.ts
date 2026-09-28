@@ -38,6 +38,7 @@ function createStore(options: {
   };
   const store: SubmissionStore = {
     document: vi.fn((collection, id) => `${collection}/${id}`),
+    newId: vi.fn(() => 'random-response-id'),
     runTransaction: vi.fn((operation) => operation(transaction)),
   };
 
@@ -63,8 +64,15 @@ describe('submitSurvey callable handler', () => {
     })).resolves.toEqual({ submitted: true });
 
     expect(store.runTransaction).toHaveBeenCalledOnce();
-    expect(transaction.create).toHaveBeenCalledWith('respuestas/secret-1', answers);
-    expect(transaction.update).toHaveBeenCalledWith('codigos/secret-1', { usado: true });
+    expect(transaction.create).toHaveBeenCalledWith('respuestas/random-response-id', {
+      schemaVersion: 2,
+      participantName: 'Sergio',
+      answers,
+    });
+    expect(transaction.update).toHaveBeenCalledWith('codigos/secret-1', {
+      usado: true,
+      responseId: 'random-response-id',
+    });
   });
 
   it('returns success for an identical retry without writing again', async () => {
@@ -80,6 +88,25 @@ describe('submitSurvey callable handler', () => {
       data: { invitationId: 'secret-1', answers },
     })).resolves.toEqual({ submitted: true });
 
+    expect(transaction.create).not.toHaveBeenCalled();
+    expect(transaction.update).not.toHaveBeenCalled();
+  });
+
+  it('uses the response ID linked from the invitation for identical versioned retries', async () => {
+    const answers = { ...validAnswers };
+    const { store, transaction } = createStore({
+      invitationUsed: true,
+      invitationData: { nombre: 'Sergio', usado: true, responseId: 'response-opaque-123' },
+      existingResponse: { schemaVersion: 2, participantName: 'Sergio', answers },
+    });
+    const handler = createSubmitSurveyHandler(store);
+
+    await expect(handler({
+      auth: { uid: 'anonymous-user' },
+      data: { invitationId: 'secret-1', answers },
+    })).resolves.toEqual({ submitted: true });
+
+    expect(store.document).toHaveBeenCalledWith('respuestas', 'response-opaque-123');
     expect(transaction.create).not.toHaveBeenCalled();
     expect(transaction.update).not.toHaveBeenCalled();
   });

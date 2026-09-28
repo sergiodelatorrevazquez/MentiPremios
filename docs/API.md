@@ -28,23 +28,25 @@ codigos/
 
 ### Colección `respuestas`
 
-Respuestas a las preguntas de la encuesta. El esquema actualmente desplegado es legado; los documentos nuevos pasarán al esquema versionado descrito en TODO-040 a TODO-042.
+Respuestas a las preguntas de la encuesta. Los documentos legacy conservan su formato; los nuevos usan un ID opaco y el esquema versionado v2.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| **Document ID** | `string` | Actualmente el código de invitación; el nuevo esquema usa un ID aleatorio |
-| Campos actuales | `string` | Un campo por pregunta, con el ID de la opción seleccionada |
+| **Document ID** | `string` | ID aleatorio interno; no contiene el código de invitación |
+| `schemaVersion` | `number` | `2` para documentos nuevos; ausente en documentos legacy |
+| `participantName` | `string` | Nombre visible del participante |
+| `answers` | `map` | IDs de pregunta a IDs de opción |
 
 **Ejemplo:**
 ```
-respuestas/{codigo-de-invitacion} {
-  tonto: "tonto-1",
-  casper: "casper-3",
-  // ... los diez campos de pregunta
+respuestas/{id-aleatorio} {
+  schemaVersion: 2,
+  participantName: "Sergio",
+  answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ }
 }
 ```
 
-El esquema actual no persiste nombre del participante, código de invitación como campo ni marcas de tiempo. No confundirlo con el DTO de entrada de la callable, que usa `{ invitationId, answers }`.
+Los documentos legacy conservan un campo plano por pregunta bajo un ID igual al código. Las nuevas invitaciones guardan el enlace `responseId`; el código no se copia a documentos nuevos de respuesta. Los timestamps se añadirán en TODO-042. No confundir el esquema persistido con el DTO de entrada de la callable, que usa `{ invitationId, answers }`.
 
 ---
 

@@ -109,15 +109,14 @@ Document ID: palabra secreta (string, ej: "galaxia-2025")
 
 ### Colección `respuestas`
 ```
-Document ID: código de invitación (esquema legado)
+Document ID: ID aleatorio opaco (v2); el esquema legacy usaba el código
 {
-  tonto: "tonto-1",       // campo plano por pregunta
-  casper: "casper-3",
-  comefeas: "comefeas-2",
-  // ... todas las preguntas
+  schemaVersion: 2,
+  participantName: "Sergio",
+  answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ }
 }
 ```
-El formato legado no guarda nombre ni timestamp. El formato versionado que se aplicará a nuevos documentos queda definido en TODO-040 a TODO-042.
+Cada invitación v2 guarda `responseId` para mantener la relación y soportar reintentos. El documento no incluye el código secreto. Los legacy conservan el mapa plano bajo el ID antiguo y se reconocen sin reescritura; los timestamps se añaden en TODO-042.
 
 ### Colección `palabrasClave`
 ```

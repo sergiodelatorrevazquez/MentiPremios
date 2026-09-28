@@ -725,9 +725,11 @@ schemaVersion: 2
 
 Resultado/decision: conservar `respuestas` como coleccion y tratar los documentos actuales sin `schemaVersion` como legacy v1. No se reescribiran ni borraran en una migracion masiva; permanecen disponibles para informes y exportaciones. Las nuevas respuestas usaran v2, con `schemaVersion: 2`, `participantName`, `answers`, `createdAt` y `submittedAt`; el ID sera opaco y se enlazara desde el documento de invitacion mediante `responseId`. La logica de reintentos reconocera la respuesta legacy asociada al ID antiguo sin copiar el codigo secreto a documentos nuevos. Cualquier backfill futuro requiere export/respaldo y un plan de rollback.
 
-## TODO-041. Evitar usar la palabra secreta como ID visible
+## TODO-041. Evitar usar la palabra secreta como ID visible [COMPLETADO]
 
 Evaluar el uso de un ID interno aleatorio para respuestas. La palabra secreta no deberia aparecer innecesariamente en documentos o informes.
+
+Resultado: las respuestas nuevas usan IDs aleatorios de Firestore; el documento de invitacion conserva el enlace `responseId`. El esquema nuevo incluye `schemaVersion: 2`, nombre y mapa de respuestas, sin copiar el secreto. Los reintentos legacy siguen comprobando el documento con el ID anterior y las pruebas cubren el enlace v2, la idempotencia y la ausencia de escrituras duplicadas.
 
 ## TODO-042. Anadir marcas de tiempo reales
 
