@@ -15,6 +15,7 @@ import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
 import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.vue';
 import AvatarPhotoViewer from '../features/survey/presentation/AvatarPhotoViewer.vue';
 import { InvitationAlreadyUsedError, InvalidInvitationError } from '../features/survey/application/errors';
+import { logger } from '../infrastructure/logging/logger';
 import { APP_SERVICES_KEY, type AppServices } from './bootstrap';
 
 function requireAppServices(): AppServices {
@@ -52,15 +53,18 @@ let pressTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressTriggered = false;
 
 function handleQuestionSelect(optionId: OptionId) {
+  // Una pulsación larga abre el visor y, al soltar, el navegador emite también
+  // un click. Sin esta guarda la opción quedaría seleccionada sin querer.
+  if (longPressTriggered) return;
   seleccionarRespuesta(optionId);
 }
 
 function handleQuestionLongPressStart(multimedia: Multimedia) {
-  handlePressStart(multimedia, new Event('mousedown') as MouseEvent | TouchEvent);
+  handlePressStart(multimedia);
 }
 
 function handleQuestionLongPressEnd() {
-  handlePressEnd(new Event('mouseup') as MouseEvent | TouchEvent);
+  handlePressEnd();
 }
 
 function iniciarVisor(multimedia: Multimedia) {
@@ -74,28 +78,19 @@ function cerrarVisorMultimedia() {
   multimediaActual.value = null;
 }
 
-function handlePressStart(multimedia: Multimedia, event: MouseEvent | TouchEvent) {
+function handlePressStart(multimedia: Multimedia) {
   longPressTriggered = false;
   pressTimer = setTimeout(() => {
     iniciarVisor(multimedia);
   }, 300);
 }
 
-function handlePressEnd(event: MouseEvent | TouchEvent) {
+function handlePressEnd() {
   if (pressTimer) {
     clearTimeout(pressTimer);
     pressTimer = null;
   }
   setTimeout(() => { longPressTriggered = false; }, 10);
-}
-
-function handleClick(opcionId: OptionId, event: MouseEvent | TouchEvent) {
-  if (longPressTriggered) return;
-  seleccionarRespuesta(opcionId);
-}
-
-function handleMultimediaKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') cerrarVisorMultimedia();
 }
 
 const puedeContinuarLogin = computed(() => palabraSecreta.value.trim().length > 0 && !enviando.value);
@@ -115,6 +110,10 @@ async function validarPalabraSecreta() {
 
   try {
     const secreta = palabraSecreta.value.trim();
+    // La palabra secreta es el dato más sensible del flujo: se registra como
+    // secreto antes de usarla, para que el logger la elimine de cualquier
+    // mensaje o contexto que se emita después.
+    logger.registerSecret(secreta);
     const encontrado = await appServices.validateInvitation(secreta);
     codigo.value = encontrado;
     cambiarPaso('welcome');
@@ -124,7 +123,7 @@ async function validarPalabraSecreta() {
     } else if (e instanceof InvalidInvitationError) {
       loginError.value = 'La palabra secreta es incorrecta. Revisa lo que te ha llegado en la invitación.';
     } else {
-      console.error(e);
+      logger.error('fallo al validar la invitación', { error: e });
       error.value = 'Ha ocurrido un error al comprobar la palabra secreta. Inténtalo de nuevo.';
     }
   } finally {
@@ -159,7 +158,9 @@ async function responderYPasarSiguiente() {
     mensaje.value = '¡Respuestas guardadas correctamente en MentiPremios!';
     cambiarPaso('done');
   } catch (e) {
-    console.error(e);
+    // Solo el mensaje del error: el contexto lleva el error completo y el
+    // logger se encarga de quitar palabra secreta, nombre y respuestas.
+    logger.error('fallo al enviar la encuesta', { error: e });
     error.value = 'Ha ocurrido un error al guardar tus respuestas. Inténtalo de nuevo.';
   } finally {
     enviando.value = false;
@@ -177,10 +178,6 @@ function cerrarVisorFoto() {
 function volverAtras() {
   if (!puedeVolverAtras.value) return;
   volverPregunta();
-}
-
-function handleModalKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') cerrarVisorFoto();
 }
 </script>
 

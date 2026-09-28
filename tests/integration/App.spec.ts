@@ -5,6 +5,9 @@ import { APP_SERVICES_KEY, type AppServices } from '../../src/app/bootstrap';
 import { InvitationAlreadyUsedError, InvalidInvitationError } from '../../src/features/survey/application/errors';
 import type { SurveySubmission } from '../../src/features/survey/domain/survey.types';
 import { preguntas } from '../../src/features/survey/domain/questions';
+import { logger, type LogEntry } from '../../src/infrastructure/logging/logger';
+
+const entries: LogEntry[] = [];
 
 const mockAppServices: AppServices = {
   validateInvitation: vi.fn().mockResolvedValue({
@@ -471,6 +474,127 @@ describe('App - Visor multimedia de respuestas', () => {
     await wrapper.find('.modal-close-btn').trigger('click');
     expect(wrapper.find('.photo-modal').exists()).toBe(false);
     vi.useRealTimers();
+  });
+
+  it('no selecciona la opción al abrir el visor con pulsación larga', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(App);
+
+    await loginAndStart(wrapper);
+    for (let questionIndex = 0; questionIndex < 6; questionIndex++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    const multimediaOption = wrapper.find('.option-card');
+    expect(multimediaOption.classes()).not.toContain('option-card--selected');
+
+    await multimediaOption.trigger('mousedown');
+    vi.advanceTimersByTime(300);
+    await wrapper.vm.$nextTick();
+    await multimediaOption.trigger('mouseup');
+    await multimediaOption.trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.photo-modal').exists()).toBe(true);
+    expect(wrapper.find('.option-card').classes()).not.toContain('option-card--selected');
+    expect(wrapper.find('button.button-primary').attributes('disabled')).toBeDefined();
+    vi.useRealTimers();
+  });
+
+  it('vuelve a seleccionar con un clic corto tras una pulsación larga', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(App);
+
+    await loginAndStart(wrapper);
+    for (let questionIndex = 0; questionIndex < 6; questionIndex++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    await wrapper.find('.option-card').trigger('mousedown');
+    vi.advanceTimersByTime(300);
+    await wrapper.vm.$nextTick();
+    await wrapper.find('.option-card').trigger('mouseup');
+    await wrapper.find('.modal-close-btn').trigger('click');
+    vi.advanceTimersByTime(20);
+
+    await wrapper.findAll('.option-card')[1].trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.findAll('.option-card')[1].classes()).toContain('option-card--selected');
+    vi.useRealTimers();
+  });
+});
+
+describe('App - logging controlado', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    logger.clear();
+    entries.length = 0;
+    logger.setSink((entry) => entries.push(entry));
+  });
+
+  afterEach(() => {
+    logger.setSink(null);
+  });
+
+  it('no escribe nada en consola directamente', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.mocked(mockAppServices.submitSurvey).mockRejectedValueOnce(new Error('boom'));
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    // El sink del logger se ha sustituido, así que nada debe llegar a la consola.
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(consoleWarn).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+    consoleWarn.mockRestore();
+  });
+
+  it('registra el fallo de envío sin la palabra secreta ni el nombre', async () => {
+    vi.mocked(mockAppServices.submitSurvey).mockRejectedValueOnce(
+      new Error('fallo incluyendo test-code'),
+    );
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    const registro = entries.find((entry) => entry.message.includes('enviar la encuesta'));
+
+    expect(registro).toBeDefined();
+    expect(registro!.level).toBe('error');
+    const serializado = JSON.stringify(registro);
+    expect(serializado).not.toContain('test-code');
+    expect(serializado).not.toContain('Sergio');
+    expect(serializado).toContain('[redactado]');
+  });
+
+  it('registra el fallo de validación sin la palabra secreta', async () => {
+    vi.mocked(mockAppServices.validateInvitation).mockRejectedValueOnce(new Error('red interna'));
+    const wrapper = mount(App);
+    await wrapper.find('input.field-input').setValue('secreta-123');
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    const registro = entries.find((entry) => entry.message.includes('validar la invitación'));
+
+    expect(registro).toBeDefined();
+    expect(JSON.stringify(registro)).not.toContain('secreta-123');
   });
 });
 

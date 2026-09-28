@@ -969,7 +969,7 @@ Resultado: se fijo el formato definitivo en los tres puntos donde el payload cam
 
 # Fase 11: observabilidad y operacion
 
-## TODO-062. Crear logging controlado
+## TODO-062. Crear logging controlado [COMPLETADO]
 
 Evitar `console.error` directo en componentes. Crear un logger que permita:
 
@@ -977,6 +977,8 @@ Evitar `console.error` directo en componentes. Crear un logger que permita:
 - No exponer palabras secretas.
 - No exponer datos personales innecesarios.
 - Desactivar logs detallados en produccion.
+
+Resultado: se anadio `src/infrastructure/logging/logger.ts`, con una instancia `logger` que sustituye a los dos `console.error` de `App.vue` y ofrece cuatro niveles. La proteccion de datos tiene tres capas. Primera, `registerSecret` acepta la palabra secreta en cuanto el usuario la escribe, antes de usarla, y el logger la elimina de cualquier mensaje o contexto posterior, includedo el texto de un `Error`. Segunda, `redactValue` sustituye por `[redactado]` toda clave cuyo nombre, normalizado a minusculas y sin separadores, coincida con una lista de terminos sensibles o termine en uno de ellos: cubre `secret`, `palabra_secreta`, `participantName`, `nombre`, `usuario`, `uid`, `answers`, `respuestas`, `invitationId`, `responseId`, `apiKey` y los tokens de autenticacion, tambien en objetos anidados, y funciona en `snake_case`, `camelCase` y `kebab-case`. Tercera, los valores no serializables se describen en lugar de romperse: un `Error` se reduce a nombre y mensaje sin arrastrear `stack` ni propiedades propias, las funciones y simbolos se etiquetan, la recursion se corta a cuatro niveles, los arrays se limitan a veinte elementos y las cadenas a 200 caracteres indicando cuanto sobra. El logger se silencia por debajo de `error` en produccion mediante `minimumLevelFor(import.meta.env.PROD)`, de modo que alli no sale ni un `debug`. La redaccion ocurre al construir la entrada, no al escribirla, para que ningun destino, nuevo o antiguo, reciba el dato en claro; `setSink(null)` desactiva la salida por completo. En Cloud Functions se mantiene `console.error` porque ahi la consola es el sink real de Cloud Logging; lo delimita `tests/unit/contracts/logging.spec.ts`, que ademas falla si algun modulo de `src/` vuelve a escribir en consola por su cuenta. Ese contrato obliga a instalar `@typescript-eslint/eslint-plugin`: la regla base de ESLint marcaba como variables sin usar los parametros de tipo, y con el logger los falsos positivos pasaron de 25 a 36. Con la regla de typescript-eslint y eliminando tres handlers muertos de `App.vue` (`handleClick`, `handleMultimediaKeydown` y `handleModalKeydown`) mas los parametros `event` que nadie usaba, `npm run lint` queda por primera vez sin un solo warning. Al eliminar `handleClick` se destapo un defecto real: `longPressTriggered` solo se escribia, nunca se leia, asi que una pulsacion larga sobre una opcion con multimedia abria el visor y ademas seleccionaba la respuesta. Ahora `handleQuestionSelect` respeta la guarda, con dos pruebas que cubren tanto el no-seleccion tras la pulsacion larga como la seleccion normal posterior. Las suites quedan en 240 unitarias y 42 de integracion.
 
 ## TODO-063. Anadir metricas basicas
 
