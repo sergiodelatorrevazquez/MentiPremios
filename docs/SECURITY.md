@@ -10,6 +10,8 @@ Use Firebase callable Cloud Functions running the Admin SDK as the only trusted 
 - Submit answers and mark the invitation used in one Firestore transaction.
 - Return only the participant display name needed by the welcome screen from invitation validation.
 
+The initial `submitSurvey(invitationId, answers)` callable is implemented in `functions/src/index.ts`. Full catalog validation, idempotency, restrictive client rules, and server-side invitation lookup are completed by the following Phase 6 tasks.
+
 ## Credential limitations
 
 Anonymous Authentication identifies a client session; it does not prove a participant's real-world identity. An invitation code remains a bearer credential. App Check helps reject requests that do not come from an attested app, but it is not a replacement for strong user authentication or a defense against every automated attack.

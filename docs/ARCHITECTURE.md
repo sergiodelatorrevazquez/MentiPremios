@@ -87,8 +87,8 @@ Usuario responde 10 preguntas una a una
   → Navegación: next (acumula y avanza) / back (restaura respuesta anterior)
 
 En la última pregunta, pulsa "Enviar y cerrar"
-  → saveUserAnswer({ usuario, premios })            ← Firestore: setDoc(respuestas/{usuario})
-  → markCodeAsUsed(secretWord)                     ← Firestore: updateDoc(codigos/{secretWord}, { usado: true })
+  → submitSurvey({ invitationId, answers })         ← Callable Function
+  → Firestore transaction: create respuesta + marcar invitación usada
   → Avanza a done
 ```
 
@@ -126,7 +126,7 @@ Document ID: auto-generado por Firestore
 
 ## Persistencia de premios e invitaciones
 
-`premiosService.ts` contiene las operaciones de compatibilidad para respuestas e invitaciones. La funcionalidad opcional de palabras clave está aislada en `FirestoreKeywordsRepository` y no se conecta al flujo de encuesta.
+La UI envía respuestas mediante la callable `submitSurvey`; el Admin SDK actualiza respuesta e invitación dentro de una transacción. `premiosService.ts` conserva operaciones de compatibilidad, pero no participa en el flujo activo. La funcionalidad opcional de palabras clave está aislada en `FirestoreKeywordsRepository`.
 
 | Función | Operación Firestore |
 |---|---|

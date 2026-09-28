@@ -11,7 +11,6 @@ export interface SubmitSurveyInput {
   questions: readonly Pregunta[];
   answers: Readonly<Record<string, string | undefined>>;
   persist: (submission: SurveySubmission) => Promise<void> | void;
-  markInvitationUsed: (invitationId: string) => Promise<void> | void;
 }
 
 export async function submitSurvey({
@@ -20,7 +19,6 @@ export async function submitSurvey({
   questions,
   answers,
   persist,
-  markInvitationUsed,
 }: SubmitSurveyInput): Promise<SurveySubmission> {
   const surveyValidation = validateSurveyAnswers(questions, answers);
 
@@ -38,7 +36,6 @@ export async function submitSurvey({
 
   try {
     await persist(submission);
-    await markInvitationUsed(invitationId);
   } catch (error) {
     throw new PersistenceError(
       'persistence-error',

@@ -1,0 +1,81 @@
+import { describe, expect, it, vi } from 'vitest';
+import {
+  createSubmitSurveyHandler,
+  SubmissionEndpointError,
+  type SubmissionStore,
+  type SubmissionTransaction,
+} from '../../functions/src/submitSurveyHandler';
+
+function createStore(invitationExists = true, invitationUsed = false) {
+  const transaction: SubmissionTransaction = {
+    get: vi.fn().mockResolvedValue({
+      exists: invitationExists,
+      data: () => ({ usado: invitationUsed }),
+    }),
+    create: vi.fn(),
+    update: vi.fn(),
+  };
+  const store: SubmissionStore = {
+    document: vi.fn((collection, id) => `${collection}/${id}`),
+    runTransaction: vi.fn((operation) => operation(transaction)),
+  };
+
+  return { store, transaction };
+}
+
+describe('submitSurvey callable handler', () => {
+  it('creates the response and marks the invitation used in one transaction', async () => {
+    const { store, transaction } = createStore();
+    const handler = createSubmitSurveyHandler(store);
+    const answers = { tonto: 'tonto-1' };
+
+    await expect(handler({
+      auth: { uid: 'anonymous-user' },
+      data: { invitationId: 'secret-1', answers },
+    })).resolves.toEqual({ submitted: true });
+
+    expect(store.runTransaction).toHaveBeenCalledOnce();
+    expect(transaction.create).toHaveBeenCalledWith('respuestas/secret-1', answers);
+    expect(transaction.update).toHaveBeenCalledWith('codigos/secret-1', { usado: true });
+  });
+
+  it('rejects unauthenticated requests before accessing Firestore', async () => {
+    const { store } = createStore();
+    const handler = createSubmitSurveyHandler(store);
+
+    await expect(handler({
+      auth: null,
+      data: { invitationId: 'secret-1', answers: { tonto: 'tonto-1' } },
+    })).rejects.toMatchObject({
+      code: 'unauthenticated',
+      name: 'SubmissionEndpointError',
+    });
+    expect(store.runTransaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed request data before starting a transaction', async () => {
+    const { store } = createStore();
+    const handler = createSubmitSurveyHandler(store);
+
+    await expect(handler({
+      auth: { uid: 'anonymous-user' },
+      data: { invitationId: 'secret-1', answers: [] },
+    })).rejects.toMatchObject({ code: 'invalid-argument' });
+    expect(store.runTransaction).not.toHaveBeenCalled();
+  });
+
+  it('does not write when the invitation is missing or already used', async () => {
+    for (const storeState of [[false, false], [true, true]] as const) {
+      const { store, transaction } = createStore(...storeState);
+      const handler = createSubmitSurveyHandler(store);
+
+      await expect(handler({
+        auth: { uid: 'anonymous-user' },
+        data: { invitationId: 'secret-1', answers: { tonto: 'tonto-1' } },
+      })).rejects.toBeInstanceOf(SubmissionEndpointError);
+
+      expect(transaction.create).not.toHaveBeenCalled();
+      expect(transaction.update).not.toHaveBeenCalled();
+    }
+  });
+});

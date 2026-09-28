@@ -29,9 +29,12 @@ VITE_FIREBASE_PROJECT_ID=tu-proyecto
 VITE_FIREBASE_STORAGE_BUCKET=tu-proyecto.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
 VITE_FIREBASE_APP_ID=1:123456789:web:abc123
+VITE_FIREBASE_APP_CHECK_SITE_KEY=tu-clave-recaptcha-v3
 ```
 
 > **Importante**: `.env.local` está en `.gitignore` y **no debe subirse al repositorio**.
+
+Habilita el proveedor **Anonymous** en Firebase Authentication y registra la app web en App Check con reCAPTCHA v3. Las callable Functions exigen Auth y un token de App Check válido.
 
 ### 1.3 Crear colecciones en Firestore
 
@@ -135,6 +138,19 @@ firebase init hosting
 npm run build
 firebase deploy --only hosting
 ```
+
+### Desplegar Cloud Functions
+
+El backend callable requiere un proyecto Firebase asociado y un plan que permita Cloud Functions. Selecciona el proyecto una vez y despliega:
+
+```bash
+npm install -g firebase-tools
+firebase use --add
+npm ci --prefix functions
+firebase deploy --only functions
+```
+
+El predeploy compila el código de `functions/` con Node 20. La aplicación web invoca `submitSurvey` en `us-central1`; configura `VITE_FIREBASE_APP_CHECK_SITE_KEY` también en el proveedor de hosting antes de generar la build.
 
 ---
 

@@ -629,7 +629,7 @@ La palabra secreta no deberia considerarse una autorizacion fuerte por si sola.
 
 Resultado: se eligieron Cloud Functions callable con Admin SDK, Firebase Authentication anonima y App Check obligatorio. Firestore quedara accesible solo desde el servidor para las colecciones de invitaciones y respuestas. La decision y sus limites quedan documentados en `docs/SECURITY.md`: el codigo sigue siendo una credencial bearer y App Check mitiga abuso, pero no acredita identidad real.
 
-## TODO-034. Crear un endpoint unico de envio
+## TODO-034. Crear un endpoint unico de envio [COMPLETADO]
 
 El cliente debe llamar a una unica operacion:
 
@@ -645,6 +645,8 @@ El servidor debe:
 4. Crear la respuesta.
 5. Marcar la invitacion como usada.
 6. Ejecutarlo todo de forma atomica.
+
+Resultado: se anadio la callable `submitSurvey` en `functions/`, protegida por Firebase Auth y App Check. Lee la invitacion, rechaza codigos inexistentes/usados y crea la respuesta junto con `usado: true` en una unica transaccion. El cliente ya envia por esta callable; la validacion exhaustiva queda en TODO-036. CI compila las Functions y el predeploy de Firebase ejecuta su build.
 
 ## TODO-035. Hacer el envio idempotente
 

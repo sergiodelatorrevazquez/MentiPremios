@@ -25,7 +25,6 @@ const preguntas: Pregunta[] = [
 describe('submitSurvey', () => {
   it('validates the answers, builds the submission DTO and persists it', async () => {
     const persist = vi.fn().mockResolvedValue(undefined);
-    const markInvitationUsed = vi.fn().mockResolvedValue(undefined);
 
     const result = await submitSurvey({
       invitationId: 'inv-1',
@@ -36,7 +35,6 @@ describe('submitSurvey', () => {
         casper: 'casper-1',
       },
       persist,
-      markInvitationUsed,
     });
 
     expect(result).toEqual({
@@ -55,12 +53,10 @@ describe('submitSurvey', () => {
         casper: 'casper-1',
       },
     });
-    expect(markInvitationUsed).toHaveBeenCalledWith('inv-1');
   });
 
   it('rejects incomplete answers without persisting', async () => {
     const persist = vi.fn();
-    const markInvitationUsed = vi.fn();
 
     await expect(
       submitSurvey({
@@ -71,7 +67,6 @@ describe('submitSurvey', () => {
           tonto: 'tonto-1',
         },
         persist,
-        markInvitationUsed,
       }),
     ).rejects.toMatchObject({
       name: 'InvalidSubmissionError',
@@ -79,12 +74,10 @@ describe('submitSurvey', () => {
     });
 
     expect(persist).not.toHaveBeenCalled();
-    expect(markInvitationUsed).not.toHaveBeenCalled();
   });
 
   it('wraps persistence failures in a domain error', async () => {
     const persist = vi.fn().mockRejectedValue(new Error('db down'));
-    const markInvitationUsed = vi.fn();
 
     await expect(
       submitSurvey({
@@ -96,7 +89,6 @@ describe('submitSurvey', () => {
           casper: 'casper-1',
         },
         persist,
-        markInvitationUsed,
       }),
     ).rejects.toMatchObject({
       name: 'PersistenceError',
