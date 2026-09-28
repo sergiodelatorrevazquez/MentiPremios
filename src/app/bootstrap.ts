@@ -1,11 +1,10 @@
-import { FirestoreInvitationRepository } from '../infrastructure/firebase/firestoreInvitationRepository';
 import { validateInvitation } from '../features/survey/application/validateInvitation';
 import { submitSurvey } from '../features/survey/application/submitSurvey';
 import type { SubmitSurveyInput } from '../features/survey/application/submitSurvey';
 import type { InvitationRecord } from '../features/survey/application/validateInvitation';
 import type { SurveySubmission } from '../features/survey/domain/survey.types';
+import { InvitationAlreadyUsedError, InvalidInvitationError } from '../features/survey/application/errors';
 import { signInAnonymously, type Auth } from 'firebase/auth';
-import type { Firestore } from 'firebase/firestore';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import type { InjectionKey } from 'vue';
 
@@ -18,8 +17,11 @@ export interface AppServices {
 
 export const APP_SERVICES_KEY: InjectionKey<AppServices> = Symbol('app-services');
 
-export function createAppServices(db: Firestore, auth: Auth, functions: Functions): AppServices {
-  const invitationRepository = new FirestoreInvitationRepository(db);
+export function createAppServices(auth: Auth, functions: Functions): AppServices {
+  const remoteValidateInvitation = httpsCallable<
+    { secret: string },
+    { participantName: string }
+  >(functions, 'validateInvitation');
   const remoteSubmitSurvey = httpsCallable<
     { invitationId: string; answers: Readonly<Record<string, string | undefined>> },
     { submitted: true }
@@ -33,10 +35,34 @@ export function createAppServices(db: Firestore, auth: Auth, functions: Function
 
   return {
     validateInvitation: async (secret: string) => {
-      await ensureAnonymousAuthentication();
-      return validateInvitation(secret, (normalizedSecret) =>
-        invitationRepository.findBySecret(normalizedSecret),
-      );
+      try {
+        return await validateInvitation(secret, async (normalizedSecret) => {
+          await ensureAnonymousAuthentication();
+          const result = await remoteValidateInvitation({ secret: normalizedSecret });
+          if (!result.data || typeof result.data.participantName !== 'string') {
+            throw new Error('Invalid invitation validation response.');
+          }
+          return {
+            id: normalizedSecret,
+            nombre: result.data.participantName,
+            usado: false,
+          };
+        });
+      } catch (error) {
+        if (error instanceof InvalidInvitationError || error instanceof InvitationAlreadyUsedError) {
+          throw error;
+        }
+        const code = error && typeof error === 'object' && 'code' in error
+          ? String(error.code)
+          : '';
+        if (code.endsWith('/not-found') || code.endsWith('/invalid-argument')) {
+          throw new InvalidInvitationError('invalid-secret', 'invalid-secret');
+        }
+        if (code.endsWith('/failed-precondition')) {
+          throw new InvitationAlreadyUsedError('invitation-already-used', 'invitation-already-used');
+        }
+        throw error;
+      }
     },
     submitSurvey: async (input) => {
       await ensureAnonymousAuthentication();

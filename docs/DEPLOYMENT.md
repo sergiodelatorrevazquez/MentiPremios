@@ -60,7 +60,7 @@ La colección queda aislada para uso opcional y se crea automáticamente al guar
 
 ### 1.4 Reglas de seguridad de Firestore
 
-El archivo `firestore.rules` está configurado en `firebase.json` y aplica denegación por defecto. Las lecturas individuales de invitación requieren autenticación; las consultas globales y las escrituras cliente están denegadas. El acceso de invitación por `get` es transitorio y se eliminará al completar TODO-038.
+El archivo `firestore.rules` está configurado en `firebase.json` y aplica denegación por defecto. El navegador no puede leer invitaciones ni consultar colecciones, ni leer/escribir respuestas. La validación de códigos y el envío se realizan mediante callables autenticadas con App Check.
 
 Despliega las reglas con:
 
@@ -68,7 +68,7 @@ Despliega las reglas con:
 firebase deploy --only firestore:rules
 ```
 
-Las Cloud Functions usan Admin SDK y no quedan limitadas por estas reglas; por eso el envío transaccional permanece server-side.
+Las Cloud Functions usan Admin SDK y no quedan limitadas por estas reglas; por eso la validación y el envío transaccional permanecen server-side.
 
 ---
 

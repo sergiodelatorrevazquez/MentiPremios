@@ -2,7 +2,7 @@
 
 ## Vista general
 
-MentiPremios es una **Single Page Application (SPA)** construida con **Vue 3 + TypeScript** que se conecta a **Firebase Firestore**. La aplicación sigue un patrón de **wizard de 4 pasos** donde los usuarios introducen una palabra secreta, reciben una bienvenida personalizada, responden 10 preguntas de premios y ven una pantalla de confirmación.
+MentiPremios es una **Single Page Application (SPA)** construida con **Vue 3 + TypeScript** y Cloud Functions. El navegador no accede directamente a Firestore: valida invitaciones y envía respuestas mediante callables autenticadas con App Check. La aplicación sigue un wizard de cuatro pasos donde los usuarios introducen una palabra secreta, reciben una bienvenida personalizada, responden 10 preguntas y ven una confirmación.
 
 ```
 index.html
@@ -11,29 +11,31 @@ index.html
               ├── Template: login → welcome → questions → done
               ├── Script: Composition API (ref, reactive, computed)
               └── Style: Scoped CSS (tema verde)
-        └── src/services/premiosService.ts  ← Capa de acceso a Firestore
-              └── src/firebase.ts            ← Init de Firebase SDK
-                    └── Firebase Firestore   ← Base de datos en la nube
+          ├── Firebase Auth anónimo + App Check
+          └── Cloud Functions callables
+            └── Firebase Admin SDK → Firestore
 ```
 
 ## Estructura de directorios
 
 ```
 src/
-├── App.vue                  # ~990 líneas: TODO el UI y la lógica de la app
-├── main.ts                  # createApp + mount
-├── firebase.ts              # Inicializa Firebase con VITE_FIREBASE_* env vars
-├── style.css                # Estilos globales + CSS custom properties
-├── vue-shim.d.ts            # Declaración de tipos para archivos .vue
-├── assets/
-│   ├── foto-amigos.jpg      # Foto grupal (avatar + visor)
-│   └── mensaje-1.jpg        # Imagen para "Mensaje del Año" opción 1
-└── services/
-    └── premiosService.ts    # 4 funciones de acceso a Firestore
+├── app/                     # Shell y composition root
+├── features/survey/         # Dominio, casos de uso y presentación
+├── features/keywords/       # Contrato opcional
+├── infrastructure/firebase/# Cliente y repositorio opcional
+├── main.ts                  # Bootstrap de Vue + servicios
+└── style.css                # Estilos globales
+
+functions/src/
+├── index.ts                 # Callable Functions
+├── validateInvitationHandler.ts
+└── submitSurveyHandler.ts
 
 tests/unit/
-├── App.spec.ts              # Tests de integración del wizard completo
-└── premiosService.spec.ts   # Tests unitarios del servicio Firestore
+├── App.spec.ts              # Tests de integración del wizard
+├── bootstrap.spec.ts        # Composición e invocación callable
+└── *Handler.spec.ts         # Tests unitarios de handlers server-side
 ```
 
 ## Patrón de componentes
@@ -66,7 +68,7 @@ Cada paso se renderiza con `v-if` en el template (`src/App.vue:383-533`):
 | `done` | `pasoActual === 'done'` | Mensaje de agradecimiento |
 
 Transiciones:
-- `login → welcome`: `validarPalabraSecreta()` busca el código en Firestore (`src/App.vue:206-235`)
+- `login → welcome`: `validarPalabraSecreta()` invoca `validateInvitation` en Cloud Functions
 - `welcome → questions`: `avanzarDesdeBienvenida()` inicia el cuestionario (`src/App.vue:237-241`)
 - `questions → done`: `responderYPasarSiguiente()` guarda respuestas y marca código como usado (`src/App.vue:243-270`)
 
@@ -74,7 +76,9 @@ Transiciones:
 
 ```
 Usuario escribe palabra secreta
-  → getCodeBySecretWord(secreta)               ← Firestore: getDoc(codigos/{secreta})
+  → validateInvitation(secreta)                ← Callable autenticada + App Check
+    → Admin SDK: lectura de codigos/{secreta}
+    → Respuesta: solo nombre visible del participante
     → ¿No existe? → Error "palabra incorrecta"
     → ¿usado === true? → Error "ya has respondido"
     → ¿usado === false? → Avanza a welcome
@@ -126,17 +130,9 @@ Document ID: auto-generado por Firestore
 
 ## Persistencia de premios e invitaciones
 
-La UI envía respuestas mediante la callable `submitSurvey`; el Admin SDK actualiza respuesta e invitación dentro de una transacción. `premiosService.ts` conserva operaciones de compatibilidad, pero no participa en el flujo activo. La funcionalidad opcional de palabras clave está aislada en `FirestoreKeywordsRepository`.
-
-| Función | Operación Firestore |
-|---|---|
-| `saveUserAnswer` | `setDoc(respuestas/{usuario}, premios)` |
-| `getCodeBySecretWord` | `getDoc(codigos/{secretWord})` |
-| `markCodeAsUsed` | `updateDoc(codigos/{secretWord}, {usado: true})` |
+La UI valida invitaciones mediante la callable `validateInvitation`; el servidor devuelve solo el nombre visible y nunca expone el documento completo. El envío usa `submitSurvey`; el Admin SDK actualiza respuesta e invitación dentro de una transacción. Las reglas deniegan toda lectura y escritura Firestore desde el navegador.
 
 `FirestoreKeywordsRepository.save` escribe en `palabrasClave` con un timestamp del servidor.
-
-Errores de Firestore se envuelven en `FirestoreServiceError` (`src/services/premiosService.ts:28-36`).
 
 ## Multimedia
 

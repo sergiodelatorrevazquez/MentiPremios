@@ -6,6 +6,11 @@ import {
   SubmissionEndpointError,
   type SubmissionStore,
 } from './submitSurveyHandler.js';
+import {
+  createValidateInvitationHandler,
+  InvitationLookupError,
+  type InvitationLookupStore,
+} from './validateInvitationHandler.js';
 
 if (getApps().length === 0) initializeApp();
 
@@ -24,6 +29,12 @@ const store: SubmissionStore = {
 };
 
 const submitSurveyHandler = createSubmitSurveyHandler(store);
+const invitationLookupStore: InvitationLookupStore = {
+  document: (id) => firestore.doc(`codigos/${id}`),
+  get: (reference) => (reference as DocumentReference).get(),
+};
+
+const validateInvitationHandler = createValidateInvitationHandler(invitationLookupStore);
 
 export const submitSurvey = onCall({
   region: 'us-central1',
@@ -37,5 +48,20 @@ export const submitSurvey = onCall({
     }
     console.error('Unexpected submitSurvey failure', error);
     throw new HttpsError('internal', 'Unable to submit the survey.');
+  }
+});
+
+export const validateInvitation = onCall({
+  region: 'us-central1',
+  enforceAppCheck: true,
+}, async (request) => {
+  try {
+    return await validateInvitationHandler({ data: request.data, auth: request.auth ?? null });
+  } catch (error) {
+    if (error instanceof InvitationLookupError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    console.error('Unexpected validateInvitation failure', error);
+    throw new HttpsError('internal', 'Unable to validate the invitation.');
   }
 });

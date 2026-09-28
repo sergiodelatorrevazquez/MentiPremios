@@ -3,8 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /codigos/{invitationId} {
-      allow get: if request.auth != null;
-      allow list, create, update, delete: if false;
+      allow read, write: if false;
     }
 
     match /respuestas/{responseId} {

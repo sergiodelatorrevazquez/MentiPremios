@@ -11,9 +11,9 @@ Use Firebase callable Cloud Functions running the Admin SDK as the only trusted 
 - Treat a retry with the same answers as the same successful submission; reject conflicting retries without overwriting.
 - Return only the participant display name needed by the welcome screen from invitation validation.
 
-The `submitSurvey(invitationId, answers)` callable is implemented in `functions/src/index.ts`. It validates the full question/option allowlist, payload shape and size, and invitation document before writing. Restrictive client rules are implemented in TODO-037; moving invitation lookup behind a callable remains in TODO-038.
+The `validateInvitation(secret)` and `submitSurvey(invitationId, answers)` callables are implemented in `functions/src/index.ts`. Both require authentication and App Check. Invitation validation normalizes and checks the bearer code server-side and returns only the participant display name. Submission validates the full question/option allowlist, payload shape and size, and writes the response and used state in one transaction.
 
-The interim rules from TODO-037 deny collection listing, all client writes, and all response reads. They temporarily permit an authenticated single-document invitation read until TODO-038 moves validation fully server-side.
+The Firestore rules deny all browser reads and writes for invitations, responses, and keywords. Admin SDK operations remain server-side in Cloud Functions.
 
 ## Credential limitations
 

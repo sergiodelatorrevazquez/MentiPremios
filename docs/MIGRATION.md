@@ -683,11 +683,13 @@ Las reglas deben impedir:
 - Reutilizacion de codigos.
 - Escrituras con campos inesperados.
 
-Resultado: `firestore.rules` usa denegacion por defecto, bloquea listados de `codigos`, todas las lecturas/escrituras de `respuestas`, y cualquier escritura cliente. Solo permite temporalmente `get` autenticado de un codigo para mantener el login hasta TODO-038. `firebase.json` referencia las reglas y el despliegue esta documentado.
+Resultado: `firestore.rules` usa denegacion por defecto y bloquea todas las lecturas/escrituras cliente de `codigos`, `respuestas` y `palabrasClave`. `firebase.json` referencia las reglas y el despliegue esta documentado.
 
-## TODO-038. Separar lectura de invitacion y autorizacion
+## TODO-038. Separar lectura de invitacion y autorizacion [COMPLETADO]
 
 Si se mantiene el acceso por palabra secreta, disenar cuidadosamente que datos puede devolver el cliente y que operaciones deben permanecer server-side.
+
+Resultado: la validacion se movio a la callable autenticada `validateInvitation`, que normaliza el codigo, verifica que exista y no este usado, y devuelve unicamente `participantName`. Se retiro la lectura Firestore del cliente, se eliminaron los servicios legacy de lectura/escritura directa y las reglas deniegan tambien `get` individual de invitaciones. Las pruebas cubren autenticacion, estados de invitacion, normalizacion y respuesta minima.
 
 ---
 
