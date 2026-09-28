@@ -1076,7 +1076,7 @@ describia cambiar la foto del avatar tocando un `.avatar-circle` sin URL, cuando
 la ruta esta escrita a mano en dos sitios. `API.md` tambien apuntaba al antiguo
 `src/App.vue`.
 
-## TODO-067. Actualizar `API.md`
+## TODO-067. Actualizar `API.md` [COMPLETADO]
 
 Alinear la documentacion con:
 
@@ -1085,6 +1085,32 @@ Alinear la documentacion con:
 - Campos reales.
 - Errores reales.
 - Operaciones disponibles.
+
+Resultado: el documento no estaba equivocado, estaba incompleto, y esa es
+la forma de error que tarda mas en saltar. Las colecciones se describian bien
+salvo por un campo: `codigos` no documentaba `responseId`, que es precisamente
+el campo del que depende la idempotencia del reenvio, el unico que explica por
+que un reintento puede distinguir "ya guardado" de "nunca guardado". El
+apartado de DTOs no existia, asi que se escribio con las reglas que el codigo
+impone de verdad: el JSON del envio no puede pasar de 4096 bytes, las claves del
+objeto tienen que ser exactamente dos, `invitationId` no puede llevar espacios en
+los extremos ni `/`, y `answers` tiene que traer las diez preguntas de la
+allowlist. Eso ultimo es la garantia que evita que alguien envie respuestas
+inventadas con `curl`, y no estaba escrita en ningun sitio. Se documento tambien
+que la allowlist vive en el servidor y no se deriva del catalogo del cliente, que
+los documentos v2 exigen exactamente cinco claves, y que el nombre se copia de
+la invitacion en lugar de venir del cliente, que es la razon por la que el DTO
+remoto no lo transporta. La seccion nueva de codigos de error conecta lo que
+lanza el servidor con lo que hace el cliente, tabla que no existia y que es la
+que hace util la clasificacion del TODO-064: cada `HttpsError` tiene su
+traduccion, y las que no la tienen caen en `classifyNetworkError`. Quedo escrito
+por que `invalid-argument` y `not-found` se colapsan en el mismo error de
+cliente, que es una decision y no un descuido. Y se corrigio la nota final sobre
+multimedia: decia que los archivos debian añadirse "para que las opciones
+funcionen correctamente", cuando lo que ya hay es un camino de reserva que
+funciona, muestra un marcador, marca la opcion como no disponible y cuenta
+`multimedia_failed`; el texto nuevo dice que el hueco es detectable desde el
+propio producto.
 
 ## TODO-068. Actualizar la guia de despliegue
 
