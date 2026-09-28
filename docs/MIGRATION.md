@@ -788,9 +788,11 @@ Comprobar que todas las opciones multimedia tienen:
 
 Resultado: `multimediaFallback.spec.ts` recorre las rutas esperadas y todas las opciones, comprueba tipo, alt, URL no vacia, extension correspondiente y existencia fisica del asset o placeholder. Tambien impide que la imagen del avatar entre accidentalmente en el catalogo de respuestas.
 
-## TODO-047. Corregir el favicon
+## TODO-047. Corregir el favicon [COMPLETADO]
 
 Mover la imagen a `public/` o actualizar el enlace del favicon para que apunte a un recurso generado por Vite.
+
+Resultado: el favicon ya referencia `/foto-amigos.jpg`, que existe en `public/` y Vite copia tal cual a `dist`. No se cambia a import transformado porque `index.html` es un HTML de entrada estatico. `favicon.spec.ts` comprueba que el enlace siempre resuelva a un archivo publico.
 
 ## TODO-048. Revisar carga y peso de videos
 
