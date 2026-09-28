@@ -36,6 +36,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function haveSameAnswers(
+  persistedAnswers: Record<string, unknown>,
+  submittedAnswers: Record<string, unknown>,
+): boolean {
+  const persistedQuestionIds = Object.keys(persistedAnswers);
+  const submittedQuestionIds = Object.keys(submittedAnswers);
+
+  return persistedQuestionIds.length === submittedQuestionIds.length
+    && submittedQuestionIds.every((questionId) => (
+      persistedAnswers[questionId] === submittedAnswers[questionId]
+    ));
+}
+
 export function createSubmitSurveyHandler(store: SubmissionStore) {
   return async ({ data, auth }: SubmitSurveyRequest): Promise<{ submitted: true }> => {
     if (!auth?.uid) {
@@ -56,12 +69,22 @@ export function createSubmitSurveyHandler(store: SubmissionStore) {
 
     return store.runTransaction(async (transaction) => {
       const invitation = await transaction.get(invitationReference);
+      const previousResponse = await transaction.get(responseReference);
 
       if (!invitation.exists) {
         throw new SubmissionEndpointError('not-found', 'Invitation not found.');
       }
 
-      if (invitation.data()?.usado === true) {
+      const invitationUsed = invitation.data()?.usado === true;
+      if (previousResponse.exists) {
+        const persistedAnswers = previousResponse.data();
+        if (invitationUsed && persistedAnswers && haveSameAnswers(persistedAnswers, answers)) {
+          return { submitted: true };
+        }
+        throw new SubmissionEndpointError('failed-precondition', 'Invitation already used.');
+      }
+
+      if (invitationUsed) {
         throw new SubmissionEndpointError('failed-precondition', 'Invitation already used.');
       }
 

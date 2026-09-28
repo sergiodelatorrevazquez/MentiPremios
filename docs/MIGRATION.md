@@ -648,9 +648,11 @@ El servidor debe:
 
 Resultado: se anadio la callable `submitSurvey` en `functions/`, protegida por Firebase Auth y App Check. Lee la invitacion, rechaza codigos inexistentes/usados y crea la respuesta junto con `usado: true` en una unica transaccion. El cliente ya envia por esta callable; la validacion exhaustiva queda en TODO-036. CI compila las Functions y el predeploy de Firebase ejecuta su build.
 
-## TODO-035. Hacer el envio idempotente
+## TODO-035. Hacer el envio idempotente [COMPLETADO]
 
 Si el usuario reintenta despues de un error de red, el servidor debe devolver un resultado consistente en lugar de crear duplicados.
+
+Resultado: la transaccion tambien lee `respuestas/{invitationId}`. Si la invitacion ya esta usada y el mapa persistido coincide exactamente, el endpoint devuelve el mismo exito sin escrituras; si difiere o el estado es inconsistente, rechaza el reintento sin sobrescribir datos.
 
 ## TODO-036. Validar las respuestas en servidor
 

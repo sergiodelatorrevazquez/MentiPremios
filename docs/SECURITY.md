@@ -8,6 +8,7 @@ Use Firebase callable Cloud Functions running the Admin SDK as the only trusted 
 - Enforce Firebase App Check on callable requests, using the web app's configured reCAPTCHA provider.
 - Keep Firestore Admin SDK reads and writes inside Functions. Browser clients must not read invitation documents or write submissions directly.
 - Submit answers and mark the invitation used in one Firestore transaction.
+- Treat a retry with the same answers as the same successful submission; reject conflicting retries without overwriting.
 - Return only the participant display name needed by the welcome screen from invitation validation.
 
 The initial `submitSurvey(invitationId, answers)` callable is implemented in `functions/src/index.ts`. Full catalog validation, idempotency, restrictive client rules, and server-side invitation lookup are completed by the following Phase 6 tasks.
