@@ -60,4 +60,16 @@ describe('multimedia asset fallback', () => {
       .flatMap((option) => option.multimedia?.assetPath ?? []);
     expect(catalogPaths).not.toContain('src/assets/foto-amigos.jpg');
   });
+
+  it('registers video files only as supported MP4 or WebM sources', () => {
+    const videoEntries = Object.values(multimediaAssetRegistry)
+      .filter((entry) => entry.tipo === 'video' && !entry.unavailable);
+
+    for (const entry of videoEntries) {
+      expect(entry.sources.length).toBeGreaterThan(0);
+      expect(entry.sources.every((source) => (
+        source.type === 'video/mp4' || source.type === 'video/webm'
+      ))).toBe(true);
+    }
+  });
 });

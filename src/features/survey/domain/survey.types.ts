@@ -22,6 +22,12 @@ export interface Multimedia {
   alt?: string;
   unavailable?: boolean;
   assetPath?: string;
+  sources?: MultimediaSource[];
+}
+
+export interface MultimediaSource {
+  src: string;
+  type: 'video/mp4' | 'video/webm';
 }
 
 export interface Opcion {

@@ -1,4 +1,4 @@
-import type { Multimedia } from './survey.types';
+import type { Multimedia, MultimediaSource } from './survey.types';
 
 export const MULTIMEDIA_ASSET_PATHS = {
   mensaje1: '../../../assets/mensaje-1.jpg',
@@ -22,15 +22,46 @@ export interface MultimediaAssetEntry {
   src: string;
   assetPath: string;
   unavailable: boolean;
+  sources: MultimediaSource[];
 }
 
-const multimediaAssets = import.meta.glob<string>('../../../assets/{mensaje,foto,video}-*.{jpg,mp4}', {
+const multimediaAssets = import.meta.glob<string>('../../../assets/{mensaje,foto,video}-*.{jpg,mp4,webm}', {
   eager: true,
   query: '?url',
   import: 'default',
 });
 
 function createEntry(path: MultimediaAssetPath, tipo: Multimedia['tipo']): MultimediaAssetEntry {
+  if (tipo === 'video') {
+    const webmPath = path.replace(/\.mp4$/, '.webm');
+    const videoSources = [
+      { path, type: 'video/mp4' as const },
+      { path: webmPath, type: 'video/webm' as const },
+    ].flatMap(({ path: sourcePath, type }) => {
+      const sourceUrl = multimediaAssets[sourcePath];
+      return typeof sourceUrl === 'string' ? [{ src: sourceUrl, type }] : [];
+    });
+
+    if (videoSources.length > 0) {
+      const primaryPath = videoSources[0].type === 'video/mp4' ? path : webmPath;
+      return {
+        tipo,
+        src: videoSources[0].src,
+        assetPath: primaryPath.replace('../../../', 'src/'),
+        unavailable: false,
+        sources: videoSources,
+      };
+    }
+
+    return {
+      tipo,
+      src: '/media-unavailable.svg',
+      assetPath: 'public/media-unavailable.svg',
+      unavailable: true,
+      sources: [],
+    };
+  }
+
   const src = multimediaAssets[path];
   if (typeof src === 'string') {
     return {
@@ -38,6 +69,7 @@ function createEntry(path: MultimediaAssetPath, tipo: Multimedia['tipo']): Multi
       src,
       assetPath: path.replace('../../../', 'src/'),
       unavailable: false,
+      sources: [],
     };
   }
 
@@ -46,6 +78,7 @@ function createEntry(path: MultimediaAssetPath, tipo: Multimedia['tipo']): Multi
     src: '/media-unavailable.svg',
     assetPath: 'public/media-unavailable.svg',
     unavailable: true,
+    sources: [],
   };
 }
 

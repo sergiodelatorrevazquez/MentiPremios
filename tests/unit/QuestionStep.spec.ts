@@ -42,4 +42,46 @@ describe('QuestionStep', () => {
     expect(wrapper.emitted('select-option')).toBeTruthy();
     expect(wrapper.emitted('submit')).toHaveLength(1);
   });
+
+  it('does not preload a video preview before the user opens it', () => {
+    const videoQuestion = preguntas.find((question) => question.id === 'video');
+    const questionWithVideo = {
+      ...videoQuestion!,
+      opciones: videoQuestion!.opciones.map((option, index) => index === 0
+        ? {
+          ...option,
+          multimedia: {
+            ...option.multimedia!,
+            src: '/assets/video.mp4',
+            alt: 'Video 1',
+            assetPath: 'src/assets/video-1.mp4',
+            unavailable: false,
+            sources: [
+              { src: '/assets/video.mp4', type: 'video/mp4' as const },
+              { src: '/assets/video.webm', type: 'video/webm' as const },
+            ],
+          },
+        }
+        : option),
+    };
+    const wrapper = mount(QuestionStep, {
+      props: {
+        question: questionWithVideo,
+        selectedOptionId: null,
+        currentQuestionIndex: 0,
+        totalQuestions: preguntas.length,
+        progress: 10,
+        canGoBack: false,
+        canContinue: false,
+        isSubmitting: false,
+      },
+    });
+
+    const preview = wrapper.find('video.option-media-thumbnail');
+    expect(preview.attributes('preload')).toBe('none');
+    expect(preview.attributes('playsinline')).toBeDefined();
+    expect(preview.attributes('aria-label')).toBe('Video 1');
+    expect(preview.findAll('source').map((source) => source.attributes('type')))
+      .toEqual(['video/mp4', 'video/webm']);
+  });
 });

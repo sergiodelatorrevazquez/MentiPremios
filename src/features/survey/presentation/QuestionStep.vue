@@ -77,21 +77,33 @@ function onGoBack() {
             class="option-media-thumbnail"
             :src="opcion.multimedia.src"
             :alt="opcion.multimedia.alt"
+            loading="lazy"
+            decoding="async"
           >
           <img
             v-else-if="opcion.multimedia.tipo === 'imagen'"
             class="option-media-thumbnail"
             :src="opcion.multimedia.src"
             :alt="opcion.multimedia.alt"
+            loading="lazy"
+            decoding="async"
           >
           <video
             v-else
             class="option-media-thumbnail"
-            :src="opcion.multimedia.src"
-            :alt="opcion.multimedia.alt"
             muted
-            preload="metadata"
-          />
+            playsinline
+            preload="none"
+            :poster="'/media-unavailable.svg'"
+            :aria-label="opcion.multimedia.alt"
+          >
+            <source
+              v-for="source in opcion.multimedia.sources"
+              :key="source.src"
+              :src="source.src"
+              :type="source.type"
+            >
+          </video>
         </div>
         <span class="option-text">{{ opcion.texto }}</span>
       </button>
