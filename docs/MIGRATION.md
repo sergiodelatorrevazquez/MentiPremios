@@ -992,15 +992,17 @@ Medir, sin datos sensibles:
 
 Resultado: se anadio `src/infrastructure/metrics/metrics.ts` con los cinco contadores pedidos, `survey_started`, `submission_succeeded`, `submission_failed`, `invitation_used` y `multimedia_failed`. La garantia de que no haya datos sensibles no depende de la prudencia de quien llame, sino de la forma de la API: los nombres son una constante cerrada `METRIC_NAMES`, `increment` solo admite un nombre de esa lista y una cantidad opcional, y no existe forma de pasar contexto. Una prueba fija ademas que la aridad de `increment` es 1 y que ningun nombre del catalogo contiene `name`, `secret` ni `token`. Los incrementos invalidos (negativos, `NaN`, infinitos o de otro tipo) se descartan y avisan por el logger en lugar de contaminar el contador, y `snapshot()` devuelve una copia para que nadie pueda escribir en los contadores. En `App.vue` se incrementa `survey_started` al pasar de bienvenida a preguntas, `submission_succeeded` e `invitation_used` cuando el envio se acepta (el servidor marca la invitacion como usada en la misma transaccion que escribe la respuesta, asi que un envio correcto la consumio), `submission_failed` en cada intento fallido, y `multimedia_failed` al abrir el visor de un asset marcado como no disponible. Hay siete pruebas de integracion que comprueban la cuenta en el flujo real, incluidas dos que differentiates el acierto del fallo y que un reintento acertado no infla el contador de fallos. En desarrollo cada incremento pasa por el logger en `debug`; en produccion no hay destino, de modo que las metricas se acumulan en memoria y nadie las imprime. Las suites quedan en 252 unitarias y 48 de integracion.
 
-## TODO-064. Anadir manejo de errores de red
+## TODO-064. Anadir manejo de errores de red [COMPLETADO]
 
-Distinguir:
+Diferenciar claramente:
 
 - Sin conexion.
 - Timeout.
 - Permisos.
 - Servicio no disponible.
 - Error desconocido.
+
+Resultado: se anadio `src/features/survey/application/networkError.ts`, con `classifyNetworkError` como unica puerta de entrada y cinco categorias (`offline`, `timeout`, `permission`, `unavailable`, `unknown`). Vive en `application` y no en `app` porque es una decision de negocio —que se puede reintentar y que texto ve la persona—, no un detalle de presentacion. La clasificacion se apoya en tres senales por orden de fiabilidad: primero `navigator.onLine`, porque si el navegador sabe que no hay red no tiene sentido interpretar el resto; despues el codigo de Firebase o del navegador, que se compara contra conjuntos cerrados en lugar de subcadenas sueltas; y por ultimo el texto, solo cuando no hay codigo. Sin conexion gana siempre, incluso si el error dice `permission-denied`, porque apagar el movil produce los dos codigos a la vez y a la persona lo que le importa es que se vaya a arreglar al volver a tener cobertura. `unavailable` se separa de `offline` a proposito: uno significa "vuelve en un momento" y el otro "revisa tu red". Todos los tipos son reintentables, y las pruebas lo fijan para que nadie marque un caso terminal por descuido. Los envoltorios propios (`PersistenceError`) guardan ahora la causa original en `cause`, y `classifyNetworkError` la desenvuelve, porque si no se habria perdido el codigo real de Firebase en cuanto el error cruzaba una frontera de capa. `App.vue` usa la clasificacion en la validacion de la invitacion y en el envio, y anade el tipo a los logs sinSensitive; los errores de dominio (`invitation-already-used`, `invalid-invitation`) conservan su mensaje propio y no pasan por aqui. Las suites quedan en 273 unitarias y 53 de integracion.
 
 ## TODO-065. Documentar recuperacion ante fallos
 

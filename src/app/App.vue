@@ -15,6 +15,7 @@ import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
 import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.vue';
 import AvatarPhotoViewer from '../features/survey/presentation/AvatarPhotoViewer.vue';
 import { InvitationAlreadyUsedError, InvalidInvitationError } from '../features/survey/application/errors';
+import { classifyNetworkError } from '../features/survey/application/networkError';
 import { logger } from '../infrastructure/logging/logger';
 import { metrics } from '../infrastructure/metrics/metrics';
 import { APP_SERVICES_KEY, type AppServices } from './bootstrap';
@@ -127,8 +128,9 @@ async function validarPalabraSecreta() {
     } else if (e instanceof InvalidInvitationError) {
       loginError.value = 'La palabra secreta es incorrecta. Revisa lo que te ha llegado en la invitación.';
     } else {
-      logger.error('fallo al validar la invitación', { error: e });
-      error.value = 'Ha ocurrido un error al comprobar la palabra secreta. Inténtalo de nuevo.';
+      const fallo = classifyNetworkError(e);
+      logger.error('fallo al validar la invitación', { error: e, kind: fallo.kind });
+      error.value = fallo.userMessage;
     }
   } finally {
     enviando.value = false;
@@ -169,9 +171,10 @@ async function responderYPasarSiguiente() {
   } catch (e) {
     // Solo el mensaje del error: el contexto lleva el error completo y el
     // logger se encarga de quitar palabra secreta, nombre y respuestas.
-    logger.error('fallo al enviar la encuesta', { error: e });
+    const fallo = classifyNetworkError(e);
+    logger.error('fallo al enviar la encuesta', { error: e, kind: fallo.kind });
     metrics.increment('submission_failed');
-    error.value = 'Ha ocurrido un error al guardar tus respuestas. Inténtalo de nuevo.';
+    error.value = fallo.userMessage;
   } finally {
     enviando.value = false;
   }

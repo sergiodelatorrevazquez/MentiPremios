@@ -648,6 +648,88 @@ describe('App - métricas', () => {
   });
 });
 
+describe('App - errores de red', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    metrics.reset();
+  });
+
+  async function enviarYLeerError(submitError: unknown): Promise<string> {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(mockAppServices.submitSurvey).mockRejectedValue(submitError);
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+    const mensaje = wrapper.find('.status--error').text();
+    consoleError.mockRestore();
+
+    return mensaje;
+  }
+
+  it('distingue sin conexión, timeout, permisos y servicio caído en el envío', async () => {
+    const sinConexion = await enviarYLeerError(new TypeError('Failed to fetch'));
+    const timeout = await enviarYLeerError({ code: 'functions/deadline-exceeded' });
+    const permisos = await enviarYLeerError({ code: 'functions/permission-denied' });
+    const caido = await enviarYLeerError({ code: 'functions/internal' });
+
+    expect(sinConexion).toMatch(/conexión a internet/i);
+    expect(timeout).toMatch(/tardado demasiado/i);
+    expect(permisos).toMatch(/permiso/i);
+    expect(caido).toMatch(/servicio no está disponible/i);
+  });
+
+  it('cae en desconocido cuando no hay pistas', async () => {
+    expect(await enviarYLeerError(new Error('raro'))).toMatch(/inesperado/i);
+  });
+
+  it('ofrece reintentar en todos los casos de red', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(mockAppServices.submitSurvey).mockRejectedValueOnce({ code: 'functions/unavailable' });
+    const wrapper = mount(App);
+    await loginAndStart(wrapper);
+
+    for (let index = 0; index < 10; index++) {
+      await wrapper.find('.option-card').trigger('click');
+      await wrapper.find('button.button-primary').trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    expect(wrapper.find('button.button-primary').text()).toBe('Reintentar envío');
+    consoleError.mockRestore();
+  });
+
+  it('usa el mensaje de red también al validar la invitación', async () => {
+    vi.mocked(mockAppServices.validateInvitation).mockRejectedValueOnce({
+      code: 'functions/unavailable',
+    });
+    const wrapper = mount(App);
+    await wrapper.find('input.field-input').setValue('secreta-123');
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.status--error').text()).toMatch(/servicio no está disponible/i);
+    expect(wrapper.find('.field-error').exists()).toBe(false);
+  });
+
+  it('mantiene el mensaje específico si la invitación ya se usó', async () => {
+    vi.mocked(mockAppServices.validateInvitation).mockRejectedValueOnce(
+      new InvitationAlreadyUsedError(),
+    );
+    const wrapper = mount(App);
+    await wrapper.find('input.field-input').setValue('secreta-123');
+    await wrapper.find('button.button-primary').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.field-error').text()).toMatch(/Ya has respondido/);
+    expect(wrapper.find('.status--error').exists()).toBe(false);
+  });
+});
+
 describe('App - logging controlado', () => {
   beforeEach(() => {
     vi.clearAllMocks();
