@@ -54,6 +54,22 @@ las respuestas ya guardadas: opera con permisos de administrador y no le afectan
 
 Para un volcado a texto, la misma consola permite exportar la colección.
 
+## Los e2e necesitan librerías del sistema
+
+Los 16 tests de `tests/e2e/` abren Chromium de verdad. Si al lanzarlos falla con
+`libnspr4.so: cannot open shared object file`, no es un fallo del proyecto: a
+Chromium le faltan cuatro librerías y **no las necesita para esta web**, solo
+para arrancar el navegador.
+
+La solución normal es `sudo npx playwright install-deps chromium`, que instala
+`libnspr4`, `libnss3` y `libasound2t64` en el sistema.
+
+Sin `sudo` se pueden usar las de los paquetes, sin instalar nada: descárgalas con
+`apt-get download`, descomprímelas con `dpkg-deb -x` en un directorio y apunta
+`LD_LIBRARY_PATH` a `usr/lib/x86_64-linux-gnu` de ese directorio. El directorio
+no es del repositorio a propósito: son unos 2 MB de binarios del sistema, y
+meterlos en git no toca nada.
+
 ## Si algo va mal
 
 | Síntoma | Causa habitual |

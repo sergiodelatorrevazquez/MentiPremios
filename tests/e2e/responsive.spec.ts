@@ -1,7 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const HARNESS = '/tests/e2e/harness/harness.html';
-const LONG_NAME = 'María-José Fernández de la Vega y Sanz de Santamaría de los Santos';
+/**
+ * Sin espacios y sin cortes, que es lo que hace que un texto se salga del viewport.
+ * Los 50 caracteres no son casualidad: `LoginStep` pone `maxlength="50"` a la palabra
+ * secreta, así que ese es el texto más largo que puede llegar a pintar la app.
+ */
+const LONG_SECRET = 'mariajosefernandezdelavegaysanzdesantamariadelossa';
 const SECRET = 'mentipremios';
 const LAST_QUESTION = 10;
 const MemeQuestion = 6;
@@ -47,9 +52,9 @@ async function expectInsideViewport(page: Page, selector: string) {
     .toBeLessThanOrEqual(viewport.width + 1);
 }
 
-async function login(page: Page, query = '') {
+async function login(page: Page, query = '', secret = SECRET) {
   await openApp(page, query);
-  await page.locator('#secret-word').fill(SECRET);
+  await page.locator('#secret-word').fill(secret);
   await page.getByRole('button', { name: /Entrar|Comprobando/ }).click();
 }
 
@@ -180,10 +185,12 @@ test.describe('responsive layout', () => {
     expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).not.toBe('hidden');
   });
 
-  test('long messages and participant names stay readable', async ({ page }) => {
-    await login(page, `?name=${encodeURIComponent(LONG_NAME)}`);
+  test('a long secret word and the welcome copy stay readable', async ({ page }) => {
+    await login(page, '', LONG_SECRET);
 
-    await expect(page.locator('.hero-title')).toContainText('Fernández');
+    // El saludo es el identificador del documento, que es la palabra secreta: lo que se
+    // teclea en el login es, de todo lo que se pinta, lo más largo que puede llegar a ser.
+    await expect(page.locator('.hero-title')).toHaveText(LONG_SECRET);
     await expectNoHorizontalOverflow(page);
 
     const title = (await page.locator('.hero-title').boundingBox())!;
@@ -216,7 +223,7 @@ test.describe('responsive layout', () => {
   });
 
   test('the final confirmation fits the viewport with a long message', async ({ page }) => {
-    await login(page, `?name=${encodeURIComponent(LONG_NAME)}`);
+    await login(page);
     await page.getByRole('button', { name: 'Empezar la encuesta' }).click();
 
     for (let current = 1; current < LAST_QUESTION; current += 1) {
