@@ -7,17 +7,32 @@ const featuresRoot = join(srcRoot, 'features');
 const appRoot = join(srcRoot, 'app');
 const infrastructureRoot = join(srcRoot, 'infrastructure');
 
+/**
+ * Una capa puede vivir en varias features. `results` es una feature entera —
+ * dominio, aplicación y presentación—, así que cada capa se comprueba en todas
+ * las que la tienen: si solo se mirara `survey`, la mitad del proyecto se
+ * escapingaría de estos contratos sin que nadie se entere.
+ */
 const LAYERS = {
-  domain: join(featuresRoot, 'survey', 'domain'),
-  application: join(featuresRoot, 'survey', 'application'),
-  presentation: join(featuresRoot, 'survey', 'presentation'),
-  infrastructure: infrastructureRoot,
-  app: appRoot,
+  domain: [
+    join(featuresRoot, 'survey', 'domain'),
+    join(featuresRoot, 'results', 'domain'),
+  ],
+  application: [
+    join(featuresRoot, 'survey', 'application'),
+    join(featuresRoot, 'results', 'application'),
+  ],
+  presentation: [
+    join(featuresRoot, 'survey', 'presentation'),
+    join(featuresRoot, 'results', 'presentation'),
+  ],
+  infrastructure: [infrastructureRoot],
+  app: [appRoot],
 } as const;
 
 /** `keywords` es una feature opcional con su propio `domain/`. */
 const domainRoots = [
-  join(featuresRoot, 'survey', 'domain'),
+  ...LAYERS.domain,
   join(featuresRoot, 'keywords', 'domain'),
 ];
 
@@ -33,7 +48,7 @@ function listFiles(directory: string): string[] {
 const filesByLayer = new Map<Layer, string[]>(
   (Object.keys(LAYERS) as Layer[]).map((layer) => [
     layer,
-    listFiles(LAYERS[layer]).filter((file) => /\.(ts|vue)$/.test(file)),
+    LAYERS[layer].flatMap((root) => listFiles(root)).filter((file) => /\.(ts|vue)$/.test(file)),
   ]),
 );
 
@@ -68,7 +83,7 @@ function describeDependency(dependency: Dependency): string {
 }
 
 function inside(target: string, layer: Layer): boolean {
-  return target === LAYERS[layer] || target.startsWith(`${LAYERS[layer]}/`);
+  return LAYERS[layer].some((root) => target === root || target.startsWith(`${root}/`));
 }
 
 function insideAnyDomain(target: string): boolean {
@@ -109,8 +124,10 @@ describe('reglas de dependencia entre capas', () => {
   });
 
   it('cada capa vive en el sitio que dice la arquitectura', () => {
-    expect(LAYERS.domain).toContain('src/features/survey/domain');
-    expect(LAYERS.presentation).toContain('src/features/survey/presentation');
+    expect(LAYERS.domain).toContain(join(srcRoot, 'features/survey/domain'));
+    expect(LAYERS.domain).toContain(join(srcRoot, 'features/results/domain'));
+    expect(LAYERS.presentation).toContain(join(srcRoot, 'features/survey/presentation'));
+    expect(LAYERS.presentation).toContain(join(srcRoot, 'features/results/presentation'));
   });
 
   describe('1. domain no importa Vue ni Firebase', () => {

@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // Sin servidor intermedio: el navegador lee y escribe directamente. Hay una
-// sola colección, `codes`, con un documento por persona.
+// colección de personas, `codes`, con un documento por invitado, y un documento
+// de totales, `resumen/actual`, con un contador por opción.
 //
 // La seguridad se apoya en una sola idea: se puede leer un documento concreto si
 // ya se conoce su identificador (la palabra secreta), pero nunca se puede
@@ -12,6 +13,14 @@ rules_version = '2';
 // amigo devuelve también sus respuestas.
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Los campos que una escritura cambia de verdad, quitando los que vienen a
+    // `null` por no estar. Se declara aquí, al nivel del servicio y no dentro de
+    // un `match`, que es donde el lenguaje de reglas lo espera y donde queda
+    // disponible para cualquier documento sin repetirlo.
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
     match /codes/{invitationId} {
       allow get: if true;
       allow list: if false;
@@ -23,6 +32,10 @@ service cloud.firestore {
       // una invitación ya votada a sin votar. No hay ningún otro campo que
       // proteger: el documento no guarda datos sobre la persona aparte del
       // identificador.
+      //
+      // `admin` lo pone el organizador al crear la invitación y no lo toca
+      // nadie: como no está en la lista blanca, no se puede alterar con una
+      // llamada normal.
       //
       // La lista debe coincidir con `QUESTION_IDS`; el test de contrato de
       // `firestore.rules` falla si se añade una pregunta y no se añade aquí.
@@ -41,6 +54,199 @@ service cloud.firestore {
           'video',
           'correa',
         ]);
+    }
+
+    match /resumen/{resumenId} {
+      // Los totales son la suma de todos los votos y no dicen nada de nadie, así
+      // que se leen sin más condición: el identificador es fijo y está en el
+      // bundle, no hay nada que ocultar detrás de él. Lo que no se puede es
+      // enumerar la colección, aunque solo haya un documento.
+      allow get: if resumenId == 'actual';
+      allow list: if false;
+
+      // El documento lo crea el organizador desde la consola, una sola vez, con
+      // los contadores a cero. Si el cliente pudiera crearlo, el primer voto
+      // podría escribir unos contadores que no son los suyos.
+      allow create, delete: if false;
+
+      // Un voto solo puede sumar contadores, nunca reescribirlos. La condición
+      // entera se apoya en un único dato, `changed`, que es el conjunto de campos
+      // que este voto toca, y de ahí sale todo lo demás:
+      //
+      //   1. Toca diez campos, los mismos diez de siempre: uno por pregunta.
+      //   2. Cada uno es un contador real del catálogo, ni uno más ni uno menos.
+      //   3. De cada pregunta toca exactamente una opción.
+      //   4. Cada contador que toca vale su valor anterior más uno.
+      //
+      // Con eso la gala no se puede amañar: no se puede poner a alguien en 999
+      // votos, ni borrar los votos que ya tenía, ni sumar este voto solo a las
+      // preguntas que le convienen. Tampoco se pueden inventar contadores de
+      // preguntas que no existen.
+      //
+      // Los puntos 2 y 4 salen de listas y comparaciones explícitas porque el
+      // lenguaje de reglas no tiene bucles ni sumas: son cuarenta y ocho
+      // líneas, una por opción. Las dos listas las comprueba
+      // `tests/unit/contracts/firestoreRules.spec.ts` contra el catálogo, así que
+      // añadir una pregunta o una opción sin tocar este fichero es un test rojo.
+      allow update: if resumenId == 'actual'
+        && changed().size() == 10
+        && changed().hasOnly([
+          'tonto-1',
+          'tonto-2',
+          'tonto-3',
+          'tonto-4',
+          'casper-1',
+          'casper-2',
+          'casper-3',
+          'casper-4',
+          'casper-5',
+          'casper-6',
+          'comefeas-1',
+          'comefeas-2',
+          'comefeas-3',
+          'comefeas-4',
+          'soltero-1',
+          'soltero-2',
+          'soltero-3',
+          'soltero-4',
+          'anecdota-1',
+          'anecdota-2',
+          'anecdota-3',
+          'anecdota-4',
+          'anecdota-5',
+          'anecdota-6',
+          'meme-1',
+          'meme-2',
+          'meme-3',
+          'meme-4',
+          'meme-5',
+          'meme-6',
+          'meme-7',
+          'meme-8',
+          'mensaje-1',
+          'mensaje-2',
+          'mensaje-3',
+          'mensaje-4',
+          'foto-1',
+          'foto-2',
+          'foto-3',
+          'foto-4',
+          'video-1',
+          'video-2',
+          'video-3',
+          'video-4',
+          'correa-1',
+          'correa-2',
+          'correa-3',
+          'correa-4',
+        ])
+        && changed.hasAny(['tonto-1', 'tonto-2', 'tonto-3', 'tonto-4'])
+        && changed.hasAny(['casper-1', 'casper-2', 'casper-3', 'casper-4', 'casper-5', 'casper-6'])
+        && changed.hasAny(['comefeas-1', 'comefeas-2', 'comefeas-3', 'comefeas-4'])
+        && changed.hasAny(['soltero-1', 'soltero-2', 'soltero-3', 'soltero-4'])
+        && changed.hasAny(['anecdota-1', 'anecdota-2', 'anecdota-3', 'anecdota-4', 'anecdota-5', 'anecdota-6'])
+        && changed.hasAny(['meme-1', 'meme-2', 'meme-3', 'meme-4', 'meme-5', 'meme-6', 'meme-7', 'meme-8'])
+        && changed.hasAny(['mensaje-1', 'mensaje-2', 'mensaje-3', 'mensaje-4'])
+        && changed.hasAny(['foto-1', 'foto-2', 'foto-3', 'foto-4'])
+        && changed.hasAny(['video-1', 'video-2', 'video-3', 'video-4'])
+        && changed.hasAny(['correa-1', 'correa-2', 'correa-3', 'correa-4'])
+        && ((!changed.has('tonto-1')
+            || request.resource.data.get('tonto-1', 0) == resource.data.get('tonto-1', 0) + 1)
+        || (!changed.has('tonto-2')
+            || request.resource.data.get('tonto-2', 0) == resource.data.get('tonto-2', 0) + 1)
+        || (!changed.has('tonto-3')
+            || request.resource.data.get('tonto-3', 0) == resource.data.get('tonto-3', 0) + 1)
+        || (!changed.has('tonto-4')
+            || request.resource.data.get('tonto-4', 0) == resource.data.get('tonto-4', 0) + 1)
+        || (!changed.has('casper-1')
+            || request.resource.data.get('casper-1', 0) == resource.data.get('casper-1', 0) + 1)
+        || (!changed.has('casper-2')
+            || request.resource.data.get('casper-2', 0) == resource.data.get('casper-2', 0) + 1)
+        || (!changed.has('casper-3')
+            || request.resource.data.get('casper-3', 0) == resource.data.get('casper-3', 0) + 1)
+        || (!changed.has('casper-4')
+            || request.resource.data.get('casper-4', 0) == resource.data.get('casper-4', 0) + 1)
+        || (!changed.has('casper-5')
+            || request.resource.data.get('casper-5', 0) == resource.data.get('casper-5', 0) + 1)
+        || (!changed.has('casper-6')
+            || request.resource.data.get('casper-6', 0) == resource.data.get('casper-6', 0) + 1)
+        || (!changed.has('comefeas-1')
+            || request.resource.data.get('comefeas-1', 0) == resource.data.get('comefeas-1', 0) + 1)
+        || (!changed.has('comefeas-2')
+            || request.resource.data.get('comefeas-2', 0) == resource.data.get('comefeas-2', 0) + 1)
+        || (!changed.has('comefeas-3')
+            || request.resource.data.get('comefeas-3', 0) == resource.data.get('comefeas-3', 0) + 1)
+        || (!changed.has('comefeas-4')
+            || request.resource.data.get('comefeas-4', 0) == resource.data.get('comefeas-4', 0) + 1)
+        || (!changed.has('soltero-1')
+            || request.resource.data.get('soltero-1', 0) == resource.data.get('soltero-1', 0) + 1)
+        || (!changed.has('soltero-2')
+            || request.resource.data.get('soltero-2', 0) == resource.data.get('soltero-2', 0) + 1)
+        || (!changed.has('soltero-3')
+            || request.resource.data.get('soltero-3', 0) == resource.data.get('soltero-3', 0) + 1)
+        || (!changed.has('soltero-4')
+            || request.resource.data.get('soltero-4', 0) == resource.data.get('soltero-4', 0) + 1)
+        || (!changed.has('anecdota-1')
+            || request.resource.data.get('anecdota-1', 0) == resource.data.get('anecdota-1', 0) + 1)
+        || (!changed.has('anecdota-2')
+            || request.resource.data.get('anecdota-2', 0) == resource.data.get('anecdota-2', 0) + 1)
+        || (!changed.has('anecdota-3')
+            || request.resource.data.get('anecdota-3', 0) == resource.data.get('anecdota-3', 0) + 1)
+        || (!changed.has('anecdota-4')
+            || request.resource.data.get('anecdota-4', 0) == resource.data.get('anecdota-4', 0) + 1)
+        || (!changed.has('anecdota-5')
+            || request.resource.data.get('anecdota-5', 0) == resource.data.get('anecdota-5', 0) + 1)
+        || (!changed.has('anecdota-6')
+            || request.resource.data.get('anecdota-6', 0) == resource.data.get('anecdota-6', 0) + 1)
+        || (!changed.has('meme-1')
+            || request.resource.data.get('meme-1', 0) == resource.data.get('meme-1', 0) + 1)
+        || (!changed.has('meme-2')
+            || request.resource.data.get('meme-2', 0) == resource.data.get('meme-2', 0) + 1)
+        || (!changed.has('meme-3')
+            || request.resource.data.get('meme-3', 0) == resource.data.get('meme-3', 0) + 1)
+        || (!changed.has('meme-4')
+            || request.resource.data.get('meme-4', 0) == resource.data.get('meme-4', 0) + 1)
+        || (!changed.has('meme-5')
+            || request.resource.data.get('meme-5', 0) == resource.data.get('meme-5', 0) + 1)
+        || (!changed.has('meme-6')
+            || request.resource.data.get('meme-6', 0) == resource.data.get('meme-6', 0) + 1)
+        || (!changed.has('meme-7')
+            || request.resource.data.get('meme-7', 0) == resource.data.get('meme-7', 0) + 1)
+        || (!changed.has('meme-8')
+            || request.resource.data.get('meme-8', 0) == resource.data.get('meme-8', 0) + 1)
+        || (!changed.has('mensaje-1')
+            || request.resource.data.get('mensaje-1', 0) == resource.data.get('mensaje-1', 0) + 1)
+        || (!changed.has('mensaje-2')
+            || request.resource.data.get('mensaje-2', 0) == resource.data.get('mensaje-2', 0) + 1)
+        || (!changed.has('mensaje-3')
+            || request.resource.data.get('mensaje-3', 0) == resource.data.get('mensaje-3', 0) + 1)
+        || (!changed.has('mensaje-4')
+            || request.resource.data.get('mensaje-4', 0) == resource.data.get('mensaje-4', 0) + 1)
+        || (!changed.has('foto-1')
+            || request.resource.data.get('foto-1', 0) == resource.data.get('foto-1', 0) + 1)
+        || (!changed.has('foto-2')
+            || request.resource.data.get('foto-2', 0) == resource.data.get('foto-2', 0) + 1)
+        || (!changed.has('foto-3')
+            || request.resource.data.get('foto-3', 0) == resource.data.get('foto-3', 0) + 1)
+        || (!changed.has('foto-4')
+            || request.resource.data.get('foto-4', 0) == resource.data.get('foto-4', 0) + 1)
+        || (!changed.has('video-1')
+            || request.resource.data.get('video-1', 0) == resource.data.get('video-1', 0) + 1)
+        || (!changed.has('video-2')
+            || request.resource.data.get('video-2', 0) == resource.data.get('video-2', 0) + 1)
+        || (!changed.has('video-3')
+            || request.resource.data.get('video-3', 0) == resource.data.get('video-3', 0) + 1)
+        || (!changed.has('video-4')
+            || request.resource.data.get('video-4', 0) == resource.data.get('video-4', 0) + 1)
+        || (!changed.has('correa-1')
+            || request.resource.data.get('correa-1', 0) == resource.data.get('correa-1', 0) + 1)
+        || (!changed.has('correa-2')
+            || request.resource.data.get('correa-2', 0) == resource.data.get('correa-2', 0) + 1)
+        || (!changed.has('correa-3')
+            || request.resource.data.get('correa-3', 0) == resource.data.get('correa-3', 0) + 1)
+        || (!changed.has('correa-4')
+            || request.resource.data.get('correa-4', 0) == resource.data.get('correa-4', 0) + 1)
+        );
     }
 
     match /palabrasClave/{entryId} {

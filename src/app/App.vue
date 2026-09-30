@@ -14,6 +14,8 @@ import QuestionStep from '../features/survey/presentation/QuestionStep.vue';
 import CompletionStep from '../features/survey/presentation/CompletionStep.vue';
 import MultimediaViewer from '../features/survey/presentation/MultimediaViewer.vue';
 import AvatarPhotoViewer from '../features/survey/presentation/AvatarPhotoViewer.vue';
+import ResultsStep from '../features/results/presentation/ResultsStep.vue';
+import type { ResultadoEncuesta } from '../features/results/domain/results.types';
 import { InvitationAlreadyUsedError, InvalidInvitationError, SubmissionAlreadyCompletedError } from '../features/survey/application/errors';
 import { classifyNetworkError } from '../features/survey/application/networkError';
 import { logger } from '../infrastructure/logging/logger';
@@ -51,6 +53,15 @@ const error = ref<string | null>(null);
 const visorFotoAbierto = ref(false);
 const visorMultimediaAbierto = ref(false);
 const multimediaActual = ref<Multimedia | null>(null);
+
+/*
+ * La gala no es un paso del cuestionario: son otras diez preguntas, con otras
+ * reglas y otro vocabulario. Meterla en la máquina de estados de la encuesta la
+ * mezclaría con el voto, así que son dos pantallas y una bandera que decide
+ * cuál se enseña.
+ */
+const gala = ref<ResultadoEncuesta | null>(null);
+const errorGala = ref<string | null>(null);
 let pressTimer: ReturnType<typeof setTimeout> | null = null;
 let longPressTriggered = false;
 
@@ -112,6 +123,7 @@ async function validarPalabraSecreta() {
   mensaje.value = null;
   error.value = null;
   loginError.value = null;
+  errorGala.value = null;
 
   try {
     const secreta = palabraSecreta.value.trim();
@@ -119,6 +131,15 @@ async function validarPalabraSecreta() {
     // secreto antes de usarla, para que el logger la elimine de cualquier
     // mensaje o contexto que se emita después.
     logger.registerSecret(secreta);
+
+    // Primero se pregunta por la gala. Solo la palabra del organizador devuelve
+    // algo, así que para el resto es un `get` de más y el camino de siempre.
+    const fotografia = await appServices.getResults(secreta);
+    if (fotografia) {
+      abrirGala(fotografia);
+      return;
+    }
+
     const encontrado = await appServices.validateInvitation(secreta);
     codigo.value = encontrado;
     cambiarPaso('welcome');
@@ -135,6 +156,40 @@ async function validarPalabraSecreta() {
   } finally {
     enviando.value = false;
   }
+}
+
+function abrirGala(fotografia: ResultadoEncuesta) {
+  gala.value = fotografia;
+  errorGala.value = null;
+  metrics.increment('results_viewed');
+}
+
+async function recargarGala() {
+  if (enviando.value || !palabraSecreta.value.trim()) return;
+  enviando.value = true;
+  errorGala.value = null;
+
+  try {
+    const fotografia = await appServices.getResults(palabraSecreta.value.trim());
+    if (fotografia) {
+      abrirGala(fotografia);
+      return;
+    }
+
+    errorGala.value = 'Ya no hay resultados que enseñar con esta palabra.';
+  } catch (e) {
+    const fallo = classifyNetworkError(e);
+    logger.error('fallo al cargar los resultados', { error: e, kind: fallo.kind });
+    errorGala.value = fallo.userMessage;
+  } finally {
+    enviando.value = false;
+  }
+}
+
+/** Cierra la gala y vuelve al login, sin perder lo que había en el campo. */
+function cerrarGala() {
+  gala.value = null;
+  errorGala.value = null;
 }
 
 function avanzarDesdeBienvenida() {
@@ -235,51 +290,62 @@ function volverAtras() {
     />
 
     <main class="app-content">
-      <template v-if="pasoActual === 'login'">
-        <LoginStep
-          :model-value="palabraSecreta"
-          :login-error="loginError"
-          :is-submitting="enviando"
-          @update:model-value="palabraSecreta = $event"
-          @submit="validarPalabraSecreta"
-        />
-      </template>
+      <ResultsStep
+        v-if="gala"
+        :resultado="gala"
+        :error="errorGala"
+        :is-loading="enviando"
+        @reload="recargarGala"
+        @close="cerrarGala"
+      />
 
-      <template v-else-if="pasoActual === 'welcome' && codigo">
-        <WelcomeStep
-          :codigo="codigo.id"
-          @continue="avanzarDesdeBienvenida"
-        />
-      </template>
+      <template v-else>
+        <template v-if="pasoActual === 'login'">
+          <LoginStep
+            :model-value="palabraSecreta"
+            :login-error="loginError"
+            :is-submitting="enviando"
+            @update:model-value="palabraSecreta = $event"
+            @submit="validarPalabraSecreta"
+          />
+        </template>
 
-      <template v-else-if="pasoActual === 'questions' && codigo && preguntaActual">
-        <QuestionStep
-          :question="preguntaActual"
-          :selected-option-id="respuestaSeleccionada"
-          :current-question-index="indicePreguntaActual"
-          :total-questions="preguntas.length"
-          :progress="progreso"
-          :can-go-back="puedeVolverAtras"
-          :can-continue="puedeContinuarPregunta"
-          :is-submitting="enviando"
-          :has-submission-error="!!error"
-          @select-option="handleQuestionSelect"
-          @long-press-start="handleQuestionLongPressStart"
-          @long-press-end="handleQuestionLongPressEnd"
-          @go-back="volverAtras"
-          @submit="responderYPasarSiguiente"
-        />
-      </template>
+        <template v-else-if="pasoActual === 'welcome' && codigo">
+          <WelcomeStep
+            :codigo="codigo.id"
+            @continue="avanzarDesdeBienvenida"
+          />
+        </template>
 
-      <template v-else-if="pasoActual === 'done' && codigo">
-        <CompletionStep
-          :codigo="codigo.id"
-          :message="mensaje"
-        />
+        <template v-else-if="pasoActual === 'questions' && codigo && preguntaActual">
+          <QuestionStep
+            :question="preguntaActual"
+            :selected-option-id="respuestaSeleccionada"
+            :current-question-index="indicePreguntaActual"
+            :total-questions="preguntas.length"
+            :progress="progreso"
+            :can-go-back="puedeVolverAtras"
+            :can-continue="puedeContinuarPregunta"
+            :is-submitting="enviando"
+            :has-submission-error="!!error"
+            @select-option="handleQuestionSelect"
+            @long-press-start="handleQuestionLongPressStart"
+            @long-press-end="handleQuestionLongPressEnd"
+            @go-back="volverAtras"
+            @submit="responderYPasarSiguiente"
+          />
+        </template>
+
+        <template v-else-if="pasoActual === 'done' && codigo">
+          <CompletionStep
+            :codigo="codigo.id"
+            :message="mensaje"
+          />
+        </template>
       </template>
 
       <div
-        v-if="error"
+        v-if="error && !gala"
         class="status status--error"
         role="alert"
         aria-live="assertive"

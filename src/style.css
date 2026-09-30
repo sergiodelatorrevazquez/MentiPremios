@@ -10,6 +10,23 @@
   --color-error-border: #fecaca;
   --color-error: #b91c1c;
   --color-focus: #155eef;
+  /*
+   * Paleta de las gráficas de tarta. Vive aquí, y no en el componente, porque
+   * `style.css` es donde están los tokens: el componente las lee del DOM para
+   * que haya un solo sitio donde cambiar el color de un premio.
+   *
+   * Los tonos vecinos son muy distintos a propósito: son ocho
+   * categorías en la misma tarta y tienen que distinguirse de un vistazo, desde
+   * la pantalla de un móvil y con daltonismo.
+   */
+  --chart-color-1: #1b7f3b;
+  --chart-color-2: #2f6fd0;
+  --chart-color-3: #d9822b;
+  --chart-color-4: #8e4ec6;
+  --chart-color-5: #c2185b;
+  --chart-color-6: #0f8a8a;
+  --chart-color-7: #7a5c00;
+  --chart-color-8: #5d6d7a;
   --font-family-base: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-size-xs: 12px;
   --font-size-sm: 14px;

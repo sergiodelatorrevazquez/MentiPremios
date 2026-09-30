@@ -11,16 +11,26 @@ const sourceRoot = resolve(workspaceRoot, 'src');
 const globalStyles = readFileSync(resolve(sourceRoot, 'style.css'), 'utf8');
 const indexHtml = readFileSync(resolve(workspaceRoot, 'index.html'), 'utf8');
 
+/**
+ * Cada componente se busca en la carpeta donde vive. `results` es otra feature
+ * con sus propios componentes, y si el test solo mirara `survey/presentation`
+ * las nuevas tarjetas se quedarían sin comprobar.
+ */
 const RESPONSIVE_COMPONENTS = [
-  'LoginStep.vue',
-  'WelcomeStep.vue',
-  'QuestionStep.vue',
-  'CompletionStep.vue',
-  'MultimediaViewer.vue',
-  'AvatarPhotoViewer.vue',
+  'features/survey/presentation/LoginStep.vue',
+  'features/survey/presentation/WelcomeStep.vue',
+  'features/survey/presentation/QuestionStep.vue',
+  'features/survey/presentation/CompletionStep.vue',
+  'features/survey/presentation/MultimediaViewer.vue',
+  'features/survey/presentation/AvatarPhotoViewer.vue',
+  'features/results/presentation/ResultsStep.vue',
+  'features/results/presentation/PieChartCard.vue',
 ] as const;
 
-const MODAL_COMPONENTS = ['MultimediaViewer.vue', 'AvatarPhotoViewer.vue'] as const;
+const MODAL_COMPONENTS = [
+  'features/survey/presentation/MultimediaViewer.vue',
+  'features/survey/presentation/AvatarPhotoViewer.vue',
+] as const;
 
 const WRAPPABLE_TEXT = ['.hero-title', '.status', '.option-text'];
 const MIN_TOUCH_TARGET_PX = 44;
@@ -75,7 +85,7 @@ function listVueFiles(directory: string): string[] {
 }
 
 function componentStyles(name: string): string {
-  const source = readFileSync(resolve(sourceRoot, 'features/survey/presentation', name), 'utf8');
+  const source = readFileSync(resolve(sourceRoot, name), 'utf8');
   return source.match(/<style[^>]*>([\s\S]*?)<\/style>/)?.[1] ?? '';
 }
 
@@ -173,7 +183,7 @@ describe('responsive shell', () => {
   });
 
   it('keeps option cards tappable and action buttons stacked on mobile', () => {
-    const questionStep = stylesheets['QuestionStep.vue'];
+    const questionStep = stylesheets['features/survey/presentation/QuestionStep.vue'];
     const mobileRules = parseRules(questionStep).filter((rule) => rule.media !== null);
     const columns = (effectiveValue(questionStep, '.options-grid--8', 'grid-template-columns', 'mobile') ?? '').replace(/\s/g, '');
 
