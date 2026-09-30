@@ -9,7 +9,7 @@ la peor forma de decidir.
 
 La invitación es el único estado que sobrevive a un fallo, y solo porque la
 pide la persona, no porque la aplicación lo guarde. Todo lo demás —palabra
-secreta, respuestas y nombre— vive en memoria. No hay `localStorage`, ni
+secreta y respuestas— vive en memoria. No hay `localStorage`, ni
 `sessionStorage`, ni cookies. La razón es directa: son datos personales y
 guardarlos en el navegador del participante convertiría un fallo de red en una
 fuga de datos.
@@ -60,7 +60,7 @@ respuestas que ya están en Firestore sería un fallo de la aplicación, no de l
 persona.
 
 **Por qué la invitación es la que arbitra:** la transacción escribe las respuestas
-en el propio documento de la persona y pasa `haVotado` a `true` en la misma
+en el propio documento de la persona y pasa `voted` a `true` en la misma
 operación. O pasa las dos cosas, o no pasa ninguna. No existe un estado
 intermedio en el que la respuesta esté guardada y la invitación libre, así que el
 mensaje de la invitación es una fuente fiable, no una heurística.
@@ -81,7 +81,7 @@ momento.
 **Un caso particular de este proyecto:** si la transacción entra en conflicto con
 otra escritura, Firestore la aborta (`aborted`) y el SDK del cliente la reintenta
 por su cuenta un número acotado de veces. El conflicto real aquí es doble envío
-—dos pestañas con la misma palabra—, y como la segunda transacción ve `haVotado:
+—dos pestañas con la misma palabra—, y como la segunda transacción ve `voted:
 true`, sale por `already-used` en lugar de sobrescribir.
 
 **Qué hacer si ocurre:** reintentar. Si el reintento dice que la invitación ya
@@ -90,7 +90,7 @@ se usó, el caso 2 aplica y la respuesta está a salvo.
 **Sobre el momento del mensaje:** una confirmación en pantalla no es la prueba de
 que haya datos en disco —la red puede cortarse entre la confirmación de Firestore
 y la respuesta al navegador—. La invitación consumida sí lo es, y por eso el
-mensaje que ve la persona no es la fuente fiable: lo es el estado de `haVotado`.
+mensaje que ve la persona no es la fuente fiable: lo es el estado de `voted`.
 
 ## 4. El código queda marcado pero la pantalla no cambia
 

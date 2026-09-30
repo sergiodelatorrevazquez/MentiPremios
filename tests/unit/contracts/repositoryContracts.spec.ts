@@ -57,18 +57,19 @@ describe('adaptador de la encuesta', () => {
   });
 
   it('escribe los votes en el propio documento de la persona', () => {
-    // Solo hay una colección: un `update` con `haVotado` y las respuestas, sin
+    // Solo hay una colección: un `update` con `voted` y las respuestas, sin
     // documento aparte y sin una segunda escritura que pueda quedar a medias.
-    expect(repositorySource).toContain('transaction.update(invitationRef, { haVotado: true, ...response.answers })');
+    expect(repositorySource).toContain('transaction.update(invitationRef, { voted: true, ...response.answers })');
     expect(repositorySource).not.toMatch(/\btransaction\.set\b/);
     expect(repositorySource).not.toMatch(/\bserverTimestamp\b/);
   });
 
-  it('no guarda ni el nombre ni la hora, solo las respuestas', () => {
-    // La persona ya la identifica el id del documento: no hace falta duplicar
-    // su nombre ni anotar cuándo votó.
+  it('no guarda ningún dato de la persona más allá de sus respuestas', () => {
+    // Ni nombre, ni hora, ni versión: el documento solo lleva `voted` y las
+    // respuestas. La persona la identifica el identificador del documento.
     expect(repositorySource).not.toContain('participantName');
     expect(repositorySource).not.toMatch(/createdAt|submittedAt|schemaVersion/);
+    expect(repositorySource).not.toMatch(/nombre\s*[:?]/);
   });
 
   it('no escribe en ninguna colección que no sea la de las invitaciones', () => {

@@ -13,8 +13,7 @@ const entries: LogEntry[] = [];
 const mockAppServices: AppServices = {
   validateInvitation: vi.fn().mockResolvedValue({
     id: 'secreta-123',
-    nombre: 'Sergio',
-    haVotado: false,
+    voted: false,
   }),
   submitSurvey: vi.fn().mockResolvedValue({} as SurveySubmission),
 };
@@ -80,7 +79,7 @@ describe('App - Login', () => {
   });
 
   it('muestra estado de comprobación y deshabilita login mientras espera', async () => {
-    let resolveValidation: ((value: { id: string; nombre: string; haVotado: false }) => void) | undefined;
+    let resolveValidation: ((value: { id: string; voted: false }) => void) | undefined;
     vi.mocked(mockAppServices.validateInvitation).mockImplementationOnce(
       () => new Promise((resolve) => { resolveValidation = resolve; }),
     );
@@ -94,10 +93,10 @@ describe('App - Login', () => {
     expect(submit.text()).toBe('Comprobando...');
     expect(submit.attributes('disabled')).toBeDefined();
 
-    resolveValidation?.({ id: 'secreta-123', nombre: 'Sergio', haVotado: false });
+    resolveValidation?.({ id: 'secreta-123', voted: false });
     await validation;
     await wrapper.vm.$nextTick();
-    expect(wrapper.find('.hero-title').text()).toContain('Sergio');
+    expect(wrapper.find('.hero-title').text()).toContain('secreta-123');
   });
 });
 
@@ -106,14 +105,14 @@ describe('App - Welcome', () => {
     vi.clearAllMocks();
   });
 
-  it('muestra la pantalla de bienvenida con el nombre del usuario', async () => {
+  it('muestra la pantalla de bienvenida con el identificador del documento', async () => {
     const wrapper = mount(App);
     const input = wrapper.find('input.field-input');
     await input.setValue('test-code');
     await wrapper.find('button.button-primary').trigger('click');
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.find('.hero-title').text()).toContain('Sergio');
+    expect(wrapper.find('.hero-title').text()).toContain('secreta-123');
   });
 });
 
@@ -802,7 +801,7 @@ describe('App - logging controlado', () => {
     expect(registro!.level).toBe('error');
     const serializado = JSON.stringify(registro);
     expect(serializado).not.toContain('test-code');
-    expect(serializado).not.toContain('Sergio');
+    expect(serializado).not.toContain('secreta-123');
     expect(serializado).toContain('[redactado]');
   });
 

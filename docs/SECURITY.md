@@ -15,14 +15,16 @@ Sin `list`, nadie puede descubrir las palabras del resto de participantes ni
 quién ha respondido ya. Ese es el motivo por el que una aplicación sin servidor
 puede seguir tratando las palabras secretas como secretas.
 
-Hay **una sola colección**, `codigos`, con un documento por persona. Antes de
-votar ese documento tiene su nombre y `haVotado: false`; al votar, se le
-añaden un campo por pregunta con la opción elegida. No hay documento de voto
-aparte.
+Hay **una sola colección**, `codigos`, con un documento por persona. El
+documento es mínimo: antes de votar tiene únicamente `voted: false`, y al votar
+se le añade `voted: true` más un campo por pregunta con la opción elegida. **No
+guarda ningún dato sobre la persona aparte del identificador** —ni nombre, ni
+horas, ni versión—, porque el identificador ya la identifica. No hay documento
+de voto aparte.
 
 - `codigos`: `get` permitido; `list` prohibido; `create` y `delete` prohibidos;
-  `update` permitido solo en el sentido `false → true` del campo `haVotado`, y
-  solo los once campos de la lista blanca: `haVotado` y las diez preguntas.
+  `update` permitido solo en el sentido `false → true` del campo `voted`, y
+  solo los once campos de la lista blanca: `voted` y las diez preguntas.
 - `palabrasClave`: solo `create`.
 - `/{document=**}`: `allow read, write: if false`. Red de seguridad para
   cualquier ruta que no esté declarada de forma explícita.
@@ -30,8 +32,8 @@ aparte.
 La lista blanca de `update` es `request.resource.data.diff(resource.data).affectedKeys().hasOnly([...])`,
 y tiene que coincidir con `QUESTION_IDS` de
 `src/features/survey/domain/survey.types.ts`. No es decoración: es lo que impide
-cambiar `nombre` o escribir un campo inventado, y es la razón por la que añadir
-una pregunta al catálogo exige tocar también `firestore.rules`.
+escribir un campo inventado, y es la razón por la que añadir una pregunta al
+catálogo exige tocar también `firestore.rules`.
 
 ## Por qué esto resiste
 
@@ -46,7 +48,7 @@ decir, **todas las palabras secretas**, y podría responder por todo el grupo. E
 el ataque que el diseño elimina por completo, no por dificultad.
 
 **Un voto es de un solo uso y a prueba de sobrescritura.** `update` exige que
-`haVotado` pase de `false` a `true`, así que un segundo envío choca contra las
+`voted` pase de `false` a `true`, así que un segundo envío choca contra las
 reglas en lugar de alterar el primero, y ninguna invitación ya votada se puede
 devolver a `false`. La unicidad la garantiza la regla, no una comparación de
 contenidos en un servidor.
@@ -56,9 +58,12 @@ persona, el envío es una única escritura: no existe el estado en el que la
 respuesta está guardada y la invitación libre, ni el caso de una respuesta
 huérfana que hubiera que arreglar después.
 
-**El nombre de la persona tampoco lo elige el cliente.** `nombre` no está en la
-lista blanca de `update`, así que desde el navegador es inmutable, y no se
-escribe nada nuevo con él al votar.
+**El documento no guarda datos personales.** Antes de votar es literalmente un
+campo: `voted: false`. No hay nombre, ni horas de creación o envío, ni nada que
+describa a la persona, porque el identificador —la palabra secreta— ya la
+identifica y ese es el único dato que se conserva. Un `get` que devuelva el
+documento completo sigue sin filtrar información que no sea el voto de esa
+persona.
 
 **El comodín no se desactiva.** Declarar `match /codigos/{id}` abre solo esa ruta;
 el `allow read, write: if false` final sigue denegando todo lo demás. Por eso
@@ -99,7 +104,7 @@ la decisión queda anotada en [MIGRATION.md](MIGRATION.md) para que no se pierda
 **Todo.** La consola opera con permisos de administrador del proyecto y no le
 afectan estas reglas, que gobiernan a los clientes del SDK. Eso significa que el
 organizador puede seguir viendo la colección `codigos` entera, el estado de
-`haVotado` de cada participante y las respuestas ya guardadas, para organizar la
+`voted` de cada participante y las respuestas ya guardadas, para organizar la
 gala.
 
 Es una distinción que conviene tener clara porque se presta a confusión: la
@@ -154,7 +159,7 @@ palabras.
 
 `tests/unit/contracts/firestoreRules.spec.ts` fija estas reglas por texto: que
 `codigos` tiene `get` y no `list`, que `create` y `delete` están negadas, que
-`update` exige `false → true` en `haVotado` con `diff(...).hasOnly([...])`, que
+`update` exige `false → true` en `voted` con `diff(...).hasOnly([...])`, que
 esa lista coincide con `QUESTION_IDS`, que no queda rastro de la colección
 `respuestas` y que el comodín lo deniega todo. Una edición que abra la colección
 entera es un test rojo antes de llegar a producción, que es exactamente la

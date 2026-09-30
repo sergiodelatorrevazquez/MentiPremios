@@ -247,7 +247,7 @@ function volverAtras() {
 
       <template v-else-if="pasoActual === 'welcome' && codigo">
         <WelcomeStep
-          :participant-name="codigo.nombre"
+          :codigo="codigo.id"
           @continue="avanzarDesdeBienvenida"
         />
       </template>
@@ -273,7 +273,7 @@ function volverAtras() {
 
       <template v-else-if="pasoActual === 'done' && codigo">
         <CompletionStep
-          :participant-name="codigo.nombre"
+          :codigo="codigo.id"
           :message="mensaje"
         />
       </template>

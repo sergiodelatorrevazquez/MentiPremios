@@ -70,14 +70,14 @@ En la consola de Firebase, crea la colección `codigos` con al menos un document
 ```
 codigos/
   └── palabra-de-prueba/
-        ├── nombre: "Usuario de prueba"
-        └── haVotado: false
+        └── voted: false
 ```
 
 El ID del documento es la palabra secreta y tiene que ir **en minúsculas**: la
-aplicación normaliza con `trim()` y `toLowerCase()` antes de leer. `nombre` es
-opcional, y el mismo documento es donde se guardará el voto de esa persona al
-enviar: `haVotado` pasará a `true` y aparecerán los diez campos de pregunta.
+aplicación normaliza con `trim()` y `toLowerCase()` antes de leer. El documento
+no guarda ningún dato más: el identificador ya identifica a la persona. Y ese
+mismo documento es donde se guardará su voto al enviar: `voted` pasará a `true` y
+aparecerán los diez campos de pregunta.
 
 ### 6. Iniciar el servidor de desarrollo
 
@@ -174,13 +174,13 @@ npm run test:ui
 
 **`tests/integration/App.spec.ts`** — Tests de integración del wizard:
 - Login: renderizado inicial, input, botón habilitado/deshabilitado, errores de palabra incorrecta y ya usada
-- Welcome: muestra el nombre del usuario
+- Welcome: muestra el identificador del documento
 - Questions: renderizado de opciones, selección, progreso, navegación siguiente/anterior, guardado al completar, pantalla de gracias
 - Visor de foto: apertura y cierre del modal
 
 **`tests/integration/bootstrap.spec.ts`** — Comprueba que el composition root conecta `AppServices` con el repositorio y traduce `'saved'`, `'already-used'` y `'not-found'` a los errores que la interfaz entiende.
 
-**`tests/unit/contracts/firestoreRules.spec.ts`** — Fija por texto el contrato de seguridad: `get` permitido en `codigos`, `list` prohibido, `create` y `delete` negadas, `update` acotado a `haVotado` y a la lista de preguntas (que además se compara con `QUESTION_IDS`), que no quede la colección `respuestas` y el comodín denegado.
+**`tests/unit/contracts/firestoreRules.spec.ts`** — Fija por texto el contrato de seguridad: `get` permitido en `codigos`, `list` prohibido, `create` y `delete` negadas, `update` acotado a `voted` y a la lista de preguntas (que además se compara con `QUESTION_IDS`), que no quede la colección `respuestas` y el comodín denegado.
 
 **`tests/unit/contracts/`** — Tokens de diseño, `scoped` de estilos, favicon, contrato responsive, reglas de dependencia, contratos de repositorio y estructura del propio repo.
 

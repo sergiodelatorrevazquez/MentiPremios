@@ -4,7 +4,7 @@ Este documento contiene el backlog para evolucionar MentiPremios desde un monoli
 
 La migracion debe hacerse de forma incremental. Cada TODO debe dejar la aplicacion funcionando como antes. La estrategia es anadir la nueva estructura, mover la logica gradualmente y eliminar la implementacion antigua solo cuando exista cobertura equivalente.
 
-> **Aviso de vigencia.** Este documento es una bitacora historica: se conserva entero porque el valor de un "Resultado:" esta en contar lo que salio mal, y eso no se reescribe. Las fases 1 a 12 describen la llegada al monolito modular con un backend de Cloud Functions; la [Fase 13](#fase-13-acceso-directo-del-cliente-a-firestore) describe el cambio posterior a acceso directo del navegador a Firestore, que **sustituye** la decision de seguridad de la Fase 6 (TODO-033 a TODO-038) y varios resultados de las fases 7 y 11. La [Fase 14](#fase-14-una-sola-coleccion-codigos) unifica despues las votaciones en la propia coleccion de invitaciones y **sustituye** a su vez todo lo que las fases 13 y anteriores dicen sobre la coleccion `respuestas` y sobre el campo `usado`. Donde los tres digan cosas distintas, **manda la Fase 14**. Lo unico que no se toca es el criterio de la linea base: la palabra secreta sigue siendo la unica credencial.
+> **Aviso de vigencia.** Este documento es una bitacora historica: se conserva entero porque el valor de un "Resultado:" esta en contar lo que salio mal, y eso no se reescribe. Las fases 1 a 12 describen la llegada al monolito modular con un backend de Cloud Functions; la [Fase 13](#fase-13-acceso-directo-del-cliente-a-firestore) describe el cambio posterior a acceso directo del navegador a Firestore, que **sustituye** la decision de seguridad de la Fase 6 (TODO-033 a TODO-038) y varios resultados de las fases 7 y 11. La [Fase 14](#fase-14-una-sola-coleccion-codigos) unifica despues las votaciones en la propia coleccion de invitaciones y **sustituye** a su vez todo lo que las fases 13 y anteriores dicen sobre la coleccion `respuestas` y sobre el campo `usado`. La [Fase 15](#fase-15-documento-minimo-con-solo-voted) reduce el documento a un unico campo, `voted`, y **sustituye** tambien a la Fase 14 en todo lo relativo al campo `nombre`, al nombre del booleano y a las horas guardadas. Donde los cuatro digan cosas distintas, **manda la Fase 15**. Lo unico que no se toca es el criterio de la linea base: la palabra secreta sigue siendo la unica credencial.
 
 ## Principios de migracion
 
@@ -1372,6 +1372,12 @@ confundir la decision de seguridad por la decision vigente.
 
 # Fase 14: una sola coleccion `codigos`
 
+> **Sustituido en parte por la Fase 15.** Todo lo que esta fase dice sobre tener
+> una sola coleccion, `get` si y `list` no, y una unica escritura al votar sigue
+> siendo cierto. Lo que ya no lo es es la forma del documento: el campo `nombre`
+> desaparece y el booleano `haVotado` pasa a llamarse `voted`. Donde esta fase y
+> la 15 digan cosas distintas, **manda la Fase 15**.
+
 ## TODO-075. Unificar las votaciones en el documento de la invitacion [COMPLETADO]
 
 El modelo anterior repartia una persona en dos documentos: `codigos/{palabra}` con
@@ -1479,6 +1485,102 @@ en su propio lenguaje: envia solo a gente de confianza.
 
 ---
 
+# Fase 15: documento minimo con solo `voted`
+
+## TODO-079. Reducir el documento de la invitacion a `voted` [COMPLETADO]
+
+La Fase 14 dejo una sola coleccion, pero el documento seguia guardando un campo
+`nombre` con el dato de la persona. Para unas votaciones entre amigos eso no
+aportaba nada: el identificador del documento ya es la palabra secreta y ya
+identifica a quien responde, asi que el nombre era una segunda copia del mismo dato.
+Y un booleano con dos estados no necesita ocho letras de nombre.
+
+Resultado: el documento de `codigos` es **minimo**. Antes de votar tiene un unico
+campo, `voted: false`, y nada mas; al votar, en ese mismo documento, `voted` pasa a
+`true` y se anaden los diez campos de pregunta con el id de la opcion elegida en la
+forma `<pregunta>-<n>`. El campo `nombre` desaparece y `haVotado` se renombra a
+`voted`.
+
+No queda ningun otro dato sobre la persona en Firestore: ni nombre, ni horas de
+creacion o de envio, ni version de esquema. Es una decision consciente y no una
+simplificacion gratuita: en un producto real el nombre se guardaria, porque habria
+que poder mostrarlo. Aqui el identificador cumple esa funcion, y el unico texto que se
+muestra es la palabra que la persona ya conoce.
+
+La consecuencia en el codigo es que la validacion tambien se simplifica.
+`parseInvitation(id, data)` en `firestoreSurveyRepository.ts` devuelve `null` solo
+si el documento no es un objeto o si `voted` no es un `boolean`: ya no valida ningun
+otro campo, porque ya no hay ningun otro. Los tipos quedan en `{ id, voted }` para
+`StoredInvitation` e `InvitationRecord`, y en `{ voted }` para `CodigoInvitacion`, y
+`validateInvitation` lanza `InvitationAlreadyUsedError` si `voted === true`. El
+guardado sigue siendo una sola escritura —`transaction.update(invitationRef, { voted:
+true, ...answers })`—, sin documento aparte ni segunda escritura.
+
+## TODO-080. Saludar por identificador [COMPLETADO]
+
+Con `nombre` fuera, las dos pantallas que lo mostraban —la bienvenida y la
+confirmacion— se quedaban sin de donde sacarlo. La pregunta util no era "que ponemos
+en su lugar", sino "que necesita saber la pantalla", y la respuesta es un
+identificador: lo unico que identifica a esa persona.
+
+Resultado: `WelcomeStep.vue` y `CompletionStep.vue` reciben un prop `codigo: string`
+—antes `participantName`— y muestran `props.codigo`; `App.vue` les pasa
+`:codigo="codigo.id"`, asi que en pantalla se ve la palabra secreta tal cual, sin
+formatear ni transformar.
+
+El nombre del prop es deliberadamente neutro, y esa es la parte que importa mas que
+el cambio en si: hoy recibe el identificador y mas adelante puede recibir un saludo
+personalizado por identificador sin tocar ninguno de los dos componentes. Si el prop
+se hubiera llamado `participantName`, ese cambio futuro habria tenido que tocar los
+dos SFC por un nombre que ya no describe lo que reciben.
+
+## TODO-081. Migrar los datos existentes [COMPLETADO]
+
+Migracion ejecutada en produccion, no un plan:
+
+- Los 14 documentos de `codigos` quedaron con un unico campo, `voted: false`, y nada
+  mas.
+- Se borraron el campo `nombre`, el campo `haVotado` y todas las respuestas que
+  hubiera guardadas.
+
+Se perdieron a proposito los dos votos que habia de la gala anterior, `admindltv` y
+`alas`: el propietario pidio empezar de cero y los votos de la gala anterior no
+servian para esta. Es la parte de esta fase que no se puede deshacer, asi que
+conviene que quede escrito que fue una decision del propietario y no un fallo de la
+migracion.
+
+Estado final: los 14 documentos con `voted: false` y ningun otro campo.
+
+## TODO-082. Verificar las reglas contra produccion [COMPLETADO]
+
+La lista blanca de `update` paso a admitir `voted` y las diez preguntas, y las reglas
+se desplegaron y se comprobaron una a una contra produccion, no solo contra el texto
+del fichero:
+
+- `list` sobre `codigos` devuelve 403.
+- `get` de una invitacion concreta devuelve 200.
+- El voto se guarda correctamente.
+- Un segundo voto devuelve 403.
+- Devolver `voted` a `false` devuelve 403.
+- Escribir un campo inventado devuelve 403.
+
+Los dos ultimos son los que ejercitan `diff(...).hasOnly([...])` y la condicion de
+direccion, que es donde un modelo de una sola coleccion podria abrirse sin que nadie
+se diera cuenta. Con el documento minimo ademas ya no queda ningun campo sobre la
+persona que un `get` pueda filtrar: solo el identificador, que quien lee ya conoce, y
+el voto de esa persona.
+
+Lo que no cambio, y sigue siendo lo que sostiene el modelo: el **id del documento
+sigue siendo la palabra secreta**, `create` y `delete` siguen negadas en `codigos`,
+`create` en `palabrasClave` y el comodin `/{document=**}` con `read, write: if false`.
+El coste de que los votos vivan en el documento de la invitacion tampoco cambio y
+sigue descrito en `SECURITY.md`: leer el codigo de un amigo devuelve tambien sus
+respuestas. Y la consola de Firebase sigue viendo la coleccion entera porque opera
+con permisos de administrador, asi que organizar la gala mirando quien ha votado
+sigue siendo posible.
+
+---
+
 # Orden recomendado de implementacion
 
 ## Bloque 1: estabilizacion
@@ -1528,6 +1630,10 @@ en su propio lenguaje: envia solo a gente de confianza.
 ## Bloque 9: una sola coleccion `codigos`
 
 - TODO-075 a TODO-078
+
+## Bloque 10: documento minimo con solo `voted`
+
+- TODO-079 a TODO-082
 
 ---
 

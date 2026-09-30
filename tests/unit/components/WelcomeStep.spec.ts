@@ -2,16 +2,16 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import WelcomeStep from '../../../src/features/survey/presentation/WelcomeStep.vue';
 
-function mountWelcomeStep(participantName = 'Sergio') {
-  return mount(WelcomeStep, { props: { participantName } });
+function mountWelcomeStep(codigo = 'pitufo') {
+  return mount(WelcomeStep, { props: { codigo } });
 }
 
 describe('WelcomeStep', () => {
   describe('renderizado', () => {
-    it('saluda por el nombre del participante', () => {
+    it('saluda con el identificador del documento', () => {
       const wrapper = mountWelcomeStep();
 
-      expect(wrapper.find('h1').text()).toBe('Sergio');
+      expect(wrapper.find('h1').text()).toBe('pitufo');
       expect(wrapper.text()).toContain('Empezar la encuesta');
     });
 
@@ -24,8 +24,10 @@ describe('WelcomeStep', () => {
   });
 
   describe('props', () => {
-    it('refleja cualquier nombre, no uno fijo', () => {
-      expect(mountWelcomeStep('Ana').find('h1').text()).toBe('Ana');
+    it('refleja cualquier saludo, no uno fijo', () => {
+      // El prop recibe el identificador del documento, que es lo que se
+      // muestra hoy. Cuando se personalize, solo cambia lo que se le pasa.
+      expect(mountWelcomeStep('og').find('h1').text()).toBe('og');
       expect(mountWelcomeStep('').find('h1').text()).toBe('');
     });
   });

@@ -53,8 +53,7 @@ Crea un documento por cada persona que vaya a participar:
 ```
 codigos/
   └── palabra-secreta-única/     ← El ID del documento es la palabra secreta
-        ├── nombre: "Sergio"     ← string (nombre visible en la bienvenida)
-        └── haVotado: false      ← boolean
+        └── voted: false         ← boolean, y nada más
 ```
 
 > Crea tantos documentos como participantes. Cada uno recibe su palabra secreta por privado.
@@ -64,11 +63,14 @@ y `toLowerCase()` antes de buscar, así que un documento sembrado como
 `Galaxia-2025` es invisible para todo el mundo. Si ya existe, hay que renombrar
 el documento, no cambiar la interfaz.
 
-`nombre` es opcional: si no está, la aplicación usa el ID del documento para la
-bienvenida. No se escribe ningún otro campo al crear la invitación, y las reglas
-ni siquiera permiten crearla desde el navegador.
+El documento es mínimo a propósito: `voted: false` y nada más. **No hay ningún
+campo con datos sobre la persona**, ni nombre ni horas, porque el identificador
+ya la identifica y ese es el único dato que se guarda. La pantalla de
+bienvenida muestra el identificador tal cual. No se escribe ningún otro campo
+al crear la invitación, y las reglas ni siquiera permiten crearla desde el
+navegador.
 
-Este mismo documento es donde queda el voto: al responder, `haVotado` pasa a
+Este mismo documento es donde queda el voto: al responder, `voted` pasa a
 `true` y el documento gana un campo por pregunta con la opción elegida
 (`tonto: "tonto-1"`, `casper: "casper-3"`…). No hay que crear nada más.
 
@@ -85,32 +87,35 @@ operación. El fichero completo, listo para copiar y desplegar:
 rules_version = '2';
 
 // Sin servidor intermedio: el navegador lee y escribe directamente. Hay una
-// sola colección, `codigos`, con un documento por persona. La seguridad se
-// apoya en una sola idea: se puede leer un documento concreto si ya se conoce
-// su identificador (la palabra secreta), pero nunca se puede enumerar la
-// colección. Sin `list`, nadie puede descubrir las palabras del resto de
-// participantes ni quién ha contestado ya.
+// sola colección, `codigos`, con un documento por persona.
 //
-// El coste de que los votos vivan en el mismo documento es que leer a un
+// La seguridad se apoya en una sola idea: se puede leer un documento concreto si
+// ya se conoce su identificador (la palabra secreta), pero nunca se puede
+// enumerar la colección. Sin `list`, nadie puede descubrir las palabras del
+// resto de participantes ni quién ha respondido ya.
+//
+// El coste de que los votes vivan en el mismo documento es que leer a un
 // amigo devuelve también sus respuestas.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /codigos/{invitationId} {
-      allow get: if true;                    // leer una invitación concreta
+      allow get: if true;                    // leer un documento concreto
       allow list: if false;                  // enumerar: NUNCA
-      allow create, delete: if false;        // las crea el organizador
+      allow create, delete: if false;        // los crea el organizador
 
-      // Al votar se escribe, en el mismo documento, `haVotado` a true y un
-      // campo por pregunta con la opción elegida. `diff` acota el cambio a esa
-      // lista exacta, así que no se puede tocar `nombre`, no se pueden escribir
-      // campos inventados y una invitación ya votada no se puede resucitar.
+      // Al votar se escribe, en el mismo documento, `voted` a true y un campo
+      // por pregunta con la opción elegida. `diff` acota el cambio a esa lista
+      // exacta, así que no se pueden escribir campos inventados ni devolver
+      // una invitación ya votada a sin votar. No hay ningún otro campo que
+      // proteger: el documento no guarda datos sobre la persona aparte del
+      // identificador.
       //
       // La lista debe coincidir con `QUESTION_IDS`; el test de contrato de
       // `firestore.rules` falla si se añade una pregunta y no se añade aquí.
-      allow update: if resource.data.haVotado == false
-        && request.resource.data.haVotado == true
+      allow update: if resource.data.voted == false
+        && request.resource.data.voted == true
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'haVotado',
+          'voted',
           'tonto',
           'casper',
           'comefeas',
@@ -152,7 +157,7 @@ firebase deploy --only firestore:rules --project mentipremios
 
 > **La contrapartida de una sola colección:** el mismo `get` que hace el login devuelve el documento entero, así que quien conozca la palabra de otra persona ve también sus respuestas si ya ha votado. Es un coste aceptado a cambio de un único documento por persona. Ver [SECURITY.md](SECURITY.md).
 
-> **Desde la consola de Firebase sí se ve la colección entera**, con el estado de `haVotado` de cada participante y sus respuestas. La consola opera con permisos de administrador del proyecto y no le afectan estas reglas: estas gobiernan a los clientes del SDK. Ver [SECURITY.md](SECURITY.md).
+> **Desde la consola de Firebase sí se ve la colección entera**, con el estado de `voted` de cada participante y sus respuestas. La consola opera con permisos de administrador del proyecto y no le afectan estas reglas: estas gobiernan a los clientes del SDK. Ver [SECURITY.md](SECURITY.md).
 
 No hace falta emular reglas en los tests: su contrato se fija por texto en
 `tests/unit/contracts/firestoreRules.spec.ts`, y una edición que vuelva a abrir
@@ -239,18 +244,18 @@ firebase deploy --only hosting
 ## 4. Migraciones
 
 No hay framework de migraciones porque el documento de invitación tiene una forma
-estable: se crea con `nombre` y `haVotado`, y al votar solo se le añaden los diez
-campos de pregunta que las reglas admiten. Lo que sí exige cuidado son tres casos
-concretos.
+estable: se crea con un único campo, `voted: false`, y al votar solo se le añaden
+`voted: true` y los diez campos de pregunta que las reglas admiten. Lo que sí
+exige cuidado son tres casos concretos.
 
 ### 4.1 Sembrar invitaciones
 
-No hay script de siembra. Las invitaciones son documentos con dos campos, así
+No hay script de siembra. Las invitaciones son documentos de un solo campo, así
 que se crean a mano en la consola. Si se escribe un script con el Admin SDK (que
 sí está autorizado), dos reglas:
 
 - El ID es la palabra ya normalizada, en minúsculas y sin espacios al final.
-- No se escribe ningún campo más: `nombre` y `haVotado`, nada más.
+- No se escribe ningún campo más: `voted: false`, nada más.
 
 Para generar un lote grande, un script temporal con el Admin SDK es más fiable
 que la consola, y no debe commitearse.
@@ -275,7 +280,7 @@ commit.
 
 ### 4.3 Añadir un campo a una respuesta guardada
 
-Las reglas acotan `update` a una lista blanca: `haVotado` y los diez IDs de
+Las reglas acotan `update` a una lista blanca: `voted` y los diez IDs de
 pregunta. Si añades un campo nuevo a lo que se guarda al votar, hay dos cosas que
 hacer **en el mismo despliegue**:
 
@@ -289,7 +294,7 @@ sitio: `QUESTION_IDS` en `src/features/survey/domain/survey.types.ts`, que es lo
 que el test de contrato compara con la lista de las reglas.
 
 Un documento ya guardado **no** se puede reescribir para añadirle el campo: `update`
-solo se admite en el sentido `false → true` de `haVotado`, a propósito. Los
+solo se admite en el sentido `false → true` de `voted`, a propósito. Los
 documentos antiguos se quedan como están, y eso no molesta a nadie porque el
 interesado es un export manual.
 
@@ -324,10 +329,10 @@ respuestas. Conviene vigilar la consola de Firebase durante el despliegue.
 
 La transacción de `saveSurvey` es atómica y hace una sola escritura, así que no
 hay estados intermedios que reparar. Si un despliegue deja invitaciones con
-`haVotado: true` y sin respuestas, no es una transacción partida: es un
+`voted: true` y sin respuestas, no es una transacción partida: es un
 despliegue con reglas abiertas que ha permitido escribir a mano, o un script de
 Admin SDK mal usado. La reparación es manual y se hace en la consola: poner
-`haVotado: false` y borrar del documento los campos de pregunta, porque el
+`voted: false` y borrar del documento los campos de pregunta, porque el
 navegador no puede hacer ninguna de las dos cosas.
 
 ---
@@ -392,14 +397,14 @@ Hay un solo `npm ci`: no hay carpeta `functions/` que instalar ni compilar. Si q
 - [ ] `.env.local` con las **seis** variables `VITE_FIREBASE_*`
 - [ ] Las mismas seis declaradas en el panel del hosting (Vercel/Netlify)
 - [ ] Colección `codigos` creada, con un documento por participante y **los IDs en minúsculas**
-- [ ] Cada documento de `codigos` tiene `haVotado: false` y, opcionalmente, `nombre` (string no vacío)
+- [ ] Cada documento de `codigos` tiene `voted: false` y ningún otro campo
 - [ ] `firebase deploy --only firestore:rules --project mentipremios` aplicado
 - [ ] Las reglas del proyecto desplegadas verificadas en la consola: `get` sí, `list` no
 - [ ] `npm run typecheck`, `npm run lint`, `npm run test:unit -- --run`, `npm run test:integration -- --run` y `npm run test:e2e` en verde
 - [ ] `npm run build` genera `dist/` sin errores
 - [ ] Assets multimedia añadidos, o asumido explícitamente que saldrán con el marcador
 - [ ] Desplegado en el hosting con las seis variables presentes **en el build**, no solo guardadas en el panel
-- [ ] Probado el flujo completo en el dominio de producción con una invitación de prueba: entrar, enviar, y comprobar que `haVotado` pasó a `true` y que el documento tiene los diez campos de pregunta
+- [ ] Probado el flujo completo en el dominio de producción con una invitación de prueba: entrar, enviar, y comprobar que `voted` pasó a `true` y que el documento tiene los diez campos de pregunta
 
 > Ningún paso de esta lista requiere un plan de pago de Firebase, ni una cuenta de
 > servicio, ni App Check. Si un checklist de despliegue te pide alguno de esos tres,

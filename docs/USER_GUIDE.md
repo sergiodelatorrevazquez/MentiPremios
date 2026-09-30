@@ -23,7 +23,7 @@
 
 ## Pantalla de bienvenida
 
-- Verás tu nombre en grande.
+- Verás tu palabra secreta en grande.
 - Lee la descripción (contiene una pista importante sobre la última pregunta).
 - Pulsa **"Empezar la encuesta"** para comenzar.
 
@@ -69,7 +69,7 @@ Tras responder la última pregunta y pulsar **"Enviar y cerrar"**:
 
 1. Tus respuestas se guardan en Firebase.
 2. Tu palabra secreta queda marcada como ya utilizada, en el mismo paso que las respuestas.
-3. Verás la pantalla **"Gracias por participar, [tu nombre]"** con un mensaje de confirmación.
+3. Verás la pantalla **"Gracias por participar, [tu palabra]"** con un mensaje de confirmación.
 
 Ya has terminado. Tus votos se usarán durante la gala de premios del grupo.
 

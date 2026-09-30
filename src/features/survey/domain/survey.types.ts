@@ -57,12 +57,7 @@ export interface PremioRespuesta {
 }
 
 export interface CodigoInvitacion {
-  /**
-   * Nombre con el que se saluda a la persona. Es opcional en el documento: si
-   * no está, la aplicación usa el id, que ya identifica a quienresponding.
-   */
-  nombre: string;
-  haVotado: boolean;
+  voted: boolean;
 }
 
 export type CodigoInvitacionIdentificado = CodigoInvitacion & { id: string };

@@ -126,7 +126,7 @@ describe('envío inválido', () => {
     // validateSurveyAnswers solo comprueba consistencia con el catálogo recibido,
     // así que un catálogo vacío y ninguna respuesta son mutuamente válidos.
     // Cierra el hueco `firestore.rules`, cuya lista blanca no admite campos
-    // distintos de `haVotado` y de las diez preguntas.
+    // distintos de `voted` y de las diez preguntas.
     await expect(submitSurvey(input({ questions: [], answers: {}, persist }))).resolves
       .toEqual({ invitationId: 'inv-1', answers: {} });
     expect(persist).toHaveBeenCalledOnce();

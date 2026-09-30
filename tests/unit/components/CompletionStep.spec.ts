@@ -2,10 +2,10 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import CompletionStep from '../../../src/features/survey/presentation/CompletionStep.vue';
 
-function mountCompletionStep(props: Partial<{ participantName: string; message: string | null }> = {}) {
+function mountCompletionStep(props: Partial<{ codigo: string; message: string | null }> = {}) {
   return mount(CompletionStep, {
     props: {
-      participantName: 'Sergio',
+      codigo: 'pitufo',
       message: '¡Respuestas guardadas correctamente en MentiPremios!',
       ...props,
     },
@@ -17,7 +17,7 @@ describe('CompletionStep', () => {
     it('agradece al participante y muestra el mensaje de guardado', () => {
       const wrapper = mountCompletionStep();
 
-      expect(wrapper.find('h1').text()).toBe('Gracias por participar, Sergio');
+      expect(wrapper.find('h1').text()).toBe('Gracias por participar, pitufo');
       expect(wrapper.find('.status--success').text())
         .toBe('¡Respuestas guardadas correctamente en MentiPremios!');
     });
@@ -42,9 +42,9 @@ describe('CompletionStep', () => {
         .toBe('Tus respuestas se han guardado correctamente.');
     });
 
-    it('refleja el nombre que recibe en el encabezado', () => {
-      expect(mountCompletionStep({ participantName: 'Ana' }).find('h1').text())
-        .toBe('Gracias por participar, Ana');
+    it('refleja el codigo que recibe en el encabezado', () => {
+      expect(mountCompletionStep({ codigo: 'og' }).find('h1').text())
+        .toBe('Gracias por participar, og');
     });
   });
 

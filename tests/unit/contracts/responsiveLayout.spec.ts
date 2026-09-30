@@ -259,12 +259,12 @@ describe('responsive markup', () => {
     expect(submit.attributes('aria-busy')).toBe('true');
   });
 
-  it('renders an unbreakable participant name in full', () => {
-    const name = 'María-José Fernández de la Vega y Sanz de Santamaría';
+  it('renders an unbreakable greeting in full', () => {
+    const saludo = 'María-José Fernández de la Vega y Sanz de Santamaría';
     const wrapper = mount(CompletionStep, {
-      props: { participantName: name, message: null },
+      props: { codigo: saludo, message: null },
     });
 
-    expect(wrapper.find('.hero-title').text()).toContain(name);
+    expect(wrapper.find('.hero-title').text()).toContain(saludo);
   });
 });

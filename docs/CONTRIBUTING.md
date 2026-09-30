@@ -75,7 +75,7 @@ planéalo como una migración: ver
 | Una regla de validación de respuestas | `src/features/survey/domain/survey.rules.ts` |
 
 **Aviso que no es negociable:** las reglas acotan `update` a una lista blanca
-exacta —`haVotado` y los diez IDs de pregunta—, y esa lista tiene que coincidir
+exacta —`voted` y los diez IDs de pregunta—, y esa lista tiene que coincidir
 con `QUESTION_IDS`. Si añades un campo al `update` del repositorio y olvidas la
 lista, la escritura se rechaza con `permission-denied` y el envío falla en la
 casa de quien participa. Un cambio de esquema son **dos** cambios, siempre, y uno
@@ -83,11 +83,11 @@ de ellos está en un fichero que no es TypeScript. El test de contrato
 `tests/unit/contracts/firestoreRules.spec.ts` es el que avisa del desajuste.
 
 El tipo que se valida y el que se guarda **no son el mismo**, y confundirlos rompe
-el contrato. El caso de uso produce `{ invitationId, answers }` —sin
-`participantName` ni nada más, porque la persona ya la identifica el id del
-documento— y el `update` escribe `{ haVotado: true, ...answers }` sobre el
-documento de la invitación. El nombre no se toca: no está en la lista blanca, así
-que desde el navegador es inmutable.
+el contrato. El caso de uso produce `{ invitationId, answers }` —sin nombre ni
+horas, porque la persona ya la identifica el id del documento— y el `update`
+escribe `{ voted: true, ...answers }` sobre el documento de la invitación. Nada
+más del documento se toca: el `update` no puede ni escribir otro dato sobre la
+persona, porque no hay ninguno.
 
 ---
 
@@ -229,7 +229,7 @@ tipos del dominio porque un adaptador implementa un contrato.
 
 ## 8. Seguridad: la línea que no se cruza
 
-Este proyecto maneja palabras secretas, nombres y respuestas, y **no hay backend
+Este proyecto maneja palabras secretas y respuestas, y **no hay backend
 que valide nada**: `firestore.rules` es la frontera de confianza. Ver
 [SECURITY.md](SECURITY.md).
 
@@ -238,11 +238,11 @@ que valide nada**: `firestore.rules` es la frontera de confianza. Ver
    palabras de todo el grupo. Si alguna vez necesitas listar para una pantalla
    interna, no lo hagas desde el cliente: la consola de Firebase ya te deja verlo
    con permisos de administrador, y esas reglas no le afectan.
-2. **`update` sobre `codigos` solo para el paso `false → true` de `haVotado`, y
-   solo con la lista blanca.** `resource.data.haVotado == false &&
-   request.resource.data.haVotado == true` impide resucitar una invitación ya
-   votada, y el `diff(...).hasOnly([...])` impide renombrarla o escribir campos
-   inventados. La lista tiene que coincidir con `QUESTION_IDS`.
+2. **`update` sobre `codigos` solo para el paso `false → true` de `voted`, y
+   solo con la lista blanca.** `resource.data.voted == false &&
+   request.resource.data.voted == true` impide resucitar una invitación ya
+   votada, y el `diff(...).hasOnly([...])` impide escribir campos inventados.
+   La lista tiene que coincidir con `QUESTION_IDS`.
 3. **No rompas el comodín `/{document=**}`.** Es la red de seguridad de cualquier
    colección que alguien añada dentro de seis meses.
 

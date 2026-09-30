@@ -5,8 +5,7 @@ import {
 
 export interface InvitationRecord {
   id: string;
-  nombre: string;
-  haVotado: boolean;
+  voted: boolean;
 }
 
 export async function validateInvitation(
@@ -25,7 +24,7 @@ export async function validateInvitation(
     throw new InvalidInvitationError('invitation-not-found', 'invitation-not-found');
   }
 
-  if (invitation.haVotado) {
+  if (invitation.voted) {
     throw new InvitationAlreadyUsedError('invitation-already-used', 'invitation-already-used');
   }
 

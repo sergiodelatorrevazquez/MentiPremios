@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{
-  participantName: string;
+  /** Identificador del documento. Hoy se muestra tal cual; aquí irá el saludo. */
+  codigo: string;
 }>();
 
 const emit = defineEmits<{
@@ -15,7 +16,7 @@ function onContinue() {
 <template>
   <div>
     <h1 class="hero-title">
-      {{ props.participantName }}
+      {{ props.codigo }}
     </h1>
     <p class="section-description">
       Cuando pulses el botón ya empezarán a salir las preguntas una a una, y por si no te acuerdas, tienes que votar a Miguel como correa obligatoriamente.

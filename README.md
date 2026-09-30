@@ -69,13 +69,12 @@ Luego, crea al menos un código de invitación en la consola de Firebase (colecc
 ```
 codigos/
   └── palabra-de-prueba/
-        ├── nombre: "Usuario de prueba"
-        └── haVotado: false
+        └── voted: false
 ```
 
 El **ID del documento es la palabra secreta**, y tiene que ir en minúsculas: tanto el cliente como el repositorio normalizan con `trim()` y `toLowerCase()` antes de leer.
 
-> Cada documento guarda también el voto de esa persona: al responder, el mismo documento pasa a `haVotado: true` y gana un campo por pregunta. No hay una segunda colección de respuestas. `nombre` es opcional: si falta, la aplicación saluda con el ID del documento.
+> Cada documento guarda también el voto de esa persona: al responder, el mismo documento pasa a `voted: true` y gana un campo por pregunta. No hay una segunda colección de respuestas. El documento no guarda ningún dato sobre la persona aparte del identificador, así que la pantalla de bienvenida muestra el identificador tal cual.
 
 Y despliega las reglas, que son la barrera real de las palabras secretas:
 
@@ -189,7 +188,7 @@ menciona `list`, alguien ha intentado enumerar `codigos`: eso está prohibido a
 propósito y así debe seguir. Para preparar una prueba, `get` sí funciona con un
 ID que ya conoces. Ojo con la contrapartida de que solo haya una colección: un
 `get` sobre el código de otra persona devuelve también sus respuestas. Para
-inspeccionar el estado de `haVotado` de todos los participantes desde la consola
+inspeccionar el estado de `voted` de todos los participantes desde la consola
 de Firebase, se puede: la consola usa permisos de administrador y no le afectan
 estas reglas.
 

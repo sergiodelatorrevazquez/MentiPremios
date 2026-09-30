@@ -8,8 +8,8 @@ import {
   type InvitationRecord,
 } from '../../../src/features/survey/application/validateInvitation';
 
-const LIBRE: InvitationRecord = { id: 'abc-123', nombre: 'Sergio', haVotado: false };
-const USADA: InvitationRecord = { id: 'abc-123', nombre: 'Sergio', haVotado: true };
+const LIBRE: InvitationRecord = { id: 'abc-123', voted: false };
+const USADA: InvitationRecord = { id: 'abc-123', voted: true };
 
 describe('invitación inexistente', () => {
   it('lanza InvalidInvitationError cuando elfinder no encuentra nada', async () => {
@@ -20,7 +20,7 @@ describe('invitación inexistente', () => {
   });
 
   it('no intenta leer la invitacion marcada como usada cuando no existe', async () => {
-    // El caso `usado` solo aplica a registros existentes; uno inexistente es otro error.
+    // El caso `voted` solo aplica a registros existentes; uno inexistente es otro error.
     await expect(validateInvitation('missing', async () => null))
       .rejects.not.toBeInstanceOf(InvitationAlreadyUsedError);
   });
@@ -34,10 +34,11 @@ describe('invitación utilizada', () => {
     });
   });
 
-  it('devuelve el error de invitacion usada aunque el nombre este vacio', async () => {
-    const conNombreVacio: InvitationRecord = { id: 'abc-123', nombre: '', haVotado: true };
-
-    await expect(validateInvitation('used', async () => conNombreVacio))
+  it('no guarda ningun dato mas sobre la persona que el identificador', async () => {
+    // El documento no tiene nombre: solo `voted`. Que la validacion no dependa
+    // de nada mas es lo que permite añadir bienvenidas luego sin tocar reglas.
+    expect(Object.keys(USADA).sort()).toEqual(['id', 'voted']);
+    await expect(validateInvitation('used', async () => USADA))
       .rejects.toBeInstanceOf(InvitationAlreadyUsedError);
   });
 });

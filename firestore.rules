@@ -17,17 +17,19 @@ service cloud.firestore {
       allow list: if false;
       allow create, delete: if false;
 
-      // Al votar se escribe, en el mismo documento, `haVotado` a true y un
-      // campo por pregunta con la opción elegida. `diff` acota el cambio a esa
-      // lista exacta, así que no se puede tocar `nombre`, no se pueden escribir
-      // campos inventados y una invitación ya votada no se puede resucitar.
+      // Al votar se escribe, en el mismo documento, `voted` a true y un campo
+      // por pregunta con la opción elegida. `diff` acota el cambio a esa lista
+      // exacta, así que no se pueden escribir campos inventados ni devolver
+      // una invitación ya votada a sin votar. No hay ningún otro campo que
+      // proteger: el documento no guarda datos sobre la persona aparte del
+      // identificador.
       //
       // La lista debe coincidir con `QUESTION_IDS`; el test de contrato de
       // `firestore.rules` falla si se añade una pregunta y no se añade aquí.
-      allow update: if resource.data.haVotado == false
-        && request.resource.data.haVotado == true
+      allow update: if resource.data.voted == false
+        && request.resource.data.voted == true
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'haVotado',
+          'voted',
           'tonto',
           'casper',
           'comefeas',

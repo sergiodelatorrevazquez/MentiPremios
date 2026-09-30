@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{
-  participantName: string;
+  codigo: string;
   message: string | null;
 }>();
 </script>
@@ -8,7 +8,7 @@ const props = defineProps<{
 <template>
   <div>
     <h1 class="hero-title">
-      Gracias por participar, {{ props.participantName }}
+      Gracias por participar, {{ props.codigo }}
     </h1>
     <p class="section-description">
       Tus respuestas se han guardado en Firebase y se usarán para montar una gala de premios inolvidable con todo el grupo.

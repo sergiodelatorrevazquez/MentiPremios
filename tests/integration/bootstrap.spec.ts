@@ -34,13 +34,12 @@ beforeEach(() => {
 
 describe('createAppServices', () => {
   it('devuelve la invitación que encuentra en Firestore, con el secreto normalizado', async () => {
-    const findInvitation = vi.fn().mockResolvedValue({ id: 'secret-1', nombre: 'Sergio', haVotado: false });
+    const findInvitation = vi.fn().mockResolvedValue({ id: 'secret-1', voted: false });
     const services = withStore({ findInvitation });
 
     await expect(services.validateInvitation('  SECRET-1  ')).resolves.toEqual({
       id: 'secret-1',
-      nombre: 'Sergio',
-      haVotado: false,
+      voted: false,
     });
 
     expect(findInvitation).toHaveBeenCalledWith('secret-1');
@@ -63,7 +62,7 @@ describe('createAppServices', () => {
 
   it('traduce una invitación ya usada al error de respuesta ya realizada', async () => {
     const services = withStore({
-      findInvitation: vi.fn().mockResolvedValue({ id: 'secret-1', nombre: 'Sergio', haVotado: true }),
+      findInvitation: vi.fn().mockResolvedValue({ id: 'secret-1', voted: true }),
     });
 
     await expect(services.validateInvitation('secret-1'))

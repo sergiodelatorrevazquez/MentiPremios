@@ -51,13 +51,13 @@ describe('reglas que protegen las palabras secretas', () => {
   it('solo admite pasar la invitación de sin votar a votada', () => {
     const codigos = block('codigos/{invitationId}');
 
-    expect(codigos).toMatch(/resource\.data\.haVotado == false/);
-    expect(codigos).toMatch(/request\.resource\.data\.haVotado == true/);
+    expect(codigos).toMatch(/resource\.data\.voted == false/);
+    expect(codigos).toMatch(/request\.resource\.data\.voted == true/);
   });
 
-  it('acota el cambio a `haVotado` y a los campos de las preguntas', () => {
-    // `diff` acota el cambio a esa lista, así que no se puede tocar `nombre`,
-    // escribir campos inventados ni devolver una invitación a sin votar.
+  it('acota el cambio a `voted` y a los campos de las preguntas', () => {
+    // `diff` acota el cambio a esa lista, así que no se pueden escribir campos
+    // inventados ni devolver una invitación a sin votar.
     expect(block('codigos/{invitationId}')).toMatch(/affectedKeys\(\)\.hasOnly\(\[/);
   });
 
@@ -69,7 +69,7 @@ describe('reglas que protegen las palabras secretas', () => {
 
     const permitidos = (lista ?? '').match(/'([^']+)'/g)?.map((c) => c.slice(1, -1)) ?? [];
 
-    expect(permitidos).toEqual(['haVotado', ...Object.values(QUESTION_IDS)]);
+    expect(permitidos).toEqual(['voted', ...Object.values(QUESTION_IDS)]);
   });
 });
 

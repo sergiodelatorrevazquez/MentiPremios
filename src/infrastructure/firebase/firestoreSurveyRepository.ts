@@ -30,21 +30,19 @@ export interface SurveyStore {
 function parseInvitation(id: string, data: unknown): StoredInvitation | null {
   if (typeof data !== 'object' || data === null) return null;
 
-  const { nombre, haVotado } = data as { nombre?: unknown; haVotado?: unknown };
-  if (nombre !== undefined && (typeof nombre !== 'string' || nombre.trim().length === 0)) return null;
-  if (typeof haVotado !== 'boolean') return null;
+  const { voted } = data as { voted?: unknown };
+  if (typeof voted !== 'boolean') return null;
 
-  // `nombre` solo sirve para la bienvenida. Si no está, se usa el id, que ya
-  // identifica a la persona.
-  return { id, nombre: nombre ?? id, haVotado };
+  return { id, voted };
 }
 
 /**
  * Acceso directo a Firestore desde el navegador.
  *
- * Solo existe una colección, `codigos`, con un documento por persona. Antes de
- * votar, ese documento tiene su nombre y `haVotado: false`; al votar, se le
- * añaden un campo por pregunta con la opción elegida.
+ * Solo existe una colección, `codigos`, con un documento por persona. Su
+ * identificador es la palabra secreta y no se guarda ningún otro dato sobre
+ * ella. Antes de votar, el documento solo tiene `voted: false`; al votar, se le
+ * añade `voted: true` y un campo por pregunta con la opción elegida.
  *
  * La protección de las palabras secretas no está aquí, está en
  * `firestore.rules`: un documento se puede leer solo por identificador (`get`),
@@ -71,12 +69,12 @@ export class FirestoreSurveyRepository implements SurveyStore {
 
       const invitation = parseInvitation(response.invitationId, snapshot.data());
       if (!invitation) return 'not-found';
-      if (invitation.haVotado) return 'already-used';
+      if (invitation.voted) return 'already-used';
 
-      // Un único `update`: en el documento de la persona se pasa `haVotado` a
+      // Un único `update`: en el documento de la persona se pasa `voted` a
       // true y se escribe un campo por pregunta. No hay una segunda escritura
       // ni un documento aparte, así que no puede quedar medio guardado.
-      transaction.update(invitationRef, { haVotado: true, ...response.answers });
+      transaction.update(invitationRef, { voted: true, ...response.answers });
 
       return 'saved';
     });

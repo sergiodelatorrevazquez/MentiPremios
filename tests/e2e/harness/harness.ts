@@ -17,7 +17,6 @@ type Scenario = 'ok' | 'invalid' | 'used' | 'slow' | 'submit-error';
 
 const params = new URLSearchParams(window.location.search);
 const scenario = (params.get('scenario') ?? 'ok') as Scenario;
-const participantName = params.get('name') ?? 'Amigo';
 const delay = Number(params.get('delay') ?? 0);
 
 function wait(ms: number): Promise<void> {
@@ -40,7 +39,7 @@ const services: AppServices = {
     if (scenario === 'used') {
       throw new InvitationAlreadyUsedError('invitation-already-used', 'invitation-already-used');
     }
-    return { id: secret, nombre: participantName, haVotado: false };
+    return { id: secret, voted: false };
   },
   async submitSurvey(input) {
     if (delay > 0) await wait(delay);
