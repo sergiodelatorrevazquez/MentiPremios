@@ -18,18 +18,6 @@ Es una SPA estática: **no hay servidor**. El navegador habla directamente con F
 - **Persistencia en Firebase** — todos los votos se guardan en Firestore, sin servidor intermedio
 - **Sin enumerar** — las reglas permiten leer una invitación por su identificador, nunca la colección entera
 
-## 🚀 Demo
-
-```bash
-npm install
-cp .env.example .env.local     # rellena las seis variables VITE_FIREBASE_*
-npm run dev
-```
-
-Abre `http://localhost:5173` e introduce una palabra secreta que hayas creado en Firestore.
-
-> Necesitas las reglas desplegadas en tu proyecto (`firebase deploy --only firestore:rules --project mentipremios`). Sin ellas, Firestore deniega el acceso al navegador y el login no funciona.
-
 ## 📦 Stack
 
 | Tecnología | Versión |
@@ -64,10 +52,10 @@ VITE_FIREBASE_APP_ID=tu-app-id
 
 > App Check es **opcional**. Si defines `VITE_FIREBASE_APP_CHECK_SITE_KEY`, `src/infrastructure/firebase/client.ts` activa reCAPTCHA v3; si no, la aplicación arranca igual y sin lanzar ningún error.
 
-Luego, crea al menos un código de invitación en la consola de Firebase (colección `codigos`):
+Luego, crea al menos un código de invitación en la consola de Firebase (colección `codes`):
 
 ```
-codigos/
+codes/
   └── palabra-de-prueba/
         └── voted: false
 ```
@@ -92,17 +80,13 @@ rellénalo con las credenciales de tu proyecto de Firebase.
 
 ## 📖 Documentación
 
-| Documento | Descripción |
+Solo dos documentos, porque el repositorio es privado y solo lo lee quien lo
+mantiene:
+
+| Documento | Para qué |
 |---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura, flujo de datos y decisiones técnicas |
-| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Guía de contribución: dónde tocar cada cosa y cómo pasar los tests |
-| [docs/RECOVERY.md](docs/RECOVERY.md) | Qué ocurre y qué se recupera cuando algo falla |
-| [docs/API.md](docs/API.md) | Modelo de datos Firestore, operaciones del cliente y reglas |
-| [docs/SECURITY.md](docs/SECURITY.md) | Por qué las palabras secretas siguen siendo secretas sin backend |
-| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Guía de uso para participantes |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Despliegue en producción (Vercel, Netlify, Firebase Hosting) |
-| [docs/DEV_SETUP.md](docs/DEV_SETUP.md) | Configuración del entorno de desarrollo |
-| [docs/MIGRATION.md](docs/MIGRATION.md) | Bitácora del refactor a monolito modular y del acceso directo |
+| [docs/SECURITY.md](docs/SECURITY.md) | Por qué las palabras siguen siendo secretas sin backend, y cuál es el coste del modelo |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Desplegar, dejar lista una gala nueva, y qué hacer si algo falla |
 
 ## 🧪 Tests
 
@@ -176,7 +160,7 @@ Casi siempre es que las reglas no están desplegadas o están en otro proyecto.
 firebase deploy --only firestore:rules --project mentipremios
 ```
 
-Comprueba también que el ID del documento de `codigos` está **en minúsculas** y
+Comprueba también que el ID del documento de `codes` está **en minúsculas** y
 sin espacios al final: se normaliza con `trim()` + `toLowerCase()`, así que
 `Galaxia-2025` es invisible. La forma de arreglarlo es renombrar el documento,
 no tocar la interfaz.
@@ -184,7 +168,7 @@ no tocar la interfaz.
 **Sale un error de permisos en la consola del navegador**
 
 Las reglas están pensadas para leerse documento a documento, no por colección. Si el error
-menciona `list`, alguien ha intentado enumerar `codigos`: eso está prohibido a
+menciona `list`, alguien ha intentado enumerar `codes`: eso está prohibido a
 propósito y así debe seguir. Para preparar una prueba, `get` sí funciona con un
 ID que ya conoces. Ojo con la contrapartida de que solo haya una colección: un
 `get` sobre el código de otra persona devuelve también sus respuestas. Para
@@ -211,29 +195,13 @@ guardar.
 El asset no está en `src/assets/` con el nombre exacto que espera el catálogo
 (`foto-3.jpg`, `video-2.webm`…). `import.meta.glob` se resuelve en build, así
 que hay que volver a compilar. El fallo no rompe la build a propósito, y se
-detecta con el contador `multimedia_failed`. Ver
-[DEPLOYMENT.md §6](docs/DEPLOYMENT.md#6-gestión-de-assets).
-
-**Las pruebas fallan con `vi is not defined` o con rutas movidas**
-
-`vite.config.ts` ya incluye `tests/unit` y `tests/integration`. Si has añadido
-una spec en una carpeta nueva, revisa que `tests/unit/contracts/testLayout.spec.ts`
-la reconozca: ese test falla a propósito cuando aparece una capa desconocida.
+detecta con el contador `multimedia_failed`.
 
 **¿Cómo despliego a producción?**
 
-`npm run build`, `firebase deploy --only firestore:rules`, las seis variables en
-el panel de Vercel y desplegar. La lista completa está en
+Un `git push` a `main` despliega la web. Las reglas de Firestore van aparte, con
+`firebase deploy --only firestore:rules --project mentipremios`. Está todo en
 [DEPLOYMENT.md](docs/DEPLOYMENT.md).
-
-## 🤝 Contribuir
-
-Lee la [guía de contribución](docs/CONTRIBUTING.md): dónde añadir una pregunta, cómo pasar los tests y qué reglas de dependencia no se cruzan.
-
-1. Haz un fork del repositorio
-2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
-3. Haz tus cambios y ejecuta `npm run typecheck && npm run lint && npm test -- --run` (o `npm run test:unit` / `npm run test:integration` / `npm run test:e2e` por nivel)
-4. Envía un pull request
 
 ## 📄 Licencia
 

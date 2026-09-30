@@ -47,7 +47,7 @@ describe('adaptador de la encuesta', () => {
   });
 
   it('solo lee por identificador: ninguna consulta que pueda enumerar invitaciones', () => {
-    // `firestore.rules` prohíbe `list` sobre `codigos`. Un `getDocs` o un
+    // `firestore.rules` prohíbe `list` sobre `codes`. Un `getDocs` o un
     // `query` aquí devolvería un error en producción, así que el contrato lo
     // fija en el código: la palabra secreta solo se puede conocer, no listar.
     expect(repositorySource).not.toMatch(/\bgetDocs\b/);
@@ -76,7 +76,7 @@ describe('adaptador de la encuesta', () => {
     const colecciones = (repositorySource.match(/_COLLECTION = '([^']+)'/g) ?? [])
       .map((consta) => consta.match(/'([^']+)'/)?.[1]);
 
-    expect(colecciones).toEqual(['codigos']);
+    expect(colecciones).toEqual(['codes']);
   });
 });
 

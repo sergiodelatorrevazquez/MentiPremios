@@ -13,7 +13,7 @@ const rules = readFileSync(resolve(__dirname, '../../../firestore.rules'), 'utf8
 
 /**
  * Devuelve el texto de un bloque `match`. No basta con buscar el primer `}`:
- * la propia ruta lleva llaves (`codigos/{invitationId}`), así que hay que
+ * la propia ruta lleva llaves (`codes/{invitationId}`), así que hay que
  * emparejar la llave que abre el bloque con su cierre.
  */
 function block(path: string): string {
@@ -37,34 +37,34 @@ function block(path: string): string {
 
 describe('reglas que protegen las palabras secretas', () => {
   it('permite leer una invitación concreta, que es lo que hace el login', () => {
-    expect(block('codigos/{invitationId}')).toMatch(/allow get:\s*if true/);
+    expect(block('codes/{invitationId}')).toMatch(/allow get:\s*if true/);
   });
 
   it('prohíbe enumerar las invitaciones: sin list no se descubren las palabras', () => {
-    expect(block('codigos/{invitationId}')).toMatch(/allow list:\s*if false/);
+    expect(block('codes/{invitationId}')).toMatch(/allow list:\s*if false/);
   });
 
   it('no deja crear ni borrar invitaciones desde el cliente', () => {
-    expect(block('codigos/{invitationId}')).toMatch(/allow create, delete:\s*if false/);
+    expect(block('codes/{invitationId}')).toMatch(/allow create, delete:\s*if false/);
   });
 
   it('solo admite pasar la invitación de sin votar a votada', () => {
-    const codigos = block('codigos/{invitationId}');
+    const codes = block('codes/{invitationId}');
 
-    expect(codigos).toMatch(/resource\.data\.voted == false/);
-    expect(codigos).toMatch(/request\.resource\.data\.voted == true/);
+    expect(codes).toMatch(/resource\.data\.voted == false/);
+    expect(codes).toMatch(/request\.resource\.data\.voted == true/);
   });
 
   it('acota el cambio a `voted` y a los campos de las preguntas', () => {
     // `diff` acota el cambio a esa lista, así que no se pueden escribir campos
     // inventados ni devolver una invitación a sin votar.
-    expect(block('codigos/{invitationId}')).toMatch(/affectedKeys\(\)\.hasOnly\(\[/);
+    expect(block('codes/{invitationId}')).toMatch(/affectedKeys\(\)\.hasOnly\(\[/);
   });
 
   it('la lista de campos que puede escribir coincide con las preguntas reales', () => {
     // Si se añade una pregunta al catálogo y no se añade a las reglas, el voto
     // se guardaría y las reglas lo rechazarían. Este test es el que avisa.
-    const [, lista] = block('codigos/{invitationId}')
+    const [, lista] = block('codes/{invitationId}')
       .match(/affectedKeys\(\)\.hasOnly\(\[([\s\S]*?)\]\)/) ?? [];
 
     const permitidos = (lista ?? '').match(/'([^']+)'/g)?.map((c) => c.slice(1, -1)) ?? [];

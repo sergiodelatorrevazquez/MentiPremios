@@ -1,7 +1,7 @@
 import { doc, getDoc, runTransaction, type Firestore } from 'firebase/firestore';
 import type { CodigoInvitacion } from '../../features/survey/domain/survey.types';
 
-const INVITATIONS_COLLECTION = 'codigos';
+const INVITATIONS_COLLECTION = 'codes';
 
 /** Invitación leída de Firestore, ya validada y con su identificador. */
 export type StoredInvitation = CodigoInvitacion & { id: string };
@@ -39,7 +39,7 @@ function parseInvitation(id: string, data: unknown): StoredInvitation | null {
 /**
  * Acceso directo a Firestore desde el navegador.
  *
- * Solo existe una colección, `codigos`, con un documento por persona. Su
+ * Solo existe una colección, `codes`, con un documento por persona. Su
  * identificador es la palabra secreta y no se guarda ningún otro dato sobre
  * ella. Antes de votar, el documento solo tiene `voted: false`; al votar, se le
  * añade `voted: true` y un campo por pregunta con la opción elegida.

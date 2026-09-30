@@ -44,7 +44,7 @@ const REDACTED_KEYS = new Set([
   'palabrasclave',
   'premiorespuesta',
   'codigo',
-  'codigos',
+  'codes',
   'invitacion',
   'secretword',
   'palabrasecreta',
