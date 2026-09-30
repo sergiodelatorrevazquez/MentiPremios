@@ -4,7 +4,8 @@
 
 - **Node.js** 20 o superior
 - **npm** (incluido con Node.js)
-- Una cuenta de **Firebase** con Firestore habilitado
+- Una cuenta de **Firebase** con Firestore habilitado (el plan gratuito basta)
+- **firebase-tools**, solo para desplegar las reglas: `npm install -g firebase-tools`
 
 ---
 
@@ -23,9 +24,15 @@ cd MentiPremios
 npm install
 ```
 
+> Un solo `npm install`. No hay carpeta `functions/` ni segunda instalación.
+
 ### 3. Configurar Firebase
 
-Crea un archivo `.env.local` en la raíz del proyecto con tus credenciales de Firebase:
+Copia la plantilla y crea un archivo `.env.local` en la raíz del proyecto con tus credenciales de Firebase:
+
+```bash
+cp .env.example .env.local
+```
 
 ```bash
 VITE_FIREBASE_API_KEY=AIzaSy...
@@ -38,9 +45,25 @@ VITE_FIREBASE_APP_ID=1:123456789:web:abc123
 
 > Las credenciales se obtienen de **Firebase Console → Configuración del proyecto → Tus aplicaciones → App web**.
 
+> **Ninguna de las seis es secreta.** El prefijo `VITE_` significa que Vite las incrusta en el bundle y cualquiera puede leerlas: son identificadores de proyecto, no credenciales. La clave privada de una cuenta de servicio no va aquí, jamás.
+
 > **`.env.local` está en `.gitignore`** — no se subirá al repositorio.
 
-### 4. Crear datos de prueba en Firestore
+> `VITE_FIREBASE_APP_CHECK_SITE_KEY` es **opcional** y no hace falta para trabajar. Si la defines, se activa reCAPTCHA v3; si no, la aplicación arranca igual. No hay que habilitar ningún proveedor en Firebase Authentication: el proyecto no usa Firebase Auth.
+
+### 4. Desplegar las reglas de Firestore
+
+El navegador habla directamente con Firestore, así que **sin reglas desplegadas no
+hay aplicación**: el login fallaría con `permission-denied` siempre.
+
+```bash
+firebase deploy --only firestore:rules --project mentipremios
+```
+
+Las reglas hacen que se pueda leer una invitación concreta por su identificador
+pero no enumerar la colección. Ver [SECURITY.md](SECURITY.md).
+
+### 5. Crear datos de prueba en Firestore
 
 En la consola de Firebase, crea la colección `codigos` con al menos un documento de prueba:
 
@@ -51,7 +74,10 @@ codigos/
         └── usado: false
 ```
 
-### 5. Iniciar el servidor de desarrollo
+El ID del documento es la palabra secreta y tiene que ir **en minúsculas**: la
+aplicación normaliza con `trim()` y `toLowerCase()` antes de leer.
+
+### 6. Iniciar el servidor de desarrollo
 
 ```bash
 npm run dev
@@ -68,6 +94,7 @@ Abre la URL que muestra Vite (normalmente `http://localhost:5173`).
 | `npm run dev` | Inicia servidor de desarrollo Vite (hot-reload) |
 | `npm run build` | Compila para producción en `dist/` |
 | `npm run preview` | Sirve la build de producción localmente |
+| `npm run typecheck` | `vue-tsc --noEmit`: tipos y plantillas `.vue` |
 | `npm test` | Ejecuta unitarias e integración en modo watch |
 | `npm test -- --run` | Ejecuta todo una sola vez (modo CI) |
 | `npm run test:unit` | Solo `tests/unit`, en watch |
@@ -81,23 +108,29 @@ Abre la URL que muestra Vite (normalmente `http://localhost:5173`).
 ## Estructura del proyecto
 
 ```
-src/
-├── app/                     # Shell y composition root
-├── features/survey/         # Dominio, casos de uso y presentación
-├── features/keywords/       # Contrato opcional
-├── infrastructure/firebase/ # Cliente y repositorios
-├── main.ts                  # Punto de entrada de la app
-└── assets/                  # Imágenes y vídeos
+firestore.rules                   # La barrera de seguridad: get sí, list no
+firebase.json                     # Solo declara las reglas
 
-functions/src/               # Cloud Functions callable
+src/
+├── main.ts                       # createApp + provide(APP_SERVICES_KEY, …)
+├── style.css                     # Tokens de diseño y estilos globales
+├── app/                          # App.vue (shell) y bootstrap.ts (composition root)
+├── features/
+│   ├── survey/                   # domain/, application/ y presentation/
+│   └── keywords/                 # Contrato opcional
+├── infrastructure/
+│   ├── firebase/                 # client.ts, firestoreSurveyRepository.ts, firestoreKeywordsRepository.ts
+│   ├── logging/                  # Logger con redacción de secretos
+│   └── metrics/                  # Contadores cerrados
+└── assets/                       # Imágenes y vídeos
 
 tests/
 ├── unit/
 │   ├── domain/              # Reglas puras y catálogo de assets, sin Vue
-│   ├── application/         # Casos de uso y handlers con dobles en memoria
+│   ├── application/         # Casos de uso con dobles en memoria
 │   ├── components/          # Cada SFC aislado con Vue Test Utils
 │   ├── infrastructure/      # Adaptadores con el SDK de Firebase simulado
-│   └── contracts/           # Invariantes del repo: tokens, estilos, esquema
+│   └── contracts/           # Invariantes del repo: tokens, estilos, reglas
 ├── integration/             # App completa con solo los adaptadores externos falsos
 └── e2e/                     # Chromium real sobre el harness
 ```
@@ -107,10 +140,10 @@ tests/
 | Lo que se prueba | Ubicación | Doble de frontera |
 |---|---|---|
 | Una regla pura del dominio | `tests/unit/domain/` | Ninguno |
-| Un caso de uso o un handler de Cloud Functions | `tests/unit/application/` | Repositorio o store en memoria |
+| Un caso de uso | `tests/unit/application/` | Repositorio en memoria |
 | Un componente Vue aislado | `tests/unit/components/` | Ninguno |
 | Un adaptador de Firebase | `tests/unit/infrastructure/` | `vi.mock` del SDK |
-| Una invariante de tokens, estilos, assets o esquema | `tests/unit/contracts/` | Lectura de ficheros |
+| Una invariante de tokens, estilos, assets, reglas o esquema | `tests/unit/contracts/` | Lectura de ficheros |
 | Varios niveles de la arquitectura a la vez | `tests/integration/` | Solo `AppServices` externos |
 | Comportamiento en navegador | `tests/e2e/` | `AppServices` simulados en el harness |
 
@@ -143,17 +176,19 @@ npm run test:ui
 - Questions: renderizado de opciones, selección, progreso, navegación siguiente/anterior, guardado al completar, pantalla de gracias
 - Visor de foto: apertura y cierre del modal
 
-**`tests/integration/bootstrap.spec.ts`** — Comprueba que la UI se conecta a las callables de validación y envío.
+**`tests/integration/bootstrap.spec.ts`** — Comprueba que el composition root conecta `AppServices` con el repositorio y traduce `'saved'`, `'already-used'` y `'not-found'` a los errores que la interfaz entiende.
 
-**`tests/unit/application/validateInvitationHandler.spec.ts`** y **`tests/unit/application/submitSurveyHandler.spec.ts`** — Verifican autenticación, validación de datos, idempotencia y operaciones de servidor.
+**`tests/unit/contracts/firestoreRules.spec.ts`** — Fija por texto el contrato de seguridad: `get` permitido en `codigos`, `list` prohibido, `update` acotado a `usado`, `respuestas` de solo `create` y el comodín denegado.
 
-**`tests/unit/contracts/`** — Tokens de diseño, `scoped` de estilos, esquema de documentos Firestore, favicon, contrato responsive y estructura del propio repo.
+**`tests/unit/contracts/`** — Tokens de diseño, `scoped` de estilos, favicon, contrato responsive, reglas de dependencia, contratos de repositorio y estructura del propio repo.
 
 ### Mocking
 
 - `tests/integration/App.spec.ts` usa servicios de aplicación provistos por el bootstrap
 - `tests/unit/infrastructure/` simula el SDK de Firebase con `vi.mock`
-- Los handlers de Functions usan stores falsos para probar su lógica sin Firebase Emulator
+- `tests/unit/contracts/firestoreRules.spec.ts` no necesita emulador: lee `firestore.rules` y `firebase.json` como ficheros
+
+> Las reglas de Firestore **no se ejecutan** en la suite. No hace falta: su contrato se fija por texto, y el SDK ya está doblado en `unit/infrastructure`. Un emulador en local es posible, pero añadiría un servicio que mantener a cambio de una garantía que el test da en milisegundos.
 
 ### Tests responsive (Playwright)
 
@@ -200,8 +235,10 @@ El proyecto usa ESLint 9 con configuración flat (`eslint.config.mjs`). Las regl
 
 | Problema | Solución |
 |---|---|
-| `VITE_FIREBASE_*` variables no encontradas | Copia `.env.local` desde el proyecto original o crea uno nuevo |
-| Error de Firebase "permission-denied" | Revisa las reglas de seguridad en Firebase Console |
+| `VITE_FIREBASE_*` variables no encontradas | Copia `.env.example` a `.env.local` y rellénalo con tu proyecto |
+| Login siempre da «palabra secreta incorrecta» | Suele ser que las reglas no están desplegadas: `firebase deploy --only firestore:rules --project mentipremios` |
+| El documento existe pero no se encuentra | El ID va **en minúsculas**: se normaliza con `trim()` + `toLowerCase()` |
+| Error de Firebase `permission-denied` | Casi siempre es una operación que las reglas prohíben; revisa `firestore.rules` |
 | Tests fallan por `vi is not defined` | Asegúrate de tener `globals: true` en `vite.config.ts` (ya configurado) |
 | Error `import.meta.glob` no encuentra assets | Añade los archivos multimedia en `src/assets/` siguiendo la convención de nombres |
 | Puerto 5173 ocupado | Vite asignará automáticamente otro puerto |
@@ -219,19 +256,38 @@ En `src/features/survey/domain/questions.ts`, añade un nuevo objeto al array `p
   id: 'nueva-pregunta',
   titulo: 'Nueva Pregunta del Año',
   opciones: [
-    { id: 'nueva-1', texto: 'Opción 1' },
-    { id: 'nueva-2', texto: 'Opción 2' },
+    { id: 'nueva-pregunta-1', texto: 'Opción 1' },
+    { id: 'nueva-pregunta-2', texto: 'Opción 2' },
   ],
 }
 ```
 
+El catálogo es la única fuente de verdad: no hay una allowlist en un servidor que
+pueda irse por delante. `validateSurveyAnswers` valida cada respuesta contra el
+catálogo, así que basta con esto. Lo que sí hay que tener en cuenta es que
+**cambiar el número de preguntas invalida los cuestionarios ya guardados**: planéalo
+como una migración de datos. Ver [DEPLOYMENT.md §4.2](DEPLOYMENT.md#42-cambiar-el-catálogo-de-preguntas).
+
 ### Añadir una nueva colección Firestore
 
-Las escrituras pasan por Cloud Functions, no por el navegador: las reglas de
-Firestore deniegan el acceso directo. Para datos nuevos, lo habitual es añadir
-una callable en `functions/src/` y un repositorio en
-`src/infrastructure/firebase/` que la invoque, siguiendo el patrón de
-`FirestoreKeywordsRepository`.
+El navegador escribe directamente, pero **no en cualquier sitio**: `firestore.rules`
+deniega por defecto con `allow read, write: if false` y hay que abrir la colección
+explícitamente. La secuencia es esta, y el orden importa:
+
+1. **Añade la regla** en `firestore.rules`, con el mínimo necesario. Piensa dos veces
+   en si necesita `list`: permitírlo publica la colección entera, y en este proyecto
+   eso significa publicar palabras secretas.
+2. **Despliega** `firebase deploy --only firestore:rules --project mentipremios`.
+3. **Escribe el repositorio** en `src/infrastructure/firebase/`, siguiendo el patrón de
+   `firestoreSurveyRepository.ts` o `firestoreKeywordsRepository.ts`.
+4. **Añade el test de contrato** en `tests/unit/contracts/`.
+
+Las reglas están fijadas por texto en `tests/unit/contracts/firestoreRules.spec.ts`, así
+que el paso 1 sin el paso de test es un commit que rompe la CI.
+
+> Añadir un `match /nueva/{id}` **no** desactiva el comodín `/{document=**}` para el
+> resto de rutas: sigue denegando todo lo no declarado. Esa es la razón por la que
+> `get` en `codigos` no filtra `palabrasClave`.
 
 ### Cambiar la imagen del avatar
 

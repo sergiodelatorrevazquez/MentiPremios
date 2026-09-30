@@ -1,31 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { Firestore } from 'firebase/firestore';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import {
   FirestoreKeywordsRepository,
   type KeywordsRepository,
 } from '../../../src/infrastructure/firebase/firestoreKeywordsRepository';
+import {
+  FirestoreSurveyRepository,
+  type SurveyStore,
+} from '../../../src/infrastructure/firebase/firestoreSurveyRepository';
 import type { KeywordSubmission } from '../../../src/features/keywords/domain/keywords.types';
-import {
-  createValidateInvitationHandler,
-  type InvitationLookupStore,
-} from '../../../functions/src/validateInvitationHandler';
-import {
-  createSubmitSurveyHandler,
-  type SubmissionStore,
-} from '../../../functions/src/submitSurveyHandler';
-import { parseSurveySubmission } from '../../../functions/src/surveyValidation';
-import { preguntas } from '../../../src/features/survey/domain/questions';
-import { SURVEY_OPTION_IDS } from '../../../functions/src/surveySchema';
 
-vi.mock('firebase/firestore', () => ({
-  addDoc: vi.fn(),
-  collection: vi.fn(),
-  serverTimestamp: vi.fn(),
-}));
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+const repositorySource = readFileSync(
+  resolve(__dirname, '../../../src/infrastructure/firebase/firestoreSurveyRepository.ts'),
+  'utf8',
+);
 
 describe('adaptador de palabras clave', () => {
   it('cumple la interfaz de repositorio de la aplicación', () => {
@@ -48,57 +38,43 @@ describe('adaptador de palabras clave', () => {
   });
 });
 
-describe('adaptadores de Cloud Function', () => {
-  it('el store de validación satisface la interfaz declarada', () => {
-    const store: InvitationLookupStore = {
-      document: vi.fn((id: string) => `codigos/${id}`),
-      get: vi.fn(),
-    };
-    const handler = createValidateInvitationHandler(store);
+describe('adaptador de la encuesta', () => {
+  it('cumple la interfaz que espera el composition root', () => {
+    const store: SurveyStore = new FirestoreSurveyRepository({} as Firestore);
 
-    expect(typeof handler).toBe('function');
-    expect(typeof store.document).toBe('function');
-    expect(typeof store.get).toBe('function');
+    expect(typeof store.findInvitation).toBe('function');
+    expect(typeof store.saveSurvey).toBe('function');
   });
 
-  it('el store de envío satisface la interfaz declarada', () => {
-    const store: SubmissionStore = {
-      document: vi.fn(),
-      newId: vi.fn(),
-      serverTimestamp: vi.fn(),
-      runTransaction: vi.fn(),
-    };
-
-    expect(typeof createSubmitSurveyHandler(store)).toBe('function');
-    expect(store).toMatchObject({
-      document: expect.any(Function),
-      newId: expect.any(Function),
-      serverTimestamp: expect.any(Function),
-      runTransaction: expect.any(Function),
-    });
+  it('solo lee por identificador: ninguna consulta que pueda enumerar invitaciones', () => {
+    // `firestore.rules` prohíbe `list` sobre `codigos`. Un `getDocs` o un
+    // `query` aquí devolvería un error en producción, así que el contrato lo
+    // fija en el código: la palabra secreta solo se puede conocer, no listar.
+    expect(repositorySource).not.toMatch(/\bgetDocs\b/);
+    expect(repositorySource).not.toMatch(/\bquery\s*\(/);
+    expect(repositorySource).not.toMatch(/\bwhere\s*\(/);
+    expect(repositorySource).not.toMatch(/\bcollection\s*\(\s*db\b/);
   });
 
-  it('el endpoint de envío acepta exactamente lo que produce el caso de uso', () => {
-    const answers = Object.fromEntries(
-      preguntas.map((pregunta) => [pregunta.id, pregunta.opciones[0].id]),
-    );
-    const submission = {
-      invitationId: 'secret-1',
-      participantName: 'Sergio',
-      answers,
-    };
-
-    // El contrato del endpoint no acepta participantName: solo id y respuestas.
-    expect(parseSurveySubmission({ invitationId: submission.invitationId, answers: submission.answers }))
-      .toEqual({ invitationId: 'secret-1', answers });
-    expect(parseSurveySubmission(submission)).toBeNull();
+  it('guarda la respuesta con el identificador de la invitación', () => {
+    // Clave del modelo de un solo uso: documento y invitación comparten id, de
+    // modo que el segundo envío choca con la prohibición de `update`.
+    expect(repositorySource).toContain('RESPONSES_COLLECTION, response.invitationId');
   });
 
-  it('la allowlist del servidor coincide con el catálogo del cliente', () => {
-    const catalogo = Object.fromEntries(
-      preguntas.map((pregunta) => [pregunta.id, pregunta.opciones.map((opcion) => opcion.id)]),
+  it('marca la invitación como usada en la misma transacción', () => {
+    expect(repositorySource).toContain('runTransaction');
+    expect(repositorySource).toMatch(/transaction\.update\(\s*invitationRef,\s*\{\s*usado:\s*true/);
+  });
+});
+
+describe('ubicación de las reglas', () => {
+  it('las reglas declaradas son las que se despliegan', () => {
+    const firebaseConfig = readFileSync(
+      join(resolve(__dirname, '../../../'), 'firebase.json'),
+      'utf8',
     );
 
-    expect(catalogo).toEqual(SURVEY_OPTION_IDS);
+    expect(firebaseConfig).toContain('firestore.rules');
   });
 });

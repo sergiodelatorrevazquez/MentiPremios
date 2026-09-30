@@ -1,7 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
-import { getAuth } from 'firebase/auth';
-import { getFunctions } from 'firebase/functions';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,10 +13,12 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 
+// App Check es opcional y nunca bloquea el arranque. La aplicación funciona sin
+// él: la protección de las palabras secretas la ponen `firestore.rules`, que
+// permite leer una invitación concreta pero prohíbe listar la colección. Si se
+// define la clave, además se puede activar la defensa de App Check en la
+// consola de Firebase.
 const appCheckSiteKey = import.meta.env.VITE_FIREBASE_APP_CHECK_SITE_KEY;
-if (!appCheckSiteKey && import.meta.env.PROD) {
-  throw new Error('VITE_FIREBASE_APP_CHECK_SITE_KEY is required in production.');
-}
 if (appCheckSiteKey) {
   initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider(appCheckSiteKey),
@@ -25,5 +26,4 @@ if (appCheckSiteKey) {
   });
 }
 
-export const auth = getAuth(app);
-export const functions = getFunctions(app, 'us-central1');
+export const db = getFirestore(app);

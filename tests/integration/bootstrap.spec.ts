@@ -1,197 +1,148 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { signInAnonymously, type Auth } from 'firebase/auth';
-import { httpsCallable, type Functions } from 'firebase/functions';
+import type { Firestore } from 'firebase/firestore';
 import { createAppServices } from '../../src/app/bootstrap';
 import { preguntas } from '../../src/features/survey/domain/questions';
 import {
   InvitationAlreadyUsedError,
   InvalidInvitationError,
+  InvalidSubmissionError,
   PersistenceError,
 } from '../../src/features/survey/application/errors';
+import { FirestoreSurveyRepository, type SurveyStore } from '../../src/infrastructure/firebase/firestoreSurveyRepository';
 
-vi.mock('firebase/auth', () => ({
-  signInAnonymously: vi.fn(),
+vi.mock('../../src/infrastructure/firebase/firestoreSurveyRepository', () => ({
+  FirestoreSurveyRepository: vi.fn(),
 }));
 
-vi.mock('firebase/functions', () => ({
-  httpsCallable: vi.fn(),
-}));
+const db = {} as Firestore;
+
+function withStore(store: Partial<SurveyStore>): ReturnType<typeof createAppServices> {
+  vi.mocked(FirestoreSurveyRepository).mockImplementation(
+    () => store as unknown as FirestoreSurveyRepository,
+  );
+
+  return createAppServices(db);
+}
+
+const respuestasCompletas = Object.fromEntries(
+  preguntas.map((pregunta) => [pregunta.id, pregunta.opciones[0].id]),
+);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('createAppServices', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(signInAnonymously).mockResolvedValue({ user: { uid: 'anonymous-user' } } as never);
-  });
+  it('devuelve la invitación que encuentra en Firestore, con el secreto normalizado', async () => {
+    const findInvitation = vi.fn().mockResolvedValue({ id: 'secret-1', nombre: 'Sergio', usado: false });
+    const services = withStore({ findInvitation });
 
-  it('validates a normalized invitation through the callable and returns its display name', async () => {
-    const auth = { currentUser: null } as Auth;
-    const functions = {} as Functions;
-    const validateCallable = vi.fn().mockResolvedValue({ data: { participantName: 'Sergio' } });
-    const submitCallable = vi.fn();
-    vi.mocked(httpsCallable)
-      .mockReturnValueOnce(validateCallable as never)
-      .mockReturnValueOnce(submitCallable as never);
-
-    const services = createAppServices(auth, functions);
     await expect(services.validateInvitation('  SECRET-1  ')).resolves.toEqual({
       id: 'secret-1',
       nombre: 'Sergio',
       usado: false,
     });
 
-    expect(signInAnonymously).toHaveBeenCalledWith(auth);
-    expect(httpsCallable).toHaveBeenCalledWith(functions, 'validateInvitation');
-    expect(validateCallable).toHaveBeenCalledWith({ secret: 'secret-1' });
+    expect(findInvitation).toHaveBeenCalledWith('secret-1');
   });
 
-  it('submits through the callable endpoint after anonymous authentication', async () => {
-    const auth = { currentUser: null } as Auth;
-    const functions = {} as Functions;
-    const validateCallable = vi.fn();
-    const submitCallable = vi.fn().mockResolvedValue({ data: { submitted: true } });
-    vi.mocked(httpsCallable)
-      .mockReturnValueOnce(validateCallable as never)
-      .mockReturnValueOnce(submitCallable as never);
-    const answers = Object.fromEntries(
-      preguntas.map((question) => [question.id, question.opciones[0].id]),
-    );
-    const services = createAppServices(auth, functions);
+  it('rechaza un secreto vacío sin preguntar a Firestore', async () => {
+    const findInvitation = vi.fn();
+    const services = withStore({ findInvitation });
 
-    await services.submitSurvey({
-      invitationId: 'inv-1',
-      participantName: 'Sergio',
-      questions: preguntas,
-      answers,
-    });
-
-    expect(signInAnonymously).toHaveBeenCalledWith(auth);
-    expect(httpsCallable).toHaveBeenNthCalledWith(1, functions, 'validateInvitation');
-    expect(httpsCallable).toHaveBeenNthCalledWith(2, functions, 'submitSurvey');
-    expect(submitCallable).toHaveBeenCalledWith({ invitationId: 'inv-1', answers });
+    await expect(services.validateInvitation('   ')).rejects.toBeInstanceOf(InvalidInvitationError);
+    expect(findInvitation).not.toHaveBeenCalled();
   });
 
-  it('maps callable invitation errors to the existing login error types', async () => {
-    const auth = { currentUser: { uid: 'anonymous-user' } } as Auth;
-    const validateCallable = vi.fn()
-      .mockRejectedValueOnce({ code: 'functions/not-found' })
-      .mockRejectedValueOnce({ code: 'functions/failed-precondition' });
-    vi.mocked(httpsCallable).mockReturnValue(validateCallable as never);
-    const services = createAppServices(auth, {} as Functions);
+  it('traduce una invitación inexistente al error de palabra incorrecta', async () => {
+    const services = withStore({ findInvitation: vi.fn().mockResolvedValue(null) });
 
-    await expect(services.validateInvitation('missing')).rejects.toBeInstanceOf(InvalidInvitationError);
-    await expect(services.validateInvitation('used')).rejects.toBeInstanceOf(InvitationAlreadyUsedError);
-  });
-
-  it('maps a rejected invitation argument to a login error too', async () => {
-    const auth = { currentUser: { uid: 'anonymous-user' } } as Auth;
-    const validateCallable = vi.fn().mockRejectedValue({ code: 'functions/invalid-argument' });
-    vi.mocked(httpsCallable).mockReturnValue(validateCallable as never);
-
-    await expect(createAppServices(auth, {} as Functions).validateInvitation('  '))
+    await expect(services.validateInvitation('no-existe'))
       .rejects.toBeInstanceOf(InvalidInvitationError);
   });
 
-  it('propagates a repository failure that is not a known invitation error', async () => {
-    const auth = { currentUser: { uid: 'anonymous-user' } } as Auth;
-    const fallo = { code: 'functions/internal', message: 'backend down' };
-    const validateCallable = vi.fn().mockRejectedValue(fallo);
-    vi.mocked(httpsCallable).mockReturnValue(validateCallable as never);
-
-    const error = await createAppServices(auth, {} as Functions)
-      .validateInvitation('secret-1')
-      .catch((e) => e);
-
-    expect(error).toBe(fallo);
-    expect(error).not.toBeInstanceOf(InvalidInvitationError);
-    expect(error).not.toBeInstanceOf(InvitationAlreadyUsedError);
-  });
-
-  it('rejects a malformed callable response instead of trusting it', async () => {
-    const auth = { currentUser: { uid: 'anonymous-user' } } as Auth;
-    const validateCallable = vi.fn().mockResolvedValue({ data: { participantName: 42 } });
-    vi.mocked(httpsCallable).mockReturnValue(validateCallable as never);
-
-    await expect(createAppServices(auth, {} as Functions).validateInvitation('secret-1'))
-      .rejects.toThrow('Invalid invitation validation response.');
-  });
-
-  it('allows retrying a failed submission with the same answers', async () => {
-    const auth = { currentUser: { uid: 'anonymous-user' } } as Auth;
-    const answers = Object.fromEntries(
-      preguntas.map((question) => [question.id, question.opciones[0].id]),
-    );
-    const validateCallable = vi.fn();
-    const submitCallable = vi.fn()
-      .mockRejectedValueOnce(new Error('network down'))
-      .mockResolvedValueOnce({ data: { submitted: true } });
-    vi.mocked(httpsCallable)
-      .mockReturnValueOnce(validateCallable as never)
-      .mockReturnValueOnce(submitCallable as never);
-    const services = createAppServices(auth, {} as Functions);
-    const request = { invitationId: 'inv-1', participantName: 'Sergio', questions: preguntas, answers };
-
-    await expect(services.submitSurvey(request)).rejects.toBeInstanceOf(PersistenceError);
-    await expect(services.submitSurvey(request)).resolves.toEqual({
-      invitationId: 'inv-1',
-      participantName: 'Sergio',
-      answers,
+  it('traduce una invitación ya usada al error de respuesta ya realizada', async () => {
+    const services = withStore({
+      findInvitation: vi.fn().mockResolvedValue({ id: 'secret-1', nombre: 'Sergio', usado: true }),
     });
-    expect(submitCallable).toHaveBeenCalledTimes(2);
+
+    await expect(services.validateInvitation('secret-1'))
+      .rejects.toBeInstanceOf(InvitationAlreadyUsedError);
   });
 
-  it('surfaces a duplicate submission as a persistence error', async () => {
-    const auth = { currentUser: { uid: 'anonymous-user' } } as Auth;
-    const answers = Object.fromEntries(
-      preguntas.map((question) => [question.id, question.opciones[0].id]),
-    );
-    const validateCallable = vi.fn();
-    const submitCallable = vi.fn().mockRejectedValue({ code: 'functions/failed-precondition' });
-    vi.mocked(httpsCallable)
-      .mockReturnValueOnce(validateCallable as never)
-      .mockReturnValueOnce(submitCallable as never);
+  it('guarda la encuesta y devuelve el envío', async () => {
+    const saveSurvey = vi.fn().mockResolvedValue('saved');
+    const services = withStore({ saveSurvey });
 
-    await expect(createAppServices(auth, {} as Functions).submitSurvey({
+    await expect(services.submitSurvey({
       invitationId: 'inv-1',
       participantName: 'Sergio',
       questions: preguntas,
-      answers,
-    })).rejects.toBeInstanceOf(PersistenceError);
+      answers: respuestasCompletas,
+    })).resolves.toEqual({
+      invitationId: 'inv-1',
+      participantName: 'Sergio',
+      answers: respuestasCompletas,
+    });
+
+    expect(saveSurvey).toHaveBeenCalledWith({
+      invitationId: 'inv-1',
+      participantName: 'Sergio',
+      answers: respuestasCompletas,
+    });
   });
 
-  it('signs in anonymously before the first callable when there is no session', async () => {
-    const auth = { currentUser: null } as Auth;
-    const validateCallable = vi.fn().mockResolvedValue({ data: { participantName: 'Sergio' } });
-    const submitCallable = vi.fn().mockResolvedValue({ data: { submitted: true } });
-    vi.mocked(httpsCallable)
-      .mockReturnValueOnce(validateCallable as never)
-      .mockReturnValueOnce(submitCallable as never);
-    const services = createAppServices(auth, {} as Functions);
-    const answers = Object.fromEntries(
-      preguntas.map((question) => [question.id, question.opciones[0].id]),
-    );
+  it('no guarda nada si las respuestas no son válidas', async () => {
+    const saveSurvey = vi.fn();
+    const services = withStore({ saveSurvey });
 
-    await services.validateInvitation('secret-1');
-    await services.submitSurvey({ invitationId: 'inv-1', participantName: 'Sergio', questions: preguntas, answers });
+    await expect(services.submitSurvey({
+      invitationId: 'inv-1',
+      participantName: 'Sergio',
+      questions: preguntas,
+      answers: { tonto: 'tonto-1' },
+    })).rejects.toBeInstanceOf(InvalidSubmissionError);
 
-    expect(signInAnonymously).toHaveBeenCalledWith(auth);
-    expect(signInAnonymously).toHaveBeenCalledTimes(2);
+    expect(saveSurvey).not.toHaveBeenCalled();
   });
 
-  it('reuses an existing anonymous session instead of signing in again', async () => {
-    const auth = { currentUser: { uid: 'anonymous-user' } } as Auth;
-    const validateCallable = vi.fn().mockResolvedValue({ data: { participantName: 'Sergio' } });
-    const submitCallable = vi.fn().mockResolvedValue({ data: { submitted: true } });
-    vi.mocked(httpsCallable)
-      .mockReturnValueOnce(validateCallable as never)
-      .mockReturnValueOnce(submitCallable as never);
-    const services = createAppServices(auth, {} as Functions);
-    const answers = Object.fromEntries(
-      preguntas.map((question) => [question.id, question.opciones[0].id]),
-    );
+  it('traduce una invitación que desaparece entre el login y el envío', async () => {
+    const services = withStore({ saveSurvey: vi.fn().mockResolvedValue('not-found') });
 
-    await services.validateInvitation('secret-1');
-    await services.submitSurvey({ invitationId: 'inv-1', participantName: 'Sergio', questions: preguntas, answers });
+    await expect(services.submitSurvey({
+      invitationId: 'inv-1',
+      participantName: 'Sergio',
+      questions: preguntas,
+      answers: respuestasCompletas,
+    })).rejects.toBeInstanceOf(InvalidInvitationError);
+  });
 
-    expect(signInAnonymously).not.toHaveBeenCalled();
+  it('traduce una invitación que alguien usaba por delante', async () => {
+    const services = withStore({ saveSurvey: vi.fn().mockResolvedValue('already-used') });
+
+    await expect(services.submitSurvey({
+      invitationId: 'inv-1',
+      participantName: 'Sergio',
+      questions: preguntas,
+      answers: respuestasCompletas,
+    })).rejects.toBeInstanceOf(InvitationAlreadyUsedError);
+  });
+
+  it('envuelve un fallo de Firestore y permite reintentar con las mismas respuestas', async () => {
+    const saveSurvey = vi.fn()
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce('saved');
+    const services = withStore({ saveSurvey });
+
+    const request = {
+      invitationId: 'inv-1',
+      participantName: 'Sergio',
+      questions: preguntas,
+      answers: respuestasCompletas,
+    };
+
+    await expect(services.submitSurvey(request)).rejects.toBeInstanceOf(PersistenceError);
+    await expect(services.submitSurvey(request)).resolves.toMatchObject({ invitationId: 'inv-1' });
+    expect(saveSurvey).toHaveBeenCalledTimes(2);
   });
 });

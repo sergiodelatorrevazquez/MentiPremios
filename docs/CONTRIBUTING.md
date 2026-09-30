@@ -15,30 +15,28 @@ corrección bienvenido.
 ```bash
 npm ci                                  # o npm install la primera vez
 cp .env.example .env.local              # credenciales de desarrollo
+firebase deploy --only firestore:rules --project mentipremios
 npm run dev
 ```
 
-Las siete variables `VITE_FIREBASE_*` están explicadas en
-[DEV_SETUP.md](DEV_SETUP.md#3-configurar-firebase). En desarrollo,
-`VITE_FIREBASE_APP_CHECK_SITE_KEY` es opcional; en producción es obligatoria y
-la aplicación no arranca sin ella.
+Las seis variables `VITE_FIREBASE_*` están explicadas en
+[DEV_SETUP.md](DEV_SETUP.md#3-configurar-firebase). Ninguna es secreta: el prefijo
+`VITE_` significa que viajan dentro del bundle.
+
+`VITE_FIREBASE_APP_CHECK_SITE_KEY` es **opcional** y no hace falta para trabajar.
+Si la defines, se activa reCAPTCHA v3; si no, la aplicación arranca igual y no
+lanza ningún error. No hay que habilitar nada en Firebase Authentication: el
+proyecto no usa Firebase Auth.
+
+El paso de `firebase deploy` es el que más se olvida: **sin reglas desplegadas el
+login no funciona**, porque el navegador accede a Firestore directamente y las
+reglas son la frontera de seguridad del proyecto.
 
 ---
 
 ## 1. Dónde añadir una pregunta
 
-Hay **dos** sitios y basta con tocar uno mal para que nada funcione:
-
-| Fichero | Qué contiene |
-|---|---|
-| `src/features/survey/domain/questions.ts` | El catálogo que ve la persona |
-| `functions/src/surveySchema.ts` | La allowlist que acepta el servidor |
-
-Las dos tienen que moverse en el mismo despliegue. Si el servidor acepta una
-pregunta que el cliente no conoce, el envío falla con `invalid-argument`; si el
-cliente ofrece una que el servidor no acepta, también. El síntoma es siempre el
-mismo —el formulario no avanza— y por eso la lista de comprobación de este
-README insiste en probar el flujo completo, no solo la build.
+Hay **un** sitio: `src/features/survey/domain/questions.ts`, el array `preguntas`.
 
 Ejemplo de pregunta nueva:
 
@@ -53,22 +51,15 @@ Ejemplo de pregunta nueva:
 }
 ```
 
-Y su allowlist:
+No hay allowlist en un servidor que pueda irse por detrás: `validateSurveyAnswers`
+valida cada respuesta contra el catálogo y `submitSurvey` exige una respuesta por
+cada pregunta. El catálogo es la única fuente de verdad.
 
-```typescript
-export const SURVEY_OPTION_IDS = {
-  // …
-  nueva: ['nueva-1', 'nueva-2'],
-} as const satisfies Record<string, readonly string[]>;
-```
-
-**Añadir una opción a una pregunta que ya existe sí es compatible**: la
-allowlist se comprueba con `includes`, así que los documentos ya guardados
-siguen siendo válidos. Añadir una pregunta **no** lo es: `submitSurvey` exige
-exactamente diez respuestas, una por cada clave de la allowlist.
-
-Para añadir una pregunta a un cuestionario que ya tiene respuestas, planéalo
-como una migración y no como un commit: ver
+**Añadir una opción a una pregunta que ya existe sí es compatible**: los
+documentos ya guardados siguen siendo válidos porque la validación es por
+pertenencia. Añadir, quitar o renombrar una pregunta **no** lo es, porque cambia
+el número de respuestas que se exigen. Para un cuestionario que ya tiene respuestas,
+planéalo como una migración: ver
 [DEPLOYMENT.md §4.2](DEPLOYMENT.md#42-cambiar-el-catálogo-de-preguntas).
 
 ---
@@ -77,39 +68,38 @@ como una migración y no como un commit: ver
 
 | Cambio | Dónde |
 |---|---|
-| Un campo nuevo en una invitación | `functions/src/firestoreSchemas.ts` (`StoredInvitation` y `parseInvitationDocument`) |
-| Un campo nuevo en una respuesta guardada | `functions/src/firestoreSchemas.ts` (`StoredSurveyResponse` y `parseStoredSurveyResponse`) |
-| El cuerpo de un DTO remoto | `functions/src/surveyValidation.ts` |
+| Un campo nuevo en una invitación | `firestore.rules` (si el cliente va a escribirlo) y `parseInvitation` en `firestoreSurveyRepository.ts` |
+| Un campo nuevo en una respuesta guardada | `firestoreSurveyRepository.ts` (el `set`) **y** la lista `hasOnly` de `firestore.rules` |
 | Un tipo del cliente | `src/features/survey/domain/survey.types.ts` |
 | Una regla de validación de respuestas | `src/features/survey/domain/survey.rules.ts` |
 
-**Aviso que no es negociable:** `parseStoredSurveyResponse` exige que un
-documento v2 tenga **exactamente** cinco claves. Si añades un campo a una
-respuesta ya guardada sin actualizar el parser en el mismo despliegue, el
-documento pasa a leerse como inválido y el reintento de esa persona deja de ser
-idempotente: en lugar de un acierto recibo un `failed-precondition`. Un cambio
-de esquema son dos cambios, siempre.
+**Aviso que no es negociable:** las reglas exigen que `respuestas` se cree con
+**exactamente** las cinco claves que ya existen. Si añades un campo al `set` y
+olvidas la lista `hasOnly`, la escritura se rechaza con `permission-denied` y el
+envío falla en la casa de quien participa. Un cambio de esquema son **dos** cambios,
+siempre, y uno de ellos está en un fichero que no es TypeScript.
 
-El tipo que viaja a la red y el que se guarda en Firestore **no son el mismo**,
-y confundirlos rompe el contrato. El DTO de `submitSurvey` es
-`{ invitationId, answers }`; el documento guardado tiene además
-`schemaVersion`, `participantName` y los dos timestamps. El nombre de la
-persona no lo envía el cliente: se copia de la invitación, que es la única fuente
-autorizada.
+El tipo que se valida y el que se guarda **no son el mismo**, y confundirlos rompe
+el contrato. El caso de uso produce `{ invitationId, participantName, answers }`;
+el documento guardado añade `schemaVersion` y los dos timestamps, y el repositorio
+ignora el `participantName` que llega de la UI: **copia el nombre de la invitación**.
+Es la invitación la única fuente autorizada del nombre, y por eso nadie puede
+escribir el nombre de otra persona aunque manipule el DOM.
 
 ---
 
 ## 3. Dónde añadir un repositorio
 
-En `src/infrastructure/`, con un fichero por colección y una función por
-operación, exportada con su alias en español. `firestoreKeywordsRepository.ts`
-es la referencia a copiar:
+En `src/infrastructure/firebase/`, con un fichero por colección y una función por
+operación. `firestoreSurveyRepository.ts` es la referencia a copiar:
 
 ```typescript
 // src/infrastructure/firebase/miColeccionRepository.ts
-export const MiColeccionRepository = {
-  guardar(datos: Dato): Promise<void> { /* … */ },
-};
+export class MiColeccionRepository implements MiContrato {
+  constructor(private readonly db: Firestore) {}
+
+  guardar(datos: Dato): Promise<Resultado> { /* … */ }
+}
 ```
 
 Y su contrato se fija en `tests/unit/contracts/repositoryContracts.spec.ts`, que
@@ -117,12 +107,18 @@ comprueba la forma de la API, no su implementación.
 
 Dos restricciones que no son de estilo:
 
-- **El navegador no puede escribir en Firestore.** `firestore.rules` lo deniega
-  todo. Un repositorio del cliente tiene que ir detrás de una callable, como
-  hace el resto.
+- **Lo que el navegador puede hacer lo deciden las reglas, no el repositorio.**
+  `firestore.rules` deniega por defecto. Una colección nueva necesita su propio
+  `match` desplegado antes de que el código funcione, y hay que decidir con
+  cuidado si admite `list`: permitirlo publica la colección entera.
 - **`infrastructure/` no contiene reglas de interfaz.** Nada de Vue, nada de
-  SFC, nada de CSS. Está verificado en
-  `dependencyRules.spec.ts` y romperlo es un test rojo, no una discusión.
+  SFC, nada de CSS. Está verificado en `dependencyRules.spec.ts` y romperlo es un
+  test rojo, no una discusión.
+
+Y una restricción que aquí sí es técnica y no de diseño: sobre `codigos` no se
+puede consultar, solo leer por identificador. El repositorio **no usa
+`getDocs`, `query` ni `where`**, porque una consulta es un `list` y `list` está
+prohibido. También lo fija un test.
 
 ---
 
@@ -217,22 +213,43 @@ presentation    no accede directamente a Firestore
 infrastructure  no contiene reglas de interfaz
 ```
 
-Tres excepciones documentadas, y no son puerta giratoria: `app/` puede conocer
-el SDK de Firebase por ser el composition root, `useSurveyWizard.ts` es el único
+La tercera sigue siendo la que más importa con el acceso directo: `presentation`
+no habla con Firestore nunca, y quien lo hace es `infrastructure`, inyectado desde
+`main.ts` a través de `bootstrap.ts`.
+
+Tres excepciones documentadas, y no son puerta giratoria: `app/` puede conocer el
+SDK de Firebase por ser el composition root, `useSurveyWizard.ts` es el único
 fichero de `application/` que importa Vue, e `infrastructure/` puede importar
 tipos del dominio porque un adaptador implementa un contrato.
 
 ---
 
-## 8. Privacidad: la línea que no se cruza
+## 8. Seguridad: la línea que no se cruza
 
-Este proyecto maneja palabras secretas, nombres y respuestas. Hay tres reglas
-que se comprueban con tests y que conviene no discutir commit a commit:
+Este proyecto maneja palabras secretas, nombres y respuestas, y **no hay backend
+que valide nada**: `firestore.rules` es la frontera de confianza. Ver
+[SECURITY.md](SECURITY.md).
+
+1. **Nunca permitas `list` sobre `codigos`.** Se puede leer una invitación por su
+   identificador —la palabra secreta—; enumerar la colección publicaría las
+   palabras de todo el grupo. Si alguna vez necesitas listar para una pantalla
+   interna, no lo hagas desde el cliente: la consola de Firebase ya te deja verlo
+   con permisos de administrador, y esas reglas no le afectan.
+2. **`update` sobre `codigos` solo para el paso `false → true` de `usado`.** El
+   `diff(...).hasOnly(['usado'])` es lo que impide renombrar una invitación o
+   resucitar una ya usada.
+3. **`respuestas` es de solo `create`.** Es lo que impide sobrescribir el voto de
+   otra persona. Y por eso el documento comparte identificador con la invitación:
+   un segundo envío choca en lugar de pisar.
+4. **No rompas el comodín `/{document=**}`.** Es la red de seguridad de cualquier
+   colección que alguien añada dentro de seis meses.
+
+Y las tres reglas de privacidad que se comprueban con tests:
 
 1. **Nada de `console.*` en `src/`.** Se usa `logger` de
    `infrastructure/logging/`, que redacta secretos y campos sensibles
-   (`tests/unit/contracts/logging.spec.ts`). Las Cloud Functions sí pueden usar
-   `console.error`: su destino es Cloud Logging.
+   (`tests/unit/contracts/logging.spec.ts`). No hay ya ninguna excepción: no
+   existe un `console.error` en un entorno externo que lo justifique.
 2. **Las métricas no llevan datos personales.** Los nombres de contador son una
    constante cerrada y la API no admite contexto libre. Un contador que acepta
    un string libre es un contador que algún día lleva un nombre dentro.
@@ -248,15 +265,16 @@ que se comprueban con tests y que conviene no discutir commit a commit:
 - Los commits que no son de la migración usan frases cortas y en imperativo.
 - Antes de abrir el PR: `npm run typecheck`, `npm run lint`, los tres niveles de
   test y `npm run build`.
+- Si el PR toca `firestore.rules`, el diff se lee con calma: es la última línea de
+  defensa del proyecto.
 - Si el PR cambia documentación, que la documentación sea la parte difícil del
   PR. Una guía que describe lo que había antes es peor que ninguna.
 - Actualiza `docs/MIGRATION.md` marcando el TODO como `[COMPLETADO]` y contando
   lo que salió mal por el camino. Ese párrafo es lo primero que se lee cuando
   algo se rompe dentro de seis meses.
 
-CI ejecuta en cada push y PR a `main`: `npm ci`, build de Cloud Functions,
-`typecheck`, `lint`, unitarias, integración, build y un job de e2e en paralelo.
-El workflow **no despliega**.
+CI ejecuta en cada push y PR a `main`: `npm ci`, `typecheck`, `lint`, unitarias,
+integración, build y un job de e2e en paralelo. El workflow **no despliega**.
 
 ---
 
@@ -265,9 +283,9 @@ El workflow **no despliega**.
 | Documento | Para qué |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Capas, flujo de datos, decisiones y sus alternativas |
-| [API.md](API.md) | DTOs, colecciones, códigos de error y allowlist |
+| [API.md](API.md) | Colecciones, operaciones del cliente, reglas y traducción de errores |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Variables, despliegue, migraciones, rollback y assets |
 | [RECOVERY.md](RECOVERY.md) | Qué pasa y qué se recupera cuando algo falla |
 | [DEV_SETUP.md](DEV_SETUP.md) | Entorno de desarrollo y tareas comunes |
-| [SECURITY.md](SECURITY.md) | Reglas, App Check y superficie de ataque |
+| [SECURITY.md](SECURITY.md) | Por qué las palabras secretas lo son sin backend |
 | [USER_GUIDE.md](USER_GUIDE.md) | Lo que ve quien participa |

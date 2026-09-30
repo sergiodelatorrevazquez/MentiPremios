@@ -51,9 +51,4 @@ describe('logging controlado', () => {
     expect(source).toContain('minimumLevel: minimumLevelFor(import.meta.env.PROD)');
   });
 
-  it('las funciones usan console porque ahí es el sink del entorno', () => {
-    const functionsIndex = readFileSync(join(repositoryRoot, 'functions/src/index.ts'), 'utf8');
-
-    expect(functionsIndex).toContain('console.error');
   });
-});

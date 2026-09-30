@@ -1,6 +1,6 @@
 # Linea base funcional
 
-Esta linea base describe el comportamiento que debe conservarse durante la migracion hacia el monolito modular.
+Esta linea base describe el comportamiento que debe conservarse durante la migracion hacia el monolito modular, y que sigue siendo valido despues del cambio al acceso directo a Firestore ([Fase 13](MIGRATION.md#fase-13-acceso-directo-del-cliente-a-firestore)).
 
 ## Flujo principal
 
@@ -23,18 +23,44 @@ Esta linea base describe el comportamiento que debe conservarse durante la migra
 - Las opciones multimedia abren el visor mediante pulsacion larga.
 - El visor multimedia se cierra usando el boton de cierre.
 
-## Contrato observado del envio actual
+## Contrato observado en Firestore
 
-La implementacion actual envia este formato al servicio:
+El envio se materializa en una unica transaccion que escribe dos documentos:
 
 ```ts
+// respuestas/{invitationId}
 {
-  usuario: string,
-  premios: Record<string, string>
+  schemaVersion: 2,
+  participantName: string,        // copiado de codigos/{invitationId}.nombre
+  answers: Record<string, string>,
+  createdAt: Timestamp,
+  submittedAt: Timestamp,
 }
+
+// codigos/{invitationId}
+{ usado: true }
 ```
 
-El ID de `usuario` corresponde actualmente al ID de la invitacion. Este contrato debe considerarse legado hasta que se complete la definicion del DTO canonico.
+El identificador del documento de respuesta es el mismo que el de la invitacion, y
+el nombre de la persona se copia de la invitacion en lugar de venir del cliente.
+Estas dos cosas son el contrato, no detalles de implementacion: la primera es lo que
+impide sobrescribir un envio anterior, y la segunda es lo que impide escribir el
+nombre de otra persona.
+
+El contrato legado `{ usuario, premios }` que se observaba en las primeras fases ya
+no existe: `respuestas/{invitationId}` guarda un documento por pregunta dentro de
+`answers`, versionado con `schemaVersion: 2`.
+
+## Invariante que no debe romperse
+
+La palabra secreta debe seguir siendo la unica credencial. Ninguna de estas
+condiciones puede relajarse sin romper la funcionalidad:
+
+- La validacion de una invitacion es una lectura **por identificador**, nunca una
+  consulta sobre la coleccion.
+- La coleccion de invitaciones **no se puede enumerar** desde el cliente.
+
+Mientras esas dos cosas sean verdad, la linea base se sostiene con o sin backend.
 
 ## Comando de verificacion
 
@@ -42,4 +68,4 @@ El ID de `usuario` corresponde actualmente al ID de la invitacion. Este contrato
 npm test -- --run tests/integration/App.spec.ts
 ```
 
-Las pruebas de esta linea base estan en `tests/integration/App.spec.ts`. No se debe eliminar ni modificar su comportamiento esperado durante las primeras fases de la migracion sin actualizar primero este documento y acordar el nuevo contrato.
+Las pruebas de esta linea base estan en `tests/integration/App.spec.ts`. No se debe eliminar ni modificar su comportamiento esperado sin actualizar primero este documento y acordar el nuevo contrato.

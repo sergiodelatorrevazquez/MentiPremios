@@ -68,10 +68,22 @@ Para las preguntas **Mensaje del Año**, **Foto del Año** y **Video del Año**:
 Tras responder la última pregunta y pulsar **"Enviar y cerrar"**:
 
 1. Tus respuestas se guardan en Firebase.
-2. Tu palabra secreta se marca como "usada".
+2. Tu palabra secreta se marca como "usada", en el mismo paso que las respuestas.
 3. Verás la pantalla **"Gracias por participar, [tu nombre]"** con un mensaje de confirmación.
 
 Ya has terminado. Tus votos se usarán durante la gala de premios del grupo.
+
+> Tus respuestas se guardan desde tu propio navegador, en la misma operación que marca la palabra como usada. Si pierdes la conexión en ese instante, la aplicación te ofrecerá «Reintentar envío»: si ya se había guardado, te lo dirá y no tendrás que volver a escribir nada.
+
+## Tu palabra secreta es la clave
+
+Unos pocos detalles sobre seguridad que explican por qué la aplicación se comporta como se comporta:
+
+- **No hay cuentas ni contraseñas.** Tu palabra secreta *es* tu credencial, y quien la tenga puede responder con ella.
+- **Nadie puede ver el listado de palabras.** Aunque alguien tenga el enlace de la web, no puede abrir la lista de participantes ni descubrir las palabras del resto.
+- **La palabra es de un solo uso.** En cuanto envías, deja de funcionar.
+
+Por eso la palabra debe viajar por privado: es tu voto, no solo tu entrada.
 
 ## Ver la foto del grupo
 
@@ -84,4 +96,6 @@ En la esquina superior izquierda hay un círculo con la foto del grupo. Púlsalo
 | No recibo la palabra secreta | Contacta con el organizador del grupo |
 | La app no carga | Comprueba tu conexión a internet |
 | Error "Firebase" o "red" | Espera unos segundos y vuelve a intentarlo |
+| Error de permisos al entrar | Espera unos minutos: lo más probable es que estén actualizando el sitio. Si persiste, avisa al organizador |
 | No puedo pulsar "Siguiente" | Asegúrate de haber seleccionado una opción (se resalta en verde) |
+| Dice que ya he respondido | Ya está guardado. No hace falta volver a hacerlo |

@@ -2,11 +2,13 @@
 
 ## Vista general
 
-MentiPremios es una **Single Page Application (SPA)** construida con **Vue 3 + TypeScript** y Cloud Functions. El navegador no accede directamente a Firestore: valida invitaciones y envía respuestas mediante callables autenticadas con App Check. La aplicación sigue un wizard de cuatro pasos donde las personas introducen una palabra secreta, reciben una bienvenida personalizada, responden 10 preguntas y ven una confirmación.
+MentiPremios es una **Single Page Application (SPA)** construida con **Vue 3 + TypeScript** que accede **directamente a Firestore desde el navegador**. No hay servidor: ni Cloud Functions, ni Firebase Auth, ni un backend propio. La aplicación sigue un wizard de cuatro pasos donde las personas introducen una palabra secreta, reciben una bienvenida personalizada, responden 10 preguntas y ven una confirmación.
+
+La consecuencia de que no haya servidor es que **la seguridad no está en el código, está en `firestore.rules`**. La regla que sostiene la funcionalidad entera es una sola: se puede hacer `get` de una invitación concreta si ya se conoce su identificador —que es la palabra secreta—, pero nunca `list` sobre la colección. Sin enumeración nadie puede descubrir las palabras del resto de participantes ni quién ha contestado ya. Ver [SECURITY.md](SECURITY.md).
 
 ```
 index.html
-  └── src/main.ts                     ← Bootstrap de Vue 3
+  └── src/main.ts                     ← createApp + provide(APP_SERVICES_KEY, …)
         └── src/app/App.vue           ← Shell del wizard: orquesta, no implementa
               ├── features/survey/presentation/   ← Los seis SFC de cada paso y sus visores
               ├── features/survey/application/    ← Casos de uso puros (sin Vue)
@@ -14,8 +16,8 @@ index.html
               ├── infrastructure/firebase/        ← Cliente y repositorios
               ├── infrastructure/logging/         ← Logger con redacción
               └── infrastructure/metrics/         ← Contadores sin datos sensibles
-                    └── Cloud Functions callables
-                          └── Firebase Admin SDK → Firestore
+                    └── Firestore (acceso directo del navegador)
+                          └── Evaluación de firestore.rules en cada operación
 ```
 
 ## Estructura de directorios
@@ -24,35 +26,33 @@ index.html
 src/
 ├── app/                             # Shell y composition root
 │   ├── App.vue                      # 292 líneas: orquesta pasos y conecta casos de uso
-│   └── bootstrap.ts                 # Traduce errores de Firebase a errores de dominio
+│   └── bootstrap.ts                 # createAppServices(db): traduce resultados a errores de dominio
 ├── features/
 │   ├── survey/
 │   │   ├── domain/                  # Catálogo, tipos, reglas de validación, assets
-│   │   ├── application/             # Casos de uso: inviting, envío, wizard, red
+│   │   ├── application/             # Casos de uso: validación, envío, wizard, red
 │   │   └── presentation/            # Los seis SFC de interfaz
 │   └── keywords/                    # Contrato opcional de palabras clave
 ├── infrastructure/
-│   ├── firebase/                    # Cliente y repositorio Firestore
+│   ├── firebase/
+│   │   ├── client.ts                # initializeApp, App Check opcional, exporta db
+│   │   ├── firestoreSurveyRepository.ts      # getDoc + runTransaction sobre Firestore
+│   │   └── firestoreKeywordsRepository.ts    # addDoc sobre palabrasClave
 │   ├── logging/logger.ts            # Logger con niveles y redacción
 │   └── metrics/metrics.ts           # Contadores cerrados
 ├── main.ts                          # Bootstrap de Vue + inyección de servicios
 └── style.css                        # Tokens de diseño y estilos globales
 
-functions/src/
-├── index.ts                         # Callable Functions
-├── validateInvitationHandler.ts     # Lectura de la invitación
-├── submitSurveyHandler.ts           # Transacción de respuesta + invitación
-├── surveySchema.ts                  # Allowlist de opciones válidas
-├── surveyValidation.ts              # DTO remoto de envío
-└── firestoreSchemas.ts              # Esquemas de lectura y escritura
+firestore.rules                      # La barrera de seguridad de las palabras secretas
+firebase.json                        # Solo declara la sección firestore
 
 tests/
 ├── unit/                            # Pruebas aisladas, sin red ni Firebase real
 │   ├── domain/                      # Reglas puras, catálogo, aislamiento
-│   ├── application/                 # Casos de uso y handlers con dobles en memoria
+│   ├── application/                 # Casos de uso con dobles en memoria
 │   ├── components/                  # SFC aislados con Vue Test Utils
 │   ├── infrastructure/              # Adaptadores con el SDK de Firebase simulado
-│   └── contracts/                   # Invariantes del repo: tokens, logging, esquema
+│   └── contracts/                   # Invariantes del repo: tokens, logging, reglas, esquema
 ├── integration/                     # Composición real con solo los adaptadores externos falsos
 └── e2e/                             # Chromium real sobre el harness
 ```
@@ -81,11 +81,11 @@ Y lo que cada capa hace:
 - **`domain/`** no importa Vue, ni `app/`, ni `infrastructure/`, ni ningún paquete que no sea `node:`. Contiene el catálogo de preguntas, los tipos, las reglas de validación y el registro de multimedia.
 - **`application/`** implementa los casos de uso sin componentes. `surveyWizard.ts` calcula el estado del wizard con funciones puras que devuelven un estado nuevo; `useSurveyWizard.ts` es el adaptador que las conecta a `ref` y `reactive`.
 - **`presentation/`** son los seis SFC, sin acceso a Firebase ni a casos de uso. Pueden leer los tipos del dominio, que es la dirección permitida de la flecha.
-- **`app/App.vue`** es el único punto que conoce todas las capas. Recibe `AppServices` por `inject` de la clave que `main.ts` provee a través de `bootstrap.ts`, así que el shell no importa Firebase ni el Admin SDK.
+- **`app/App.vue`** es el único punto que conoce todas las capas. Recibe `AppServices` por `inject` de la clave que `main.ts` provee a través de `bootstrap.ts`, así que el shell no importa Firebase.
 
 **Excepciones, y por qué existen:**
 
-- `app/` sí importa `firebase/auth` y `firebase/functions`. Es el composition root: si nadie puede conocer el SDK, nadie puede construirlo.
+- `app/` sí importa `firebase/firestore` (solo el tipo `Firestore`) y el repositorio. Es el composition root: si nadie puede conocer el SDK, nadie puede construirlo. `main.ts` sí importa `client.ts`, porque es el único punto donde existe `db`.
 - `useSurveyWizard.ts` importa Vue, y es el único fichero de `application/` que lo hace. La lógica que vale la pena probar vive en `surveyWizard.ts`, sin Vue.
 - `infrastructure/` puede importar tipos del dominio. Un adaptador implementa un contrato, y ese contrato está en el dominio.
 
@@ -110,8 +110,8 @@ El shell conserva el estado entre pasos y pasa hacia abajo datos y eventos; los 
 
 No se usa Vue Router ni Pinia/Vuex. El estado se gestiona localmente con:
 
-- **`ref`** para valores simples: `pasoActual`, `palabraSecreta`, `codigo`, `loginError`, `indicePreguntaActual`, `respuestaSeleccionada`, `enviando`, etc.
-- **`reactive`** para estructuras complejas: `preguntas[]` (10 preguntas), `respuestas{}` (acumulador de respuestas), `respuestasAnteriores{}` (para navegación atrás).
+- **`ref`** para valores simples: `palabraSecreta`, `codigo`, `loginError`, `enviando`, `mensaje`, `error`, `visorFotoAbierto`, `visorMultimediaAbierto`.
+- **`reactive`** para estructuras complejas: solo `preguntas[]` (las 10 preguntas del catálogo). El acumulador `respuestas` y el resto del estado del wizard no viven en el shell: los expone el composable `useSurveyWizard`, que también es dueño de `pasoActual`, `indicePreguntaActual` y `respuestaSeleccionada`.
 - **`computed`** para valores derivados: `puedeContinuarLogin`, `preguntaActual`, `puedeContinuarPregunta`, `puedeVolverAtras`, `progreso`.
 
 ### Sistema de pasos (wizard)
@@ -132,17 +132,17 @@ Cada paso se renderiza con `v-if` en el template de `src/app/App.vue`:
 | `done` | `pasoActual === 'done'` | Mensaje de agradecimiento |
 
 Transiciones:
-- `login → welcome`: `validarPalabraSecreta()` invoca `validateInvitation` en Cloud Functions
+- `login → welcome`: `validarPalabraSecreta()` invoca `validateInvitation`, que hace un `get` de `codigos/{palabra}`
 - `welcome → questions`: `avanzarDesdeBienvenida()` inicia el cuestionario y cuenta `survey_started`
-- `questions → done`: `responderYPasarSiguiente()` guarda respuestas y pide al servidor marcar el código como usado
+- `questions → done`: `responderYPasarSiguiente()` guarda respuestas y marca el código como usado
 
 ## Flujo de datos
 
 ```
 Persona escribe la palabra secreta
-  → validateInvitation(secreta)                ← Callable autenticada + App Check
-    → Admin SDK: lectura de codigos/{secreta}
-    → Respuesta: solo nombre visible del participante
+  → validateInvitation(secreta)                ← getDoc(codigos/{secreta})
+    → getDoc: una lectura por identificador, nunca una consulta
+    → Documento mal formado? → "palabra incorrecta"
     → ¿No existe? → Error "palabra incorrecta"
     → ¿usado === true? → Error "ya has respondido"
     → ¿usado === false? → Avanza a welcome
@@ -155,10 +155,14 @@ Responde 10 preguntas una a una
   → Navegación: next (acumula y avanza) / back (restaura respuesta anterior)
 
 En la última pregunta, pulsa "Enviar y cerrar"
-  → submitSurvey({ invitationId, answers })         ← Callable Function
-  → Firestore transaction: create respuesta + marcar invitación usada
+  → submitSurvey({ invitationId, answers })
+  → runTransaction: set respuestas/{invitationId} + update codigos/{id}.usado = true
   → Avanza a done, submission_succeeded +1, invitation_used +1
 ```
+
+Las dos escrituras del envío van en la **misma transacción** de Firestore, así que no existe un estado en el que la respuesta esté guardada y la invitación libre. Ese es el motivo por el que `docs/RECOVERY.md` puede tratar «invitación ya usada» durante el envío como prueba de que las respuestas están a salvo.
+
+> El documento de respuesta usa **el mismo identificador que la invitación**. No es estética: como `update` está prohibido en `respuestas`, un segundo envío choca contra la regla en lugar de sobrescribir. Y como la colección no se puede listar, nadie puede deducir el identificador del documento ajeno.
 
 ## Modelo de datos (Firestore)
 
@@ -173,16 +177,16 @@ Document ID: palabra secreta (string, ej: "galaxia-2025")
 
 ### Colección `respuestas`
 ```
-Document ID: ID aleatorio opaco (v2); el esquema legacy usaba el código
+Document ID: el mismo ID de la invitación
 {
   schemaVersion: 2,
-  participantName: "Sergio",
+  participantName: "Sergio",        // copiado de la invitación, no del cliente
   answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ },
   createdAt: Timestamp,
   submittedAt: Timestamp
 }
 ```
-Cada invitación v2 guarda `responseId` para mantener la relación y soportar reintentos. El documento no incluye el código secreto. Los legacy conservan el mapa plano bajo el ID antiguo y se reconocen sin reescritura. Los dos timestamps usan hora de servidor y se asignan en la transacción inicial.
+El documento no incluye el código secreto en ningún campo: su identificador **es** el de la invitación, pero nadie puede enumerar la colección ni adivinarlo. Los dos timestamps usan hora de servidor y se asignan en la transacción.
 
 ### Colección `palabrasClave`
 ```
@@ -194,11 +198,47 @@ Document ID: auto-generado por Firestore
 }
 ```
 
+## Modelo de seguridad
+
+Sin servidor, `firestore.rules` es la frontera de confianza. Las decisiones, y por qué:
+
+| Regla | Qué permite | Por qué |
+|---|---|---|
+| `codigos`: `get` permitido | Leer una invitación si ya conoces su ID | La palabra secreta **es** la credencial; sin esta lectura el login no puede existir |
+| `codigos`: `list` prohibido | Nada | **Sin enumeración nadie descubre las palabras del resto ni quién ya ha respondido.** Es la regla que sostiene la funcionalidad |
+| `codigos`: `create, delete` prohibido | Nada | Las invitaciones las crea el organizador desde la consola, no un navegador |
+| `codigos`: `update` solo `false → true` en `usado` | Consumir la invitación al guardar | `diff(...).affectedKeys().hasOnly(['usado'])` impide cambiar el nombre o resucitar una invitación usada |
+| `respuestas`: solo `create`, con las cinco claves exactas | Guardar el voto | Nadie puede leer los votos ajenos ni alterar los ya emitidos |
+| `respuestas`: `update` prohibido | Nada | Un segundo envío no sobrescribe el primero; falla |
+| `/{document=**}`: `read, write` denegado | Nada | Red de seguridad para cualquier colección futura no declarada |
+
+> **Ver el estado de `usado` desde la consola de Firebase sigue funcionando.** La consola opera con permisos de administrador del proyecto, que no pasan por estas reglas: las reglas gobiernan a los clientes del SDK, no al panel de control. Así que organizar la gala mirando quién ha contestado sigue siendo posible sin abrir la colección al navegador.
+
+`tests/unit/contracts/firestoreRules.spec.ts` fija este contrato por texto, con el mismo criterio que el resto de `contracts/`: una edición accidental que vuelva a abrir la colección entera es un test rojo, no una discusión.
+
+App Check es **opcional y no bloquea nada**: `client.ts` solo llama a `initializeAppCheck` si existe `VITE_FIREBASE_APP_CHECK_SITE_KEY`, y nunca lanza un error al arrancar. No hay Firebase Auth: el proyecto es anónimo por diseño y la identidad la aporta la palabra secreta.
+
 ## Persistencia de premios e invitaciones
 
-La UI valida invitaciones mediante la callable `validateInvitation`; el servidor devuelve solo el nombre visible y nunca expone el documento completo. El envío usa `submitSurvey`; el Admin SDK actualiza respuesta e invitación dentro de una transacción. Las reglas deniegan toda lectura y escritura Firestore desde el navegador.
+`FirestoreSurveyRepository` (`src/infrastructure/firebase/firestoreSurveyRepository.ts`) es el único adaptador que toca `codigos` y `respuestas`, y expone dos operaciones:
 
-`FirestoreKeywordsRepository.save` escribe en `palabrasClave` con un timestamp del servidor.
+| Método | Operación Firestore | Devuelve |
+|---|---|---|
+| `findInvitation(id)` | `getDoc(doc(db, 'codigos', id))` | La invitación validada, o `null` |
+| `saveSurvey(response)` | `runTransaction`: lee la invitación, escribe la respuesta, marca `usado: true` | `'saved' \| 'already-used' \| 'not-found'` |
+
+Los tres resultados se devuelven **como dato y no como excepción**, porque los tres son esperables: el repositorio no decide qué mensaje ve la persona. Esa traducción vive en `createAppServices` (`src/app/bootstrap.ts`), que es el composition root y el único punto que conoce Firestore por arriba de la interfaz:
+
+| Resultado del repositorio | Error de aplicación |
+|---|---|
+| `not-found` | `InvalidInvitationError` |
+| `already-used` | `InvitationAlreadyUsedError` |
+| `saved` | — |
+| excepción del SDK | `PersistenceError` (envuelto por `submitSurvey`, con la causa en `cause`) |
+
+El repositorio nunca usa consultas —ni `getDocs`, ni `query`, ni `where`—, porque una consulta es un `list` y `list` está prohibido. `tests/unit/contracts/repositoryContracts.spec.ts` lo fija leyendo el fuente.
+
+`FirestoreKeywordsRepository.save` escribe en `palabrasClave` con un timestamp del servidor, y solo puede crear (`addDoc`): la colección tiene `create` permitido y todo lo demás denegado.
 
 ## Manejo de errores
 
@@ -208,11 +248,13 @@ El orden de las señales es deliberado: primero `navigator.onLine`, porque si el
 
 Los errores de dominio (`invitation-already-used`, `invalid-invitation`) conservan su mensaje propio. Durante el envío, `invitation-already-used` y `submission-already-completed` se tratan como acierto, porque significan que un intento anterior sí se guardó. `docs/RECOVERY.md` explica por qué esa interpretación es fiable.
 
+Con acceso directo, los errores que llegan desde Firestore son los del propio SDK: `permission-denied` cuando las reglas no encajan con la operación, `unavailable` o `failed-precondition` cuando hay un problema transitorio, `aborted` cuando una transacción entra en conflicto y reintenta. `classifyNetworkError` los clasifica con la misma tabla cerrada, sin cambios.
+
 ## Observabilidad
 
 Dos piezas, con la misma postura de no recoger datos personales:
 
-- **`infrastructure/logging/logger.ts`**: niveles, redacción recursiva de secretos registrados y campos con nombres sensibles, límites de profundidad y tamaño. En producción solo escribe `error`. Las Cloud Functions pueden seguir usando `console.error` porque su destino es Cloud Logging; `tests/unit/contracts/logging.spec.ts` prohíbe el `console.*` en `src/`.
+- **`infrastructure/logging/logger.ts`**: niveles, redacción recursiva de secretos registrados y campos con nombres sensibles, límites de profundidad y tamaño. En producción solo escribe `error`. No hay ya ningún `console.error` justificado por un destino externo: `tests/unit/contracts/logging.spec.ts` prohíbe el `console.*` en todo `src/`.
 - **`infrastructure/metrics/metrics.ts`**: contadores cerrados (`survey_started`, `submission_succeeded`, `submission_failed`, `invitation_used`, `multimedia_failed`). La ausencia de datos sensibles no depende de la prudencia de quien llama: los nombres son una constante y la API no admite contexto libre.
 
 ## Multimedia
@@ -252,19 +294,20 @@ Los tokens cubren color, tipografía, tamaño de línea y espaciado. Los estilos
 
 - **Framework**: Vitest + Vue Test Utils + Happy DOM, con Playwright como nivel superior
 - **Niveles**: `unit`, `integration` y `e2e`, cada uno ejecutable por separado
-- **Mocks**: los dobles viven en `src/infrastructure/firebase/client.ts` (inyectados como `AppServices`), en `vi.mock` del SDK de Firebase y en stores falsos de Cloud Functions
+- **Mocks**: los dobles viven en la frontera `AppServices` de `bootstrap.ts`, en `vi.mock` del SDK de Firebase y en el harness de e2e
 - **Cobertura**: Configurada en `vite.config.ts` con reporter `text` y `html`
 - **Setup**: `vitest.setup.ts` configura `config.global.components = {}`
+- **Sin emulador**: las reglas no se ejecutan en los tests. No hace falta porque su contrato se fija por texto en `tests/unit/contracts/firestoreRules.spec.ts`, y porque un `getDoc` o una transacción es exactamente lo que el repositorio ya ejecuta contra un doble del SDK
 
 ### Niveles de prueba
 
 | Nivel | Qué ejercita | Doble de frontera | Ejecución |
 |---|---|---|---|
 | `tests/unit/domain` | Reglas puras, catálogo de assets, aislamiento | Ninguno | `npm run test:unit -- --run` |
-| `tests/unit/application` | Casos de uso del cliente, clasificación de red y handlers de Cloud Functions | Repositorios y stores en memoria | `npm run test:unit -- --run` |
+| `tests/unit/application` | Casos de uso del cliente y clasificación de red | Repositorios en memoria | `npm run test:unit -- --run` |
 | `tests/unit/components` | Cada SFC por separado con Vue Test Utils | Ninguno | `npm run test:unit -- --run` |
 | `tests/unit/infrastructure` | Logger, métricas y adaptadores de Firebase | SDK de Firebase simulado | `npm run test:unit -- --run` |
-| `tests/unit/contracts` | Tokens, estilos, logging, esquema Firestore, contratos de repositorio y estructura | Lectura de ficheros | `npm run test:unit -- --run` |
+| `tests/unit/contracts` | Tokens, estilos, logging, reglas Firestore, contratos de repositorio y estructura | Lectura de ficheros | `npm run test:unit -- --run` |
 | `tests/integration` | Composición de la app completa | Solo `AppServices` externos | `npm run test:integration -- --run` |
 | `tests/e2e` | Flujo real en Chromium, móvil y escritorio | `AppServices` simulados en el harness | `npm run test:e2e` |
 
@@ -275,13 +318,13 @@ Los tokens cubren color, tipografía, tamaño de línea y espaciado. Los estilos
 | Archivo | Nivel | Casos |
 |---|---|---|
 | `tests/integration/App.spec.ts` | Integración | Login, bienvenida, preguntas, navegación atrás, payload exacto, payload de red, errores de red, métricas, logging, multiselección |
-| `tests/integration/bootstrap.spec.ts` | Integración | Composición, invocación callable y traducción de errores |
+| `tests/integration/bootstrap.spec.ts` | Integración | Composición, traducción de `saved`/`already-used`/`not-found` a errores de aplicación y reintento |
 | `tests/unit/application/submitSurvey.spec.ts` | Unitario | Validación, construcción del payload, orden de persistencia, reintento |
 | `tests/unit/application/networkError.spec.ts` | Unitario | Los cinco tipos de fallo, causas envueltas y mensajes |
-| `tests/unit/application/submitSurveyHandler.spec.ts` | Unitario | Autenticación, idempotencia y operaciones de servidor |
 | `tests/unit/domain/isolation.spec.ts` | Unitario | Que el dominio no importe presentación ni infraestructura |
 | `tests/unit/infrastructure/logger.spec.ts` | Unitario | Niveles, redacción y límites del logger |
 | `tests/unit/infrastructure/metrics.spec.ts` | Unitario | Catálogo cerrado, incrementos inválidos y ausencia de contexto |
+| `tests/unit/contracts/firestoreRules.spec.ts` | Unitario | `get` sí, `list` no, `update` acotado a `usado`, `respuestas` de solo `create`, comodín denegado |
 | `tests/unit/contracts/*` | Unitario | Invariantes del repositorio |
 
 ## CI/CD
@@ -291,20 +334,24 @@ El workflow de GitHub Actions (`.github/workflows/tests.yml`) ejecuta en push/PR
 Job `test`:
 1. `actions/checkout@v4`
 2. `actions/setup-node@v4` con Node 20 y cache npm
-3. `npm ci` y `npm ci --prefix functions`
-4. `npm --prefix functions run build`
-5. `npm run typecheck`
-6. `npm run lint`
-7. `npm run test:unit -- --run`
-8. `npm run test:integration -- --run`
-9. `npm run build`
+3. `npm ci`
+4. `npm run typecheck`
+5. `npm run lint`
+6. `npm run test:unit -- --run`
+7. `npm run test:integration -- --run`
+8. `npm run build`
 
 Job `e2e` en paralelo instala Chromium, ejecuta `npm run test:e2e` y sube el informe de Playwright como artefacto.
+
+Hay un solo `npm ci`: no hay carpeta `functions/` que instalar ni compilar. El workflow **no despliega**; desplegar es un paso manual (`npm run build` + `firebase deploy --only firestore:rules` + Vercel).
 
 ## Decisiones arquitectónicas clave
 
 | Decisión | Alternativa | Motivo |
 |---|---|---|
+| **Acceso directo del navegador a Firestore** | Cloud Functions con Admin SDK | Menos piezas, sin plan de pago, sin código que mantener; la seguridad pasa a estar en `firestore.rules` |
+| **`get` sí, `list` no** | Backend que valida la palabra | La palabra secreta es la credencial; prohibir la enumeración es lo que impide descubrir las demás |
+| **`respuestas/{invitationId}`** | ID opaco con enlace en la invitación | La prohibición de `update` es lo que impide sobrescribir un envío anterior, sin necesidad de un `responseId` |
 | **Shell de 292 líneas + seis SFC** | Un único `App.vue` de ~990 líneas | Cada paso se prueba y se lee por separado; el shell solo orquesta |
 | **Wizard con funciones puras** | Lógica del wizard dentro de `computed` del componente | `surveyWizard.ts` se prueba sin montar Vue y sin mocks |
 | **Sin Vue Router** | `vue-router` | Solo 4 pantallas en secuencia fija, sin URL routing |
@@ -313,8 +360,10 @@ Job `e2e` en paralelo instala Chromium, ejecuta `npm run test:e2e` y sube el inf
 | **Dominio sin framework** | Importar Vue en el dominio | Hace la regla de dependencia verificable con una prueba |
 | **Capa de servicio** | Lógica Firestore en el shell | Separación de responsabilidades y testabilidad |
 | **Alias español en servicios** | Solo nombres en inglés | API bilingüe para facilitar contribuciones |
-| **Mock de servicios en tests** | Mock de Firestore | Tests más simples y predecibles |
+| **App Check opcional** | App Check obligatorio | La app nunca debe dejar de arrancar por una variable de entorno ausente |
+| **Sin Firebase Auth** | Auth anónima | Nadie tiene cuenta ni correo; la identidad es la palabra secreta |
+| **Mock de servicios en tests** | Emulador de Firestore | Tests más simples y predecibles |
 | **Pulsación larga para multimedia** | Click normal | Permite seleccionar la opción con clic y ver el detalle con pulsación larga |
 | **Errores de red en `application`** | Clasificar en el componente | Es una decisión de negocio: qué se reintenta y qué ve la persona |
 | **Sin persistencia en el navegador** | `sessionStorage` con borrador | Los datos personales no sobreviven al cierre de la pestaña (`docs/RECOVERY.md`) |
-| **`console.error` permitido en Functions** | Regla global | Su destino es Cloud Logging, que ya conoce el contexto de la invocación de la invocación |
+| **Reglas fijadas por texto** | Emulador de reglas en CI | El emulador no corre en el runner y un `git diff` de reglas es legible en un PR; el contrato de seguridad no depende de un servicio externo |

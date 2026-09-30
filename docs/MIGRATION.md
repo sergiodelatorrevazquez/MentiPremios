@@ -4,6 +4,8 @@ Este documento contiene el backlog para evolucionar MentiPremios desde un monoli
 
 La migracion debe hacerse de forma incremental. Cada TODO debe dejar la aplicacion funcionando como antes. La estrategia es anadir la nueva estructura, mover la logica gradualmente y eliminar la implementacion antigua solo cuando exista cobertura equivalente.
 
+> **Aviso de vigencia.** Este documento es una bitacora historica: se conserva entero porque el valor de un "Resultado:" esta en contar lo que salio mal, y eso no se reescribe. Las fases 1 a 12 describen la llegada al monolito modular con un backend de Cloud Functions; la [Fase 13](#fase-13-acceso-directo-del-cliente-a-firestore) describe el cambio posterior a acceso directo del navegador a Firestore, que **sustituye** la decision de seguridad de la Fase 6 (TODO-033 a TODO-038) y varios resultados de las fases 7 y 11. Donde los dos digan cosas distintas, **manda la Fase 13**. Lo unico que no se toca es el criterio de la linea base: la palabra secreta sigue siendo la unica credencial.
+
 ## Principios de migracion
 
 - Mantener el despliegue como una unica aplicacion.
@@ -629,6 +631,8 @@ La palabra secreta no deberia considerarse una autorizacion fuerte por si sola.
 
 Resultado: se eligieron Cloud Functions callable con Admin SDK, Firebase Authentication anonima y App Check obligatorio. Firestore quedara accesible solo desde el servidor para las colecciones de invitaciones y respuestas. La decision y sus limites quedan documentados en `docs/SECURITY.md`: el codigo sigue siendo una credencial bearer y App Check mitiga abuso, pero no acredita identidad real.
 
+> **Sustituido por la Fase 13.** Esta decision se reviso: las Cloud Functions se eliminaron por completo, y con ellas la autenticacion anonima y el App Check obligatorio. La conclusion sobre la credencial bearer se mantiene; el modelo que la sostiene, no. Ver [SECURITY.md](SECURITY.md).
+
 ## TODO-034. Crear un endpoint unico de envio [COMPLETADO]
 
 El cliente debe llamar a una unica operacion:
@@ -647,6 +651,8 @@ El servidor debe:
 6. Ejecutarlo todo de forma atomica.
 
 Resultado: se anadio la callable `submitSurvey` en `functions/`, protegida por Firebase Auth y App Check. Lee la invitacion, rechaza codigos inexistentes/usados y crea la respuesta junto con `usado: true` en una unica transaccion. El cliente ya envia por esta callable; la validacion exhaustiva queda en TODO-036. CI compila las Functions y el predeploy de Firebase ejecuta su build.
+
+> **Sustituido por la Fase 13.** No hay callable ni carpeta `functions/`. El envio es una `runTransaction` del SDK de cliente en `FirestoreSurveyRepository.saveSurvey`. La operacion unica que se pedia en este TODO se conserva: el cliente llama a un unico `submitSurvey`.
 
 ## TODO-035. Hacer el envio idempotente [COMPLETADO]
 
@@ -685,11 +691,15 @@ Las reglas deben impedir:
 
 Resultado: `firestore.rules` usa denegacion por defecto y bloquea todas las lecturas/escrituras cliente de `codigos`, `respuestas` y `palabrasClave`. `firebase.json` referencia las reglas y el despliegue esta documentado.
 
+> **Sustituido por la Fase 13.** Las reglas ya no bloquean el acceso del cliente: permiten `get` por identificador en `codigos` y `create` en `respuestas`, y siguen negando todo lo demas, incluida la enumeracion. La denegacion por defecto y el comodin final siguen intactos.
+
 ## TODO-038. Separar lectura de invitacion y autorizacion [COMPLETADO]
 
 Si se mantiene el acceso por palabra secreta, disenar cuidadosamente que datos puede devolver el cliente y que operaciones deben permanecer server-side.
 
 Resultado: la validacion se movio a la callable autenticada `validateInvitation`, que normaliza el codigo, verifica que exista y no este usado, y devuelve unicamente `participantName`. Se retiro la lectura Firestore del cliente, se eliminaron los servicios legacy de lectura/escritura directa y las reglas deniegan tambien `get` individual de invitaciones. Las pruebas cubren autenticacion, estados de invitacion, normalizacion y respuesta minima.
+
+> **Sustituido por la Fase 13, y en sentido contrario.** El cliente vuelve a leer `codigos/{invitationId}` directamente, con `getDoc`. Lo que se mantiene intacto es el nucleo de la decision: normalizar el codigo, distinguir inexistente de ya usada, y no exponer nada mas que el nombre visible. Lo que se abandona es la idea de que esa comprobacion no pueda hacerse en el navegador, porque las reglas ya impiden enumerar la coleccion.
 
 ---
 
@@ -725,11 +735,15 @@ schemaVersion: 2
 
 Resultado/decision: conservar `respuestas` como coleccion y tratar los documentos actuales sin `schemaVersion` como legacy v1. No se reescribiran ni borraran en una migracion masiva; permanecen disponibles para informes y exportaciones. Las nuevas respuestas usaran v2, con `schemaVersion: 2`, `participantName`, `answers`, `createdAt` y `submittedAt`; el ID sera opaco y se enlazara desde el documento de invitacion mediante `responseId`. La logica de reintentos reconocera la respuesta legacy asociada al ID antiguo sin copiar el codigo secreto a documentos nuevos. Cualquier backfill futuro requiere export/respaldo y un plan de rollback.
 
+> **Sustituido por la Fase 13 en el punto del identificador.** El esquema v2 es exactamente el que se escribio aqui, pero el documento **no** lleva un ID opaco enlazado: usa el identificador de la invitacion, y el campo `responseId` se elimino de `codigos`. La garantia que se buscaba —que un reintento no pise nada— la dan las reglas: `update` esta prohibido en `respuestas`, de modo que el segundo envio choca. La observacion de que un documento guardando el codigo secreto tiene riesgo tambien se resuelve sola: sin `list` sobre `respuestas`, el identificador no se puede recorrer.
+
 ## TODO-041. Evitar usar la palabra secreta como ID visible [COMPLETADO]
 
 Evaluar el uso de un ID interno aleatorio para respuestas. La palabra secreta no deberia aparecer innecesariamente en documentos o informes.
 
 Resultado: las respuestas nuevas usan IDs aleatorios de Firestore; el documento de invitacion conserva el enlace `responseId`. El esquema nuevo incluye `schemaVersion: 2`, nombre y mapa de respuestas, sin copiar el secreto. Los reintentos legacy siguen comprobando el documento con el ID anterior y las pruebas cubren el enlace v2, la idempotencia y la ausencia de escrituras duplicadas.
+
+> **Revertido por la Fase 13, y el motivo es instructivo.** La preocupacion era que la palabra secreta apareciera como identificador de un documento. Se resolvio de la forma mas simple: la palabra sigue siendo el ID, y lo que se prohibio fue enumerar la coleccion, de modo que ese identificador solo lo conoce quien ya tiene la palabra. Añadir un ID opaco obligaba a escribir un `responseId` en el documento de la invitacion —un campo mas que alguien podia alterar— y a comparar contenidos para deducir si un reintento era legitimo. La prohibicion de `update` hace las dos cosas gratis.
 
 ## TODO-042. Anadir marcas de tiempo reales [COMPLETADO]
 
@@ -748,6 +762,8 @@ snap.data() as CodigoInvitacion
 Crear parseadores o validadores para documentos incompletos o corruptos.
 
 Resultado: `firestoreSchemas.ts` valida invitaciones y sus `responseId`, mapas completos de opciones, respuestas legacy planas y documentos v2 con version, nombre, campos exactos y timestamps Firestore validos. Los handlers usan estos parseadores antes de devolver nombres o aceptar reintentos; los documentos ausentes, corruptos o de versiones desconocidas se rechazan. Hay pruebas de campos faltantes/extra, IDs inseguros, opciones invalidas, timestamps fuera de rango y formato legacy.
+
+> **Parcialmente sustituido por la Fase 13.** Los parseadores de `functions/` desaparecen con la carpeta. En su lugar, `parseInvitation` en `FirestoreSurveyRepository` rechaza los documentos sin `nombre` no vacio o sin `usado` booleano, y los devuelve como inexistentes. **Lo que no se traslada, y hay que decirlo claro:** ya no hay un parser de respuestas guardadas que valida lo que hay en Firestore, porque el cliente no las lee. La validacion pasa a estar en las reglas, que exigen las cinco claves exactas al crear, y en `validateSurveyAnswers`, que valida contra el catalogo antes de escribir. Un documento v2 con un campo de mas que se escribio antes sigue ahi y no se detecta; solo se detectaria al intentar reescribirlo, que las reglas impiden.
 
 ---
 
@@ -886,6 +902,8 @@ Resultado: la revision revelo seis defectos reales que se corrigieron. El boton 
 
 # Fase 10: pruebas
 
+> **Sustituido en parte por la Fase 13.** Los resultados de esta fase describen specs que ya no existen: `submitSurveyHandler.spec.ts`, `validateInvitationHandler.spec.ts` y `firestoreSchemas.spec.ts` se borraron con la carpeta `functions/`, y las allowlists que fijaban (`SURVEY_OPTION_IDS`, `parseSurveySubmission`) tenian su unico consumidor en el servidor. En su lugar hay `tests/unit/contracts/firestoreRules.spec.ts`, que fija por texto el contrato de las reglas, y `tests/integration/bootstrap.spec.ts`, que cubre la traduccion de `'saved'`, `'already-used'` y `'not-found'` a errores de aplicacion. La piramide de tres niveles y `testLayout.spec.ts` siguen exactamente igual.
+
 ## TODO-055. Separar pruebas por nivel [COMPLETADO]
 
 Crear:
@@ -969,6 +987,8 @@ Resultado: se fijo el formato definitivo en los tres puntos donde el payload cam
 
 # Fase 11: observabilidad y operacion
 
+> **Parcialmente sustituido por la Fase 13.** TODO-062 justificaba el `console.error` de `functions/` porque su destino era Cloud Logging; al desaparecer `functions/`, esa excepcion desaparece con el, y `tests/unit/contracts/logging.spec.ts` ahora prohibe el `console.*` en todo `src/` sin excepciones. TODO-065 sigue entero: `docs/RECOVERY.md` existe, y la garantia que lo sostiene —la invitacion consumida prueba que las respuestas estan a salvo— no cambio, porque la transaccion sigue siendo atomica. Solo cambio quien la ejecuta.
+
 ## TODO-062. Crear logging controlado [COMPLETADO]
 
 Evitar `console.error` directo en componentes. Crear un logger que permita:
@@ -1040,6 +1060,8 @@ citadas al final del propio documento.
 ---
 
 # Fase 12: documentacion
+
+> **Extendida por la Fase 13.** Los TODO de esta fase rehicieron su trabajo cuando describian Cloud Functions, el plan Blaze, la autenticacion anonima y el App Check obligatorio. Los cinco se reescribieron: `ARCHITECTURE.md`, `API.md`, `DEPLOYMENT.md`, `DEV_SETUP.md` y `SECURITY.md`. Sus resultados se conservan aqui porque explican por que se escribio lo que se escribio, y porque varios de los problemas que detectaron —el `.env.example` sin origen de los valores, el checklist con un `npm test -- --run` que no existia, el `firebase.json` sin hosting— siguieron siendo ciertos despues del cambio.
 
 ## TODO-066. Actualizar `ARCHITECTURE.md` [COMPLETADO]
 
@@ -1236,6 +1258,106 @@ costumbre.
 
 ---
 
+# Fase 13: acceso directo del cliente a Firestore
+
+## TODO-071. Sustituir Cloud Functions por acceso directo [COMPLETADO]
+
+Eliminada la carpeta `functions/` por completo. No hay backend, ni Firebase
+Authentication, ni App Check obligatorio, ni plan Blaze. El navegador accede a
+Firestore con el SDK de cliente y la frontera de seguridad pasa a ser
+`firestore.rules`.
+
+Que esto sea seguro depende de una sola pareja de reglas en `codigos`:
+
+- `allow get: if true` — se puede leer una invitacion concreta si ya se conoce su
+  identificador, que es la palabra secreta. Sin esta lectura el login no puede
+  existir.
+- `allow list: if false` — **nunca** se puede enumerar la coleccion. Sin
+  enumeracion nadie descubre las palabras del resto de participantes ni quien ha
+  contestado ya.
+
+Resultado: la validacion de la invitacion es un `getDoc` en
+`FirestoreSurveyRepository.findInvitation`, y el envio es una `runTransaction` en
+`saveSurvey` que escribe `respuestas/{invitationId}` y marca
+`codigos/{invitationId}.usado = true` en la misma operacion. El repositorio devuelve
+`'saved' | 'already-used' | 'not-found'` **como dato**, y `createAppServices` en
+`src/app/bootstrap.ts` traduce esos tres resultados a `InvalidInvitationError`,
+`InvitationAlreadyUsedError` o exito. La interfaz `AppServices` no cambio, asi que
+`App.vue`, los SFC y los casos de uso no se tocaron.
+
+Lo que si cambio por el camino, y conviene no perderlo:
+
+- `client.ts` deja de lanzar error al arrancar y App Check pasa a ser opcional: solo
+  se inicializa si existe `VITE_FIREBASE_APP_CHECK_SITE_KEY`. Una variable ausente
+  ya no puede ser la causa de que la gala no funcione.
+- Se elimino el campo `responseId` de `codigos`. El documento de respuesta usa el
+  identificador de la invitacion y `update` esta prohibido en `respuestas`, asi que
+  un segundo envio choca contra las reglas en lugar de sobrescribir. La
+  idempotencia la da la regla, no una comparacion de contenidos.
+- Se eliminaron `submitSurveyHandler.spec.ts`, `validateInvitationHandler.spec.ts` y
+  `firestoreSchemas.spec.ts`. En su lugar hay `tests/unit/contracts/firestoreRules.spec.ts`.
+- CI tiene un unico `npm ci`. `firebase.json` solo declara `firestore`.
+
+## TODO-072. Fijar el contrato de las reglas por texto [COMPLETADO]
+
+Las reglas son la unica barrera que queda entre las palabras secretas y cualquier
+navegador, y una emulador en la suite anadiria un servicio que mantener a cambio de
+una garantia que un test da en milisegundos.
+
+Resultado: `tests/unit/contracts/firestoreRules.spec.ts` lee `firestore.rules` y fija
+que `codigos` tiene `get` y no `list`, que `create` y `delete` estan negadas, que
+`update` exige `false -> true` en `usado` con `affectedKeys().hasOnly(['usado'])`,
+que `respuestas` solo admite `create` con las cinco claves del esquema, y que el
+comodin final lo deniega todo. `repositoryContracts.spec.ts` complementa con la otra
+mitad de la garantia: el repositorio **no** usa `getDocs`, `query` ni `where`,
+porque una consulta es un `list`. Las dos mitades juntas dicen que la palabra
+secreta solo se puede conocer, nunca listar.
+
+## TODO-073. Reescribir la documentacion [COMPLETADO]
+
+Nueve ficheros y el README. Lo que se elimino de todos ellos: Cloud Functions, el
+plan Blaze, Firebase Authentication anonima, el App Check obligatorio, la carpeta
+`functions/`, la septima variable `VITE_FIREBASE_APP_CHECK_SITE_KEY` como requisito, y
+los despliegues que los requerian —`npm ci --prefix functions`,
+`firebase deploy --only functions`, `firebase functions:rollback`, la orden
+"funciones antes que la web", y el requisito de que la region de las callables
+coincidiera con la del cliente.
+
+Lo que se escribio, y no es solo sustituir nombres: `SECURITY.md` se reescribio
+entero para explicar por que una aplicacion sin servidor puede seguir tratando las
+palabras como secretas, y por que App Check no es lo que las protege. `ARCHITECTURE.md`
+gano una seccion de modelo de seguridad con la tabla de reglas. `API.md` paso de
+documentar DTOs remotos y codigos `HttpsError` a documentar las dos operaciones del
+repositorio y como sus tres resultados se traducen a errores de aplicacion.
+`DEPLOYMENT.md` perdio tres secciones enteras y gano la explicacion de que el
+comprobante `hasOnly` y el `set` del repositorio tienen que moverse juntos.
+`RECOVERY.md` tiene ahora un quinto escenario —reglas desplegadas que no encajan—
+porque con acceso directo ese es el fallo de despliegue mas probable, y su sintoma
+—«palabra secreta incorrecta» siempre— es engañoso por diseno. `USER_GUIDE.md` gano
+una seccion que explica a quien participa por que su palabra es su credencial.
+
+Se mantuvo deliberadamente la aclaracion de que el prefijo `VITE_` es publico y no
+son secretos: es la que evita que alguien meta una clave de cuenta de servicio en
+un `.env.local`. Y se documento explicitamente que **la consola de Firebase sigue
+pudiendo ver la coleccion entera**, porque usa permisos de administrador que no le
+afectan estas reglas: sin esa frase, la prohibicion de `list` parece una limitacion
+inconveniente para el organizador, y no lo es.
+
+## TODO-074. Corregir el contrato de documentacion obsoleto [COMPLETADO]
+
+Escritos como notas de sustitucion al principio de cada fase afectada, para que la
+bitacora no mienta: Fase 6 (modelo de seguridad, callable de envio, reglas,
+separacion de lectura y autorizacion), Fase 7 (identificador opaco y `responseId`,
+parseo de documentos), Fase 10 (specs de handlers y allowlists) y Fase 11 (la
+excepcion de `console.error` para Functions).
+
+Resultado: el documento se conserva entero —un "Resultado:" reescrito pierde justo lo
+que lo hace util dentro de seis meses— pero con el aviso de vigencia arriba del todo
+y con siete notas que dicen que la Fase 13 manda. Un lector nuevo ya no puede
+confundir la decision de seguridad por la decision vigente.
+
+---
+
 # Orden recomendado de implementacion
 
 ## Bloque 1: estabilizacion
@@ -1268,7 +1390,7 @@ costumbre.
 
 ## Bloque 5: seguridad y persistencia
 
-- TODO-033 a TODO-043
+- TODO-033 a TODO-043, **superado en parte por TODO-071 a TODO-074**
 
 ## Bloque 6: recursos y experiencia
 
@@ -1277,6 +1399,10 @@ costumbre.
 ## Bloque 7: calidad y operacion
 
 - TODO-055 a TODO-070
+
+## Bloque 8: acceso directo a Firestore
+
+- TODO-071 a TODO-074
 
 ---
 
@@ -1291,8 +1417,15 @@ La migracion se considerara completada cuando:
 - `npm run test:e2e` pase.
 - `npm run build` pase.
 - El dominio no dependa de Vue ni Firebase.
-- La interfaz no acceda directamente a Firestore.
-- El envio sea atomico e idempotente.
+- Solo `infrastructure/` hable con Firestore, y la presentacion no.
+- El envio sea atomico y no pueda sobrescribirse.
+- Se pueda leer una invitacion por identificador y **no** enumerar la coleccion.
 - Las reglas de Firebase no permitan acceso indiscriminado.
 - La documentacion refleje la arquitectura y el modelo de datos reales.
 - Las cuatro reglas de dependencia esten verificadas por pruebas, no por costumbre.
+
+> La version anterior de este criterio decia «La interfaz no acceda directamente a
+> Firestore», que era lo correcto mientras las Cloud Functions eran la frontera.
+> Con la Fase 13, lo correcto es lo de al lado: la interfaz sigue sin hablar con
+> Firestore —eso lo verifica `dependencyRules.spec.ts`—, pero la condicion que de
+> verdad protege los datos ya no es *donde* se accede, sino *que* se puede hacer.
