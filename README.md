@@ -112,7 +112,7 @@ npm run test:e2e        # Tests responsive en navegador real
 | `npm run test:unit` | Tests unitarias por capa |
 | `npm run test:integration` | Tests de integración |
 | `npm run test:ui` | Dashboard interactivo |
-| `npm run test:e2e` | Tests responsive (Playwright) |
+| `npm run test:e2e` | Tests responsive (Playwright). Si Chromium no arranca por librerías del sistema, ver [DEPLOYMENT.md](docs/DEPLOYMENT.md#los-e2e-necesitan-librerías-del-sistema) |
 
 > `npm test` entra en modo watch. Para una sola ejecución, como en CI, `npm test -- --run`.
 

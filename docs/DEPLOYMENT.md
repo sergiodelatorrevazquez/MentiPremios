@@ -58,17 +58,19 @@ Para un volcado a texto, la misma consola permite exportar la colección.
 
 Los 16 tests de `tests/e2e/` abren Chromium de verdad. Si al lanzarlos falla con
 `libnspr4.so: cannot open shared object file`, no es un fallo del proyecto: a
-Chromium le faltan cuatro librerías y **no las necesita para esta web**, solo
-para arrancar el navegador.
+Chromium le faltan `libnspr4`, `libnss3` y `libasound2t64`, y esta web **no usa
+ninguna** de las tres. Solo hacen falta para que el navegador arranque.
 
-La solución normal es `sudo npx playwright install-deps chromium`, que instala
-`libnspr4`, `libnss3` y `libasound2t64` en el sistema.
+La solución permanente es `sudo npx playwright install-deps chromium`.
 
-Sin `sudo` se pueden usar las de los paquetes, sin instalar nada: descárgalas con
-`apt-get download`, descomprímelas con `dpkg-deb -x` en un directorio y apunta
-`LD_LIBRARY_PATH` a `usr/lib/x86_64-linux-gnu` de ese directorio. El directorio
-no es del repositorio a propósito: son unos 2 MB de binarios del sistema, y
-meterlos en git no toca nada.
+Si no hay `sudo`, `scripts/fetch-e2e-libs.sh` deja esas librerías en
+`~/.local/share/pwlibs` (unos 5 MB) **sin instalar nada en el sistema**: las
+descarga de los paquetes de Ubuntu y las descomprime ahí. Es idempotente, así
+que repetirlo no hace nada. A partir de ese momento `npm run test:e2e` las
+encuentra solo, porque `scripts/e2e.sh` añade ese directorio a `LD_LIBRARY_PATH`
+solo si existe.
+
+Las dos librerías se pueden dejar donde uno quiera con la variable `PWLIBS`.
 
 ## Si algo va mal
 
