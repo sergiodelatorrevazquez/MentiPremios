@@ -7,7 +7,6 @@ import {
 
 export interface SubmitSurveyInput {
   invitationId: string;
-  participantName: string;
   questions: readonly Pregunta[];
   answers: Readonly<Record<string, string | undefined>>;
   persist: (submission: SurveySubmission) => Promise<void> | void;
@@ -15,7 +14,6 @@ export interface SubmitSurveyInput {
 
 export async function submitSurvey({
   invitationId,
-  participantName,
   questions,
   answers,
   persist,
@@ -28,7 +26,6 @@ export async function submitSurvey({
 
   const submission: SurveySubmission = {
     invitationId,
-    participantName,
     answers: Object.fromEntries(
       questions.map((question) => [question.id, answers[question.id] as string]),
     ) as SurveySubmission['answers'],

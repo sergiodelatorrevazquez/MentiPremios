@@ -59,11 +59,11 @@ fallo en las métricas. Pedirle a alguien que vuelva a escribir veinte
 respuestas que ya están en Firestore sería un fallo de la aplicación, no de la
 persona.
 
-**Por qué la invitación es la que arbitra:** la transacción marca la invitación
-como usada y escribe la respuesta en la misma operación. O pasan las dos cosas, o
-no pasa ninguna. No existe un estado intermedio en el que la respuesta esté
-guardada y la invitación libre, así que el mensaje de la invitación es una fuente
-fiable, no una heurística.
+**Por qué la invitación es la que arbitra:** la transacción escribe las respuestas
+en el propio documento de la persona y pasa `haVotado` a `true` en la misma
+operación. O pasa las dos cosas, o no pasa ninguna. No existe un estado
+intermedio en el que la respuesta esté guardada y la invitación libre, así que el
+mensaje de la invitación es una fuente fiable, no una heurística.
 
 **Un matiz que conviene saber:** la persona no puede distinguir su respuesta ya
 guardada de la que ella acaba de enviar. Su voto no se ve, así que tampoco hay
@@ -81,7 +81,7 @@ momento.
 **Un caso particular de este proyecto:** si la transacción entra en conflicto con
 otra escritura, Firestore la aborta (`aborted`) y el SDK del cliente la reintenta
 por su cuenta un número acotado de veces. El conflicto real aquí es doble envío
-—dos pestañas con la misma palabra—, y como la segunda transacción ve `usado:
+—dos pestañas con la misma palabra—, y como la segunda transacción ve `haVotado:
 true`, sale por `already-used` en lugar de sobrescribir.
 
 **Qué hacer si ocurre:** reintentar. Si el reintento dice que la invitación ya
@@ -90,7 +90,7 @@ se usó, el caso 2 aplica y la respuesta está a salvo.
 **Sobre el momento del mensaje:** una confirmación en pantalla no es la prueba de
 que haya datos en disco —la red puede cortarse entre la confirmación de Firestore
 y la respuesta al navegador—. La invitación consumida sí lo es, y por eso el
-mensaje que ve la persona no es la fuente fiable: lo es el estado de `usado`.
+mensaje que ve la persona no es la fuente fiable: lo es el estado de `haVotado`.
 
 ## 4. El código queda marcado pero la pantalla no cambia
 

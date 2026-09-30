@@ -1,19 +1,19 @@
 # Linea base funcional
 
-Esta linea base describe el comportamiento que debe conservarse durante la migracion hacia el monolito modular, y que sigue siendo valido despues del cambio al acceso directo a Firestore ([Fase 13](MIGRATION.md#fase-13-acceso-directo-del-cliente-a-firestore)).
+Esta linea base describe el comportamiento que debe conservarse durante la migracion hacia el monolito modular, y que sigue siendo valido despues del cambio al acceso directo a Firestore ([Fase 13](MIGRATION.md#fase-13-acceso-directo-del-cliente-a-firestore)) y de la unificacion de las votaciones en la propia coleccion de invitaciones ([Fase 14](MIGRATION.md#fase-14-una-sola-coleccion-codigos)).
 
 ## Flujo principal
 
 1. La aplicacion comienza en la pantalla de login.
 2. El boton de entrada permanece deshabilitado mientras la palabra secreta esta vacia.
 3. Una palabra secreta inexistente muestra un error de invitacion incorrecta.
-4. Una invitacion marcada como usada muestra un error y no permite continuar.
+4. Una invitacion con `haVotado: true` muestra un error y no permite continuar.
 5. Una invitacion valida muestra la pantalla de bienvenida con el nombre del participante.
 6. El usuario puede iniciar la encuesta y avanzar por diez preguntas.
 7. Cada pregunta permite seleccionar una unica opcion.
 8. La navegacion hacia atras vuelve a la pregunta anterior y conserva su seleccion.
 9. La primera pregunta mantiene deshabilitado el boton de volver atras.
-10. En la ultima pregunta, el envio guarda las diez respuestas y marca la invitacion como usada.
+10. En la ultima pregunta, el envio guarda las diez respuestas y marca la invitacion como ya votada.
 11. Tras un envio correcto se muestra la pantalla de agradecimiento.
 
 ## Visores
@@ -25,31 +25,40 @@ Esta linea base describe el comportamiento que debe conservarse durante la migra
 
 ## Contrato observado en Firestore
 
-El envio se materializa en una unica transaccion que escribe dos documentos:
+Solo hay una coleccion, `codigos`, y el envio se materializa en una unica
+transaccion que hace una unica escritura sobre el documento de la propia persona:
 
 ```ts
-// respuestas/{invitationId}
-{
-  schemaVersion: 2,
-  participantName: string,        // copiado de codigos/{invitationId}.nombre
-  answers: Record<string, string>,
-  createdAt: Timestamp,
-  submittedAt: Timestamp,
-}
-
 // codigos/{invitationId}
-{ usado: true }
+{
+  haVotado: true,
+  tonto: "tonto-1",
+  casper: "casper-3",
+  comefeas: "comefeas-2",
+  soltero: "soltero-1",
+  'anecdota': "anecdota-1",   // el id del campo no lleva tilde
+  meme: "meme-4",
+  mensaje: "mensaje-1",
+  foto: "foto-2",
+  video: "video-1",
+  correa: "correa-1",
+}
 ```
 
-El identificador del documento de respuesta es el mismo que el de la invitacion, y
-el nombre de la persona se copia de la invitacion en lugar de venir del cliente.
-Estas dos cosas son el contrato, no detalles de implementacion: la primera es lo que
-impide sobrescribir un envio anterior, y la segunda es lo que impide escribir el
-nombre de otra persona.
+El documento de la invitacion ya traia `nombre` y `haVotado: false`; el envio
+anade los diez campos de pregunta, uno por cada entrada de `QUESTION_IDS`, con
+el id de la opcion elegida en la forma `<pregunta>-<n>`. No hay un mapa
+anidado `answers`, ni `schemaVersion`, ni `participantName`, ni `createdAt` o
+`submittedAt`, y no hay documento de voto aparte: la coleccion `respuestas` ya no
+existe.
 
-El contrato legado `{ usuario, premios }` que se observaba en las primeras fases ya
-no existe: `respuestas/{invitationId}` guarda un documento por pregunta dentro de
-`answers`, versionado con `schemaVersion: 2`.
+Que `haVotado` solo pueda pasar de `false` a `true` es parte del contrato, no un
+detalle: es lo que impide sobrescribir un envio anterior. Y `nombre` no se
+escribe al enviar, de modo que desde el cliente es inmutable.
+
+El contrato legado `{ usuario, premios }` que se observaba en las primeras fases,
+y despues el `respuestas/{invitationId}` con `schemaVersion: 2`, ya no existen:
+el voto vive dentro del propio documento de la invitacion.
 
 ## Invariante que no debe romperse
 

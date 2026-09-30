@@ -1,10 +1,15 @@
 rules_version = '2';
 
-// Sin servidor intermedio: el navegador lee y escribe directamente. La
-// seguridad se apoya en una sola idea: se puede leer una invitación concreta si
+// Sin servidor intermedio: el navegador lee y escribe directamente. Hay una
+// sola colección, `codigos`, con un documento por persona.
+//
+// La seguridad se apoya en una sola idea: se puede leer un documento concreto si
 // ya se conoce su identificador (la palabra secreta), pero nunca se puede
 // enumerar la colección. Sin `list`, nadie puede descubrir las palabras del
-// resto de participantes ni quién ha contestado ya.
+// resto de participantes ni quién ha respondido ya.
+//
+// El coste de que los votes vivan en el mismo documento es que leer a un
+// amigo devuelve también sus respuestas.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /codigos/{invitationId} {
@@ -12,27 +17,28 @@ service cloud.firestore {
       allow list: if false;
       allow create, delete: if false;
 
-      // Lo único que la aplicación escribe es el paso de `usado: false` a
-      // `usado: true` al guardar la encuesta. `diff` acota el cambio a ese
-      // campo, así que no sirve ni para alterar el nombre ni para resucitar una
-      // invitación ya usada.
-      allow update: if resource.data.usado == false
-        && request.resource.data.usado == true
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usado']);
-    }
-
-    // Solo se crean, nunca se leen ni se modifican. El documento se identifica
-    // con el id de la invitación, así que la prohibición de `update` es lo que
-    // impide que un segundo envío sobrescriba el primero.
-    match /respuestas/{responseId} {
-      allow create: if request.resource.data.keys().hasOnly([
-        'schemaVersion',
-        'participantName',
-        'answers',
-        'createdAt',
-        'submittedAt',
-      ]);
-      allow read, update, delete: if false;
+      // Al votar se escribe, en el mismo documento, `haVotado` a true y un
+      // campo por pregunta con la opción elegida. `diff` acota el cambio a esa
+      // lista exacta, así que no se puede tocar `nombre`, no se pueden escribir
+      // campos inventados y una invitación ya votada no se puede resucitar.
+      //
+      // La lista debe coincidir con `QUESTION_IDS`; el test de contrato de
+      // `firestore.rules` falla si se añade una pregunta y no se añade aquí.
+      allow update: if resource.data.haVotado == false
+        && request.resource.data.haVotado == true
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'haVotado',
+          'tonto',
+          'casper',
+          'comefeas',
+          'soltero',
+          'anecdota',
+          'meme',
+          'mensaje',
+          'foto',
+          'video',
+          'correa',
+        ]);
     }
 
     match /palabrasClave/{entryId} {

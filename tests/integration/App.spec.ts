@@ -14,7 +14,7 @@ const mockAppServices: AppServices = {
   validateInvitation: vi.fn().mockResolvedValue({
     id: 'secreta-123',
     nombre: 'Sergio',
-    usado: false,
+    haVotado: false,
   }),
   submitSurvey: vi.fn().mockResolvedValue({} as SurveySubmission),
 };
@@ -80,7 +80,7 @@ describe('App - Login', () => {
   });
 
   it('muestra estado de comprobación y deshabilita login mientras espera', async () => {
-    let resolveValidation: ((value: { id: string; nombre: string; usado: false }) => void) | undefined;
+    let resolveValidation: ((value: { id: string; nombre: string; haVotado: false }) => void) | undefined;
     vi.mocked(mockAppServices.validateInvitation).mockImplementationOnce(
       () => new Promise((resolve) => { resolveValidation = resolve; }),
     );
@@ -94,7 +94,7 @@ describe('App - Login', () => {
     expect(submit.text()).toBe('Comprobando...');
     expect(submit.attributes('disabled')).toBeDefined();
 
-    resolveValidation?.({ id: 'secreta-123', nombre: 'Sergio', usado: false });
+    resolveValidation?.({ id: 'secreta-123', nombre: 'Sergio', haVotado: false });
     await validation;
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.hero-title').text()).toContain('Sergio');
@@ -295,13 +295,12 @@ describe('App - Questions', () => {
 
     // toHaveBeenCalledWith sin objectContaining: si aparece un campo extra,
     // la comparación falla. El formato en memoria incluye `questions` porque
-    // submitSurvey necesita el catálogo para validar; el payload de red queda
+    // submitSurvey necesita el catálogo para validar; lo que se guarda queda
     // reducido a { invitationId, answers }, como fijan bootstrap.spec y
-    // repositoryContracts.spec, donde participantName lo resuelve el servidor.
+    // repositoryContracts.spec. El nombre no viaja: lo identifica el id.
     expect(mockAppServices.submitSurvey).toHaveBeenCalledTimes(1);
     expect(mockAppServices.submitSurvey).toHaveBeenCalledWith({
       invitationId: 'secreta-123',
-      participantName: 'Sergio',
       questions: preguntas,
       answers: {
         tonto: 'tonto-1',
@@ -331,7 +330,7 @@ describe('App - Questions', () => {
     const payload = vi.mocked(mockAppServices.submitSurvey).mock.calls[0][0];
 
     expect(Object.keys(payload).sort())
-      .toEqual(['answers', 'invitationId', 'participantName', 'questions']);
+      .toEqual(['answers', 'invitationId', 'questions']);
     expect(Object.keys(payload.answers)).toHaveLength(10);
     expect(payload.answers).toEqual({
       tonto: 'tonto-2',

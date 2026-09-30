@@ -158,7 +158,6 @@ async function responderYPasarSiguiente() {
   try {
     await appServices.submitSurvey({
       invitationId: codigo.value.id,
-      participantName: codigo.value.nombre,
       questions: preguntas,
       answers: { ...respuestas },
     });

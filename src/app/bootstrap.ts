@@ -49,13 +49,11 @@ export function createAppServices(db: Firestore): AppServices {
 
       const submission = await submitSurvey({
         invitationId: input.invitationId,
-        participantName: input.participantName,
         questions: input.questions,
         answers: input.answers,
         persist: async (toSave) => {
           outcome = await store.saveSurvey({
             invitationId: toSave.invitationId,
-            participantName: toSave.participantName,
             answers: toSave.answers,
           });
         },

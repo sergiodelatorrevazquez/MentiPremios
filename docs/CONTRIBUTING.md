@@ -69,22 +69,25 @@ planéalo como una migración: ver
 | Cambio | Dónde |
 |---|---|
 | Un campo nuevo en una invitación | `firestore.rules` (si el cliente va a escribirlo) y `parseInvitation` en `firestoreSurveyRepository.ts` |
-| Un campo nuevo en una respuesta guardada | `firestoreSurveyRepository.ts` (el `set`) **y** la lista `hasOnly` de `firestore.rules` |
+| Un campo nuevo en lo que se guarda al votar | `firestoreSurveyRepository.ts` (el `update`) **y** la lista `hasOnly` de `firestore.rules` |
+| Una pregunta nueva en el catálogo | `questions.ts` y `QUESTION_IDS` en `survey.types.ts` **y** la lista `hasOnly` de `firestore.rules` |
 | Un tipo del cliente | `src/features/survey/domain/survey.types.ts` |
 | Una regla de validación de respuestas | `src/features/survey/domain/survey.rules.ts` |
 
-**Aviso que no es negociable:** las reglas exigen que `respuestas` se cree con
-**exactamente** las cinco claves que ya existen. Si añades un campo al `set` y
-olvidas la lista `hasOnly`, la escritura se rechaza con `permission-denied` y el
-envío falla en la casa de quien participa. Un cambio de esquema son **dos** cambios,
-siempre, y uno de ellos está en un fichero que no es TypeScript.
+**Aviso que no es negociable:** las reglas acotan `update` a una lista blanca
+exacta —`haVotado` y los diez IDs de pregunta—, y esa lista tiene que coincidir
+con `QUESTION_IDS`. Si añades un campo al `update` del repositorio y olvidas la
+lista, la escritura se rechaza con `permission-denied` y el envío falla en la
+casa de quien participa. Un cambio de esquema son **dos** cambios, siempre, y uno
+de ellos está en un fichero que no es TypeScript. El test de contrato
+`tests/unit/contracts/firestoreRules.spec.ts` es el que avisa del desajuste.
 
 El tipo que se valida y el que se guarda **no son el mismo**, y confundirlos rompe
-el contrato. El caso de uso produce `{ invitationId, participantName, answers }`;
-el documento guardado añade `schemaVersion` y los dos timestamps, y el repositorio
-ignora el `participantName` que llega de la UI: **copia el nombre de la invitación**.
-Es la invitación la única fuente autorizada del nombre, y por eso nadie puede
-escribir el nombre de otra persona aunque manipule el DOM.
+el contrato. El caso de uso produce `{ invitationId, answers }` —sin
+`participantName` ni nada más, porque la persona ya la identifica el id del
+documento— y el `update` escribe `{ haVotado: true, ...answers }` sobre el
+documento de la invitación. El nombre no se toca: no está en la lista blanca, así
+que desde el navegador es inmutable.
 
 ---
 
@@ -235,14 +238,18 @@ que valide nada**: `firestore.rules` es la frontera de confianza. Ver
    palabras de todo el grupo. Si alguna vez necesitas listar para una pantalla
    interna, no lo hagas desde el cliente: la consola de Firebase ya te deja verlo
    con permisos de administrador, y esas reglas no le afectan.
-2. **`update` sobre `codigos` solo para el paso `false → true` de `usado`.** El
-   `diff(...).hasOnly(['usado'])` es lo que impide renombrar una invitación o
-   resucitar una ya usada.
-3. **`respuestas` es de solo `create`.** Es lo que impide sobrescribir el voto de
-   otra persona. Y por eso el documento comparte identificador con la invitación:
-   un segundo envío choca en lugar de pisar.
-4. **No rompas el comodín `/{document=**}`.** Es la red de seguridad de cualquier
+2. **`update` sobre `codigos` solo para el paso `false → true` de `haVotado`, y
+   solo con la lista blanca.** `resource.data.haVotado == false &&
+   request.resource.data.haVotado == true` impide resucitar una invitación ya
+   votada, y el `diff(...).hasOnly([...])` impide renombrarla o escribir campos
+   inventados. La lista tiene que coincidir con `QUESTION_IDS`.
+3. **No rompas el comodín `/{document=**}`.** Es la red de seguridad de cualquier
    colección que alguien añada dentro de seis meses.
+
+Y recuerda el coste de que solo haya una colección, para no romperlo por
+descuido: el mismo `get` que hace el login devuelve el documento entero, así que
+quien tenga la palabra de otra persona ve también sus respuestas. Está
+analizado en [SECURITY.md](SECURITY.md).
 
 Y las tres reglas de privacidad que se comprueban con tests:
 

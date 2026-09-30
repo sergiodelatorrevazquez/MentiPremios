@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { QUESTION_IDS } from '../../../src/features/survey/domain/survey.types';
 
 /*
  * Estas reglas son la única barrera que queda entre las palabras secretas y
@@ -47,35 +48,37 @@ describe('reglas que protegen las palabras secretas', () => {
     expect(block('codigos/{invitationId}')).toMatch(/allow create, delete:\s*if false/);
   });
 
-  it('solo admite pasar la invitación de sin usar a usada', () => {
+  it('solo admite pasar la invitación de sin votar a votada', () => {
     const codigos = block('codigos/{invitationId}');
 
-    expect(codigos).toMatch(/resource\.data\.usado == false/);
-    expect(codigos).toMatch(/request\.resource\.data\.usado == true/);
-    // `diff` acota el cambio al campo `usado`, así que no se puede tocar el
-    // nombre ni devolver una invitación usada a sin usar.
-    expect(codigos).toMatch(/affectedKeys\(\)\.hasOnly\(\['usado'\]\)/);
+    expect(codigos).toMatch(/resource\.data\.haVotado == false/);
+    expect(codigos).toMatch(/request\.resource\.data\.haVotado == true/);
+  });
+
+  it('acota el cambio a `haVotado` y a los campos de las preguntas', () => {
+    // `diff` acota el cambio a esa lista, así que no se puede tocar `nombre`,
+    // escribir campos inventados ni devolver una invitación a sin votar.
+    expect(block('codigos/{invitationId}')).toMatch(/affectedKeys\(\)\.hasOnly\(\[/);
+  });
+
+  it('la lista de campos que puede escribir coincide con las preguntas reales', () => {
+    // Si se añade una pregunta al catálogo y no se añade a las reglas, el voto
+    // se guardaría y las reglas lo rechazarían. Este test es el que avisa.
+    const [, lista] = block('codigos/{invitationId}')
+      .match(/affectedKeys\(\)\.hasOnly\(\[([\s\S]*?)\]\)/) ?? [];
+
+    const permitidos = (lista ?? '').match(/'([^']+)'/g)?.map((c) => c.slice(1, -1)) ?? [];
+
+    expect(permitidos).toEqual(['haVotado', ...Object.values(QUESTION_IDS)]);
   });
 });
 
-describe('reglas que protegen los votos', () => {
-  it('permite guardar una respuesta nueva', () => {
-    expect(block('respuestas/{responseId}')).toMatch(/allow create:/);
-  });
-
-  it('no deja leer, modificar ni borrar respuestas ya guardadas', () => {
-    const respuestas = block('respuestas/{responseId}');
-
-    expect(respuestas).toMatch(/allow read, update, delete:\s*if false/);
-  });
-
-  it('exige la forma exacta del documento para poder crearlo', () => {
-    const respuestas = block('respuestas/{responseId}');
-
-    expect(respuestas).toMatch(/hasOnly\(\[\s*'schemaVersion'/);
-    for (const campo of ['participantName', 'answers', 'createdAt', 'submittedAt']) {
-      expect(respuestas).toContain(`'${campo}'`);
-    }
+describe('una sola colección', () => {
+  it('ya no existe la colección de respuestas', () => {
+    // Los votes se guardan en el propio documento de la persona, así que no
+    // debe quedar ni el bloque de reglas ni el nombre en el repositorio.
+    expect(rules).not.toContain('/respuestas/');
+    expect(rules).not.toContain('match /respuestas');
   });
 });
 

@@ -27,7 +27,6 @@ function wait(ms: number): Promise<void> {
 function submissionFrom(input: SubmitSurveyRequest): SurveySubmission {
   return {
     invitationId: input.invitationId,
-    participantName: input.participantName,
     answers: { ...input.answers } as SurveySubmission['answers'],
   };
 }
@@ -41,7 +40,7 @@ const services: AppServices = {
     if (scenario === 'used') {
       throw new InvitationAlreadyUsedError('invitation-already-used', 'invitation-already-used');
     }
-    return { id: secret, nombre: participantName, usado: false };
+    return { id: secret, nombre: participantName, haVotado: false };
   },
   async submitSurvey(input) {
     if (delay > 0) await wait(delay);

@@ -35,7 +35,6 @@ const respuestasValidas = { tonto: 'tonto-1', casper: 'casper-1' } as const;
 function input(overrides: Partial<SubmitSurveyInput> = {}): SubmitSurveyInput {
   return {
     invitationId: 'inv-1',
-    participantName: 'Sergio',
     questions: preguntas,
     answers: { ...respuestasValidas },
     persist: vi.fn(),
@@ -50,7 +49,6 @@ describe('envío correcto', () => {
 
     expect(resultado).toEqual({
       invitationId: 'inv-1',
-      participantName: 'Sergio',
       answers: { ...respuestasValidas },
     });
     expect(persist).toHaveBeenCalledOnce();
@@ -127,9 +125,10 @@ describe('envío inválido', () => {
     const persist = vi.fn();
     // validateSurveyAnswers solo comprueba consistencia con el catálogo recibido,
     // así que un catálogo vacío y ninguna respuesta son mutuamente válidos.
-    // El endpoint cierra el hueco: la allowlist de SURVEY_OPTION_IDS exige las diez.
+    // Cierra el hueco `firestore.rules`, cuya lista blanca no admite campos
+    // distintos de `haVotado` y de las diez preguntas.
     await expect(submitSurvey(input({ questions: [], answers: {}, persist }))).resolves
-      .toEqual({ invitationId: 'inv-1', participantName: 'Sergio', answers: {} });
+      .toEqual({ invitationId: 'inv-1', answers: {} });
     expect(persist).toHaveBeenCalledOnce();
   });
 });

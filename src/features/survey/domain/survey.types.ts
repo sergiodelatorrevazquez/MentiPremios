@@ -48,7 +48,6 @@ export type RespuestasCompletas = Record<QuestionId, OptionId>;
 
 export interface SurveySubmission {
   invitationId: string;
-  participantName: string;
   answers: RespuestasCompletas;
 }
 
@@ -58,8 +57,12 @@ export interface PremioRespuesta {
 }
 
 export interface CodigoInvitacion {
+  /**
+   * Nombre con el que se saluda a la persona. Es opcional en el documento: si
+   * no está, la aplicación usa el id, que ya identifica a quienresponding.
+   */
   nombre: string;
-  usado: boolean;
+  haVotado: boolean;
 }
 
 export type CodigoInvitacionIdentificado = CodigoInvitacion & { id: string };

@@ -71,11 +71,13 @@ En la consola de Firebase, crea la colección `codigos` con al menos un document
 codigos/
   └── palabra-de-prueba/
         ├── nombre: "Usuario de prueba"
-        └── usado: false
+        └── haVotado: false
 ```
 
 El ID del documento es la palabra secreta y tiene que ir **en minúsculas**: la
-aplicación normaliza con `trim()` y `toLowerCase()` antes de leer.
+aplicación normaliza con `trim()` y `toLowerCase()` antes de leer. `nombre` es
+opcional, y el mismo documento es donde se guardará el voto de esa persona al
+enviar: `haVotado` pasará a `true` y aparecerán los diez campos de pregunta.
 
 ### 6. Iniciar el servidor de desarrollo
 
@@ -178,7 +180,7 @@ npm run test:ui
 
 **`tests/integration/bootstrap.spec.ts`** — Comprueba que el composition root conecta `AppServices` con el repositorio y traduce `'saved'`, `'already-used'` y `'not-found'` a los errores que la interfaz entiende.
 
-**`tests/unit/contracts/firestoreRules.spec.ts`** — Fija por texto el contrato de seguridad: `get` permitido en `codigos`, `list` prohibido, `update` acotado a `usado`, `respuestas` de solo `create` y el comodín denegado.
+**`tests/unit/contracts/firestoreRules.spec.ts`** — Fija por texto el contrato de seguridad: `get` permitido en `codigos`, `list` prohibido, `create` y `delete` negadas, `update` acotado a `haVotado` y a la lista de preguntas (que además se compara con `QUESTION_IDS`), que no quede la colección `respuestas` y el comodín denegado.
 
 **`tests/unit/contracts/`** — Tokens de diseño, `scoped` de estilos, favicon, contrato responsive, reglas de dependencia, contratos de repositorio y estructura del propio repo.
 

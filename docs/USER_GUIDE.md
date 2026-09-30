@@ -68,12 +68,12 @@ Para las preguntas **Mensaje del Año**, **Foto del Año** y **Video del Año**:
 Tras responder la última pregunta y pulsar **"Enviar y cerrar"**:
 
 1. Tus respuestas se guardan en Firebase.
-2. Tu palabra secreta se marca como "usada", en el mismo paso que las respuestas.
+2. Tu palabra secreta queda marcada como ya utilizada, en el mismo paso que las respuestas.
 3. Verás la pantalla **"Gracias por participar, [tu nombre]"** con un mensaje de confirmación.
 
 Ya has terminado. Tus votos se usarán durante la gala de premios del grupo.
 
-> Tus respuestas se guardan desde tu propio navegador, en la misma operación que marca la palabra como usada. Si pierdes la conexión en ese instante, la aplicación te ofrecerá «Reintentar envío»: si ya se había guardado, te lo dirá y no tendrás que volver a escribir nada.
+> Tus respuestas se guardan desde tu propio navegador, en una sola operación que las escribe y marca la palabra como utilizada. Si pierdes la conexión en ese instante, la aplicación te ofrecerá «Reintentar envío»: si ya se había guardado, te lo dirá y no tendrás que volver a escribir nada.
 
 ## Tu palabra secreta es la clave
 
@@ -82,6 +82,7 @@ Unos pocos detalles sobre seguridad que explican por qué la aplicación se comp
 - **No hay cuentas ni contraseñas.** Tu palabra secreta *es* tu credencial, y quien la tenga puede responder con ella.
 - **Nadie puede ver el listado de palabras.** Aunque alguien tenga el enlace de la web, no puede abrir la lista de participantes ni descubrir las palabras del resto.
 - **La palabra es de un solo uso.** En cuanto envías, deja de funcionar.
+- **Tus respuestas se guardan en tu propia ficha.** Van en el mismo sitio que tu palabra, así que quien tenga tu palabra puede ver cómo votaste. Envía solo a gente de confianza.
 
 Por eso la palabra debe viajar por privado: es tu voto, no solo tu entrada.
 

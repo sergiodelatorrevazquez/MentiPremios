@@ -56,15 +56,26 @@ describe('adaptador de la encuesta', () => {
     expect(repositorySource).not.toMatch(/\bcollection\s*\(\s*db\b/);
   });
 
-  it('guarda la respuesta con el identificador de la invitación', () => {
-    // Clave del modelo de un solo uso: documento y invitación comparten id, de
-    // modo que el segundo envío choca con la prohibición de `update`.
-    expect(repositorySource).toContain('RESPONSES_COLLECTION, response.invitationId');
+  it('escribe los votes en el propio documento de la persona', () => {
+    // Solo hay una colección: un `update` con `haVotado` y las respuestas, sin
+    // documento aparte y sin una segunda escritura que pueda quedar a medias.
+    expect(repositorySource).toContain('transaction.update(invitationRef, { haVotado: true, ...response.answers })');
+    expect(repositorySource).not.toMatch(/\btransaction\.set\b/);
+    expect(repositorySource).not.toMatch(/\bserverTimestamp\b/);
   });
 
-  it('marca la invitación como usada en la misma transacción', () => {
-    expect(repositorySource).toContain('runTransaction');
-    expect(repositorySource).toMatch(/transaction\.update\(\s*invitationRef,\s*\{\s*usado:\s*true/);
+  it('no guarda ni el nombre ni la hora, solo las respuestas', () => {
+    // La persona ya la identifica el id del documento: no hace falta duplicar
+    // su nombre ni anotar cuándo votó.
+    expect(repositorySource).not.toContain('participantName');
+    expect(repositorySource).not.toMatch(/createdAt|submittedAt|schemaVersion/);
+  });
+
+  it('no escribe en ninguna colección que no sea la de las invitaciones', () => {
+    const colecciones = (repositorySource.match(/_COLLECTION = '([^']+)'/g) ?? [])
+      .map((consta) => consta.match(/'([^']+)'/)?.[1]);
+
+    expect(colecciones).toEqual(['codigos']);
   });
 });
 

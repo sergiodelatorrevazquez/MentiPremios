@@ -2,61 +2,49 @@
 
 ## Modelo de datos (Firestore)
 
-El proyecto utiliza **Firebase Firestore** con tres colecciones, y el navegador accede a ellas **directamente**: no hay servidor, ni Cloud Functions, ni Firebase Auth, ni App Check obligatorio. La API que consume la aplicación son dos operaciones del SDK de cliente, implementadas en `src/infrastructure/firebase/firestoreSurveyRepository.ts`, y el contrato de seguridad lo impone `firestore.rules`, que cierra con una regla comodín `/{document=**}` cualquier colección que no esté declarada.
+El proyecto utiliza **Firebase Firestore** y el navegador accede a él **directamente**: no hay servidor, ni Cloud Functions, ni Firebase Auth, ni App Check obligatorio. Hay **una sola colección**, `codigos`, con un documento por persona. La API que consume la aplicación son dos operaciones del SDK de cliente, implementadas en `src/infrastructure/firebase/firestoreSurveyRepository.ts`, y el contrato de seguridad lo impone `firestore.rules`, que cierra con una regla comodín `/{document=**}` cualquier colección que no esté declarada.
 
-Un documento que no encaja con lo esperado no es «un documento raro»: para la aplicación es un documento inexistente. `parseInvitation` en el repositorio devuelve `null` si falta `nombre` o si `usado` no es un booleano, y el caso de uso lo traduce al mismo error que un `null` de verdad.
+Un documento que no encaja con lo esperado no es «un documento raro»: para la aplicación es un documento inexistente. `parseInvitation` en el repositorio devuelve `null` si `haVotado` no es un booleano, o si `nombre` está presente y no es un `string` no vacío, y el caso de uso lo traduce al mismo error que un `null` de verdad.
 
 ---
 
 ### Colección `codigos`
 
-Control de acceso. Cada documento es una invitación de una persona.
+Control de acceso. Cada documento es una invitación de una persona, y **ese mismo documento guarda también su voto** cuando la persona responde. No hay una segunda colección de respuestas.
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| **Document ID** | `string` | Palabra secreta normalizada (`trim()` + `toLowerCase()`, sin `/`) |
-| `nombre` | `string` | Nombre de la persona; no puede estar vacío ni ser solo espacios |
-| `usado` | `boolean` | `false` = disponible, `true` = ya respondió |
+| Campo | Tipo | Cuándo existe | Descripción |
+|---|---|---|---|
+| **Document ID** | `string` | siempre | Palabra secreta normalizada (`trim()` + `toLowerCase()`, sin `/`) |
+| `haVotado` | `boolean` | siempre | `false` = disponible, `true` = ya respondió |
+| `nombre` | `string` | opcional | Nombre de la persona; si falta, la aplicación usa el id del documento |
+| `<pregunta>` | `string` | solo tras votar | ID de la opción elegida, con la forma `<pregunta>-<n>` (`tonto-1`, `casper-3`…) |
 
-**Ejemplo en Firebase Console:**
+Los diez campos de pregunta son exactamente los del catálogo: `tonto`, `casper`, `comefeas`, `soltero`, `anecdota`, `meme`, `mensaje`, `foto`, `video` y `correa`. Coinciden con `QUESTION_IDS` en `src/features/survey/domain/survey.types.ts`, y `tests/unit/contracts/firestoreRules.spec.ts` es el test de contrato que falla si se añade una pregunta y no se añade a la lista blanca de `firestore.rules`.
+
+**Antes de votar, en Firebase Console:**
 ```
 codigos/
   └── secreto-de-sergio/
         ├── nombre: "Sergio"
-        └── usado: false
+        └── haVotado: false
 ```
 
-> No hay ningún campo más. Estas dos columnas son el contrato completo: el cliente nunca escribe aquí, salvo el paso de `usado` a `true`.
-
----
-
-### Colección `respuestas`
-
-| Campo | Tipo | Descripción |
-|---|---|---|
-| **Document ID** | `string` | **El mismo ID de la invitación.** Es lo que impide sobrescribir un envío anterior |
-| `schemaVersion` | `number` | `2` |
-| `participantName` | `string` | Nombre visible; copiado de la invitación, no del cliente |
-| `answers` | `map` | ID de pregunta → ID de opción, exactamente 10 entradas del catálogo |
-| `createdAt` | `timestamp` | `serverTimestamp()` |
-| `submittedAt` | `timestamp` | `serverTimestamp()` |
-
-**Ejemplo:**
+**Después de votar, en ese mismo documento:**
 ```
-respuestas/secreto-de-sergio {
-  schemaVersion: 2,
-  participantName: "Sergio",
-  answers: { tonto: "tonto-1", casper: "casper-3" /* ... */ },
-  createdAt: Timestamp,
-  submittedAt: Timestamp
-}
+codigos/
+  └── secreto-de-sergio/
+        ├── nombre: "Sergio"
+        ├── haVotado: true
+        ├── tonto: "tonto-1"
+        ├── casper: "casper-3"
+        /* ...las otras ocho respuestas... */
 ```
 
-Las reglas exigen que `create` lleve **exactamente** esas cinco claves (`request.resource.data.keys().hasOnly([...])`). Un campo de más hace que la escritura se rechace, y una clave de menos también.
+> **Sobre `nombre`.** Se conserva a propósito, aunque desde el cliente no se escriba nada nuevo con él: es lo que saluda en la pantalla de bienvenida y lo que usarán las bienvenidas personalizadas futuras. En la práctica es opcional, porque si falta, `parseInvitation` devuelve el id del documento —que ya identifica a quien responde— y la aplicación funciona igual. La lista blanca de `update` no incluye `nombre`, así que desde el navegador es inmutable en cualquier caso.
 
-El nombre de la persona se copia desde la invitación dentro de la transacción: la invitación es la única fuente autorizada, y así el cliente no puede escribir el nombre de otra persona aunque manipule el DOM.
+> **Lo que ya no existe.** El campo `usado` está sustituido por `haVotado`. No hay colección `respuestas`, ni campos `participantName`, `schemaVersion`, `createdAt` o `submittedAt`, ni ningún mapa anidado `answers`: el voto se escribe plano, un campo por pregunta, dentro de la invitación.
 
-> **El documento no guarda el código secreto en ningún campo, pero su identificador es la palabra secreta.** Es aceptable precisamente porque `respuestas` no admite `list`: sin enumeración, nadie puede recorrer los identificadores. Si algún día se permitiera listar esa colección, este diseño dejaría de ser seguro.
+> **El identificador del documento es la palabra secreta, y sigue siendo aceptable** precisamente porque `codigos` no admite `list`: sin enumeración, nadie puede recorrer los identificadores. Si algún día se permitiera listar esa colección, este diseño dejaría de ser seguro.
 
 ---
 
@@ -92,33 +80,32 @@ interface SurveyStore {
 |---|---|
 | Normalización | `trim()` + `toLowerCase()` en `validateInvitation`, antes de llamar al repositorio |
 | Vacío | Un secreto vacío o solo espacios se rechaza sin preguntar a Firestore |
-| Forma del documento | `nombre` debe ser un `string` no vacío y `usado` un `boolean` |
+| Forma del documento | `haVotado` debe ser un `boolean`; `nombre`, si está presente, un `string` no vacío |
 
 **Operación** — `getDoc(doc(db, 'codigos', id))`.
 
-**Salida** — la invitación (`{ id, nombre, usado }`) o `null` si no existe o si el documento no encaja. Nunca devuelve el documento completo ni el resto de campos.
+**Salida** — la invitación (`{ id, nombre, haVotado }`) o `null` si no existe o si el documento no encaja. Nunca devuelve el resto de campos del documento.
 
 > **No hay ninguna consulta en todo el repositorio.** Ni `getDocs`, ni `query`, ni `where`. Una consulta sobre `codigos` sería un `list`, y `list` está prohibido en las reglas. `tests/unit/contracts/repositoryContracts.spec.ts` lo fija leyendo el fuente, porque la consulta no fallaría en los tests: fallaría en producción, en la casa de quien participa.
 
 ### `saveSurvey(response)`
 
-**Entrada** — `{ invitationId, participantName, answers }`.
+**Entrada** — `{ invitationId, answers }`. No hay `participantName`: la persona ya la identifica el id del documento, así que el payload solo lleva las respuestas.
 
 **Transacción** — `runTransaction` sobre `db`:
 
 1. Lee `codigos/{invitationId}` dentro de la transacción.
 2. Si no existe, o si el documento no encaja → `'not-found'`.
-3. Si `usado === true` → `'already-used'`, sin escribir nada.
-4. Si no, escribe `respuestas/{invitationId}` con `schemaVersion: 2`, `participantName` tomado de la invitación y los dos `serverTimestamp()`.
-5. Actualiza `codigos/{invitationId}` con `{ usado: true }`.
+3. Si `haVotado === true` → `'already-used'`, sin escribir nada.
+4. Si no, hace **una sola escritura**: `transaction.update(invitationRef, { haVotado: true, ...answers })`.
 
-Las dos escrituras son atómicas. No existe un estado en el que el voto esté guardado y la invitación libre.
+No hay documento aparte ni segunda escritura, así que no puede quedar medio guardado: o se escriben las diez respuestas y `haVotado` pasa a `true`, o no se escribe nada. Por eso `docs/RECOVERY.md` puede tratar «invitación ya votada» durante el envío como prueba de que las respuestas están a salvo.
 
 **Salida** — `'saved' | 'already-used' | 'not-found'`.
 
 Se devuelven como **dato y no como excepción** a propósito: los tres son resultados esperables, no fallos. El repositorio no decide qué ve la persona; eso es tarea de la capa de aplicación.
 
-> **Sobre la idempotencia.** El esquema ya no usa un `responseId` ni compara respuestas: la unicidad la garantiza la propia regla. Como el documento de respuesta se identifica con el mismo ID que la invitación y `update` está prohibido, un reintento choca contra las reglas en lugar de duplicar o sobrescribir. Quien ya respondió recibe «invitación ya usada», que la aplicación trata como acierto (ver [RECOVERY.md](RECOVERY.md)).
+> **Sobre la idempotencia.** La unicidad la garantiza la propia regla, no una comparación de contenidos: `update` solo se admite cuando `haVotado` pasa de `false` a `true`, así que un segundo envío choca contra las reglas en lugar de duplicar o sobrescribir. Quien ya respondió recibe «invitación ya utilizada», que la aplicación trata como acierto (ver [RECOVERY.md](RECOVERY.md)).
 
 ---
 
@@ -129,7 +116,7 @@ La interfaz (`AppServices`) no cambia: recibe errores de dominio, no códigos de
 | Resultado | Error de aplicación | Qué ve la persona |
 |---|---|---|
 | `not-found` (validación) | `InvalidInvitationError` | «La palabra secreta es incorrecta» |
-| Invitación con `usado: true` | `InvitationAlreadyUsedError` | «Ya has respondido a la encuesta» |
+| Invitación con `haVotado: true` | `InvitationAlreadyUsedError` | «Ya has respondido a la encuesta» |
 | `not-found` (envío) | `InvalidInvitationError` | «La palabra secreta es incorrecta» |
 | `already-used` (envío) | `InvitationAlreadyUsedError` | Confirmación: las respuestas ya estaban guardadas |
 | Excepción del SDK | `PersistenceError`, y luego `classifyNetworkError` | Mensaje de red con opción de reintentar |
@@ -146,14 +133,28 @@ Lo que llega desde Firestore entra por `classifyNetworkError` (`src/features/sur
 
 | Ruta | Operaciones permitidas |
 |---|---|
-| `codigos/{invitationId}` | `get` · `update` solo `false → true` en `usado`, y solo ese campo |
-| `respuestas/{responseId}` | `create` con exactamente las cinco claves del esquema |
+| `codigos/{invitationId}` | `get` · `update` solo `false → true` en `haVotado`, y solo los once campos de la lista blanca |
 | `palabrasClave/{entryId}` | `create` |
 | `/{document=**}` | ninguna |
 
+`list`, `create` y `delete` están negadas en `codigos`: las invitaciones las crea el organizador desde la consola, no un navegador.
+
+La condición de `update` es doble, y las dos mitades importan. La primera es la dirección: `resource.data.haVotado == false && request.resource.data.haVotado == true`, que hace imposible devolver una invitación a sin votar. La segunda es el alcance, con `diff`:
+
+```rules
+request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+  'haVotado', 'tonto', 'casper', 'comefeas', 'soltero', 'anecdota',
+  'meme', 'mensaje', 'foto', 'video', 'correa',
+])
+```
+
+Esa lista blanca es lo que impide tocar `nombre` o escribir un campo inventado, y tiene que coincidir con `QUESTION_IDS` de `src/features/survey/domain/survey.types.ts`: si se añade una pregunta al catálogo y no a la lista, el voto se guardaría y las reglas lo rechazarían. `tests/unit/contracts/firestoreRules.spec.ts` comprueba esa coincidencia.
+
 La idea que sostiene el modelo está en el par `get` / `list` de `codigos`: **se puede leer una invitación concreta si ya se conoce el identificador —la palabra secreta—, pero nunca se puede enumerar la colección.** Sin enumeración no se pueden descubrir las palabras del resto de participantes ni quién ha contestado ya.
 
-> **La consola de Firebase sí puede ver la colección entera.** Opera con permisos de administrador del proyecto y no le afectan estas reglas, que gobiernan a los clientes del SDK. Organizar la gala mirando quién ha respondido sigue siendo posible.
+> **El coste consciente de una sola colección: leer a un amigo devuelve también sus respuestas.** El `get` que hace el login no distingue entre una invitación sin votar y una ya votada, así que quien conozca la palabra de otra persona obtiene también sus diez respuestas. A cambio hay un único documento por persona, una única escritura al votar y ninguna posibilidad de voto huérfano. Es un intercambio deliberado, y está en [SECURITY.md](SECURITY.md) con su análisis.
+
+> **La consola de Firebase sí puede ver la colección entera.** Opera con permisos de administrador del proyecto y no le afectan estas reglas, que gobiernan a los clientes del SDK. Organizar la gala mirando quién ha votado sigue siendo posible.
 
 ---
 

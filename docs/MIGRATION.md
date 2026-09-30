@@ -4,7 +4,7 @@ Este documento contiene el backlog para evolucionar MentiPremios desde un monoli
 
 La migracion debe hacerse de forma incremental. Cada TODO debe dejar la aplicacion funcionando como antes. La estrategia es anadir la nueva estructura, mover la logica gradualmente y eliminar la implementacion antigua solo cuando exista cobertura equivalente.
 
-> **Aviso de vigencia.** Este documento es una bitacora historica: se conserva entero porque el valor de un "Resultado:" esta en contar lo que salio mal, y eso no se reescribe. Las fases 1 a 12 describen la llegada al monolito modular con un backend de Cloud Functions; la [Fase 13](#fase-13-acceso-directo-del-cliente-a-firestore) describe el cambio posterior a acceso directo del navegador a Firestore, que **sustituye** la decision de seguridad de la Fase 6 (TODO-033 a TODO-038) y varios resultados de las fases 7 y 11. Donde los dos digan cosas distintas, **manda la Fase 13**. Lo unico que no se toca es el criterio de la linea base: la palabra secreta sigue siendo la unica credencial.
+> **Aviso de vigencia.** Este documento es una bitacora historica: se conserva entero porque el valor de un "Resultado:" esta en contar lo que salio mal, y eso no se reescribe. Las fases 1 a 12 describen la llegada al monolito modular con un backend de Cloud Functions; la [Fase 13](#fase-13-acceso-directo-del-cliente-a-firestore) describe el cambio posterior a acceso directo del navegador a Firestore, que **sustituye** la decision de seguridad de la Fase 6 (TODO-033 a TODO-038) y varios resultados de las fases 7 y 11. La [Fase 14](#fase-14-una-sola-coleccion-codigos) unifica despues las votaciones en la propia coleccion de invitaciones y **sustituye** a su vez todo lo que las fases 13 y anteriores dicen sobre la coleccion `respuestas` y sobre el campo `usado`. Donde los tres digan cosas distintas, **manda la Fase 14**. Lo unico que no se toca es el criterio de la linea base: la palabra secreta sigue siendo la unica credencial.
 
 ## Principios de migracion
 
@@ -1285,6 +1285,13 @@ Resultado: la validacion de la invitacion es un `getDoc` en
 `InvitationAlreadyUsedError` o exito. La interfaz `AppServices` no cambio, asi que
 `App.vue`, los SFC y los casos de uso no se tocaron.
 
+> **Sustituido por la Fase 14 en el modelo de datos.** El `getDoc` y los tres
+> resultados como dato siguen siendo exactamente estos. Lo que ya no es cierto es
+> que el envio escriba `respuestas/{invitationId}` y marque `usado`: ahora hay una
+> sola coleccion y el envio es un unico `update` sobre `codigos/{invitationId}` con
+> `{ haVotado: true, ...answers }`. La coleccion `respuestas` y el campo `usado` ya
+> no existen.
+
 Lo que si cambio por el camino, y conviene no perderlo:
 
 - `client.ts` deja de lanzar error al arrancar y App Check pasa a ser opcional: solo
@@ -1312,6 +1319,11 @@ comodin final lo deniega todo. `repositoryContracts.spec.ts` complementa con la 
 mitad de la garantia: el repositorio **no** usa `getDocs`, `query` ni `where`,
 porque una consulta es un `list`. Las dos mitades juntas dicen que la palabra
 secreta solo se puede conocer, nunca listar.
+
+> **Ampliado por la Fase 14.** El test sigue fijando `get` si, `list` no y el
+> comodin denegado, pero ahora ademas comprueba que la lista blanca de `update`
+> coincide con `QUESTION_IDS` y que no queda rastro de la coleccion `respuestas`.
+> La garantia de no enumerar es la misma; lo que cambio es el resto del contrato.
 
 ## TODO-073. Reescribir la documentacion [COMPLETADO]
 
@@ -1355,6 +1367,115 @@ Resultado: el documento se conserva entero —un "Resultado:" reescrito pierde j
 que lo hace util dentro de seis meses— pero con el aviso de vigencia arriba del todo
 y con siete notas que dicen que la Fase 13 manda. Un lector nuevo ya no puede
 confundir la decision de seguridad por la decision vigente.
+
+---
+
+# Fase 14: una sola coleccion `codigos`
+
+## TODO-075. Unificar las votaciones en el documento de la invitacion [COMPLETADO]
+
+El modelo anterior repartia una persona en dos documentos: `codigos/{palabra}` con
+`nombre` y `usado`, y `respuestas/{palabra}` con `schemaVersion`, `participantName`,
+`answers`, `createdAt` y `submittedAt`. El identificador era el mismo en los dos,
+pero eran dos documentos, dos escrituras y una transaccion que tenia que mantenerlos
+de acuerdo. Para unas votaciones entre amigos eso era mas maquinaria de la que el
+problema necesitaba.
+
+Resultado: hay **una sola coleccion, `codigos`**, con un documento por persona. El
+identificador sigue siendo la palabra secreta, sin cambios. Antes de votar el
+documento tiene `nombre` (opcional) y `haVotado: false`; al votar, el mismo
+documento recibe `haVotado: true` y un campo por pregunta con el id de la opcion
+elegida: `tonto: "tonto-1"`, `casper: "casper-3"` y asi con las diez —`tonto`,
+`casper`, `comefeas`, `soltero`, `anecdota`, `meme`, `mensaje`, `foto`, `video`,
+`correa`—, que son exactamente los valores de `QUESTION_IDS`. El campo `usado`
+desaparece, sustituido por `haVotado`, y con el tampoco se van `participantName`,
+`schemaVersion`, `createdAt`, `submittedAt` ni el mapa anidado `answers`. La
+coleccion `respuestas` se elimino por completo.
+
+`nombre` se conserva a proposito, aunque el cliente no escriba nada nuevo con el:
+sirve para la pantalla de bienvenida y para las bienvenidas personalizadas
+futuras. Es opcional en la practica, porque `parseInvitation` cae al id del
+documento cuando no esta, y el id ya identifica a la persona.
+
+El envio paso de dos escrituras a **una sola**: `transaction.update(invitationRef,
+{ haVotado: true, ...answers })`. No hay documento aparte, no hay segunda escritura
+y no puede quedar medio guardado. `SurveySubmission` tampoco lleva `participantName`:
+la persona ya la identifica el id.
+
+Lo que no se toco, y sigue siendo lo que sostiene el modelo:
+
+- El **id del documento sigue siendo la palabra secreta**. No se cambio ni se debe
+  cambiar.
+- `get: if true` y `list: if false`. Se puede leer una invitacion concreta si ya se
+  conoce su identificador; nunca se puede enumerar la coleccion, asi que nadie
+  descubre las palabras del resto.
+- `create` y `delete` negadas en `codigos`, `create` en `palabrasClave` y el
+  comodin `/{document=**}` con `read, write: if false`.
+
+La regla de `update` se adapto al modelo nuevo, y las dos mitades importan. La
+direccion: `resource.data.haVotado == false && request.resource.data.haVotado ==
+true` sigue impidiendo resucitar una invitacion ya votada. El alcance, con
+`diff(resource.data).affectedKeys().hasOnly([...])`, ahora admite once claves —
+`haVotado` y las diez preguntas— en lugar de solo `usado`. Esa lista blanca tiene
+que coincidir con `QUESTION_IDS`, y `tests/unit/contracts/firestoreRules.spec.ts` lo
+comprueba: si se anade una pregunta al catalogo y no a las reglas, el voto se
+guardaria y las reglas lo rechazarian, asi que el test es el que avisa.
+
+## TODO-076. Migrar los datos existentes [COMPLETADO]
+
+Migracion ejecutada en produccion, no un plan:
+
+- Los 14 documentos de `codigos` pasaron de `usado` a `haVotado`, y el campo `usado`
+  se elimino de todos ellos.
+- Los dos votos reales que existian, en `respuestas/admindltv` y `respuestas/alas`,
+  se trasladaron al interior de su propio documento de invitacion. No se perdio
+  ninguno de los dos.
+- La coleccion `respuestas` se elimino por completo.
+- `creeper` se reinicio a `haVotado: false` y sin respuestas, porque se habia
+  consumido en una prueba.
+
+Estado final: `admindltv` y `alas` con `haVotado: true` y sus diez respuestas; los
+otros doce con `haVotado: false` y sin respuestas.
+
+## TODO-077. Verificar las reglas contra produccion [COMPLETADO]
+
+Las reglas se desplegaron y se comprobaron una a una contra produccion, no solo
+contra el texto del fichero:
+
+- `list` sobre `codigos` devuelve 403.
+- `get` de una invitacion concreta devuelve 200.
+- El voto se guarda correctamente.
+- Un segundo voto devuelve 403.
+- Devolver `haVotado` a `false` devuelve 403.
+- Cambiar `nombre` devuelve 403.
+- Escribir un campo inventado devuelve 403.
+
+Los cuatro ultimos son los que ejercitan `diff(...).hasOnly([...])` y la condicion
+de direccion, que es donde un modelo de una sola coleccion podria abrirse sin que
+nadie se diera cuenta.
+
+## TODO-078. Documentar el coste de seguridad [COMPLETADO]
+
+El coste consciente de esta decision, escrito para que no se descubra en la gala:
+como los votos viven en el documento de la invitacion, un `get` sobre el codigo de
+un amigo devuelve tambien sus respuestas. Quien conozca la palabra de otra persona
+puede ver como voto. Las reglas no pueden evitarlo sin romper el login, porque el
+login necesita exactamente esa lectura.
+
+Es un intercambio, no un descuido. A cambio hay un documento por persona, una
+unica escritura al votar y ningun voto huerfano posible. Es aceptable porque son
+votaciones de premios entre amigos y porque quien tiene la palabra de alguien ya
+es alguien de confianza para ella; si algun dia dejara de ser cierto, el sitio
+correcto para separarlo es volver a dos colecciones, y la decision queda anotada
+aqui para que no se pierda.
+
+La consola de Firebase sigue viendo la coleccion entera porque opera con permisos
+de administrador que no le afectan estas reglas: organizar la gala mirando quien ha
+votado sigue siendo posible.
+
+Resultado: `SECURITY.md` tiene ahora una seccion propia sobre este coste, enlazada
+desde `API.md` y `ARCHITECTURE.md`, y `USER_GUIDE.md` se lo dice a quien participa
+en su propio lenguaje: envia solo a gente de confianza.
 
 ---
 
@@ -1404,6 +1525,10 @@ confundir la decision de seguridad por la decision vigente.
 
 - TODO-071 a TODO-074
 
+## Bloque 9: una sola coleccion `codigos`
+
+- TODO-075 a TODO-078
+
 ---
 
 # Criterio de finalizacion
@@ -1429,3 +1554,9 @@ La migracion se considerara completada cuando:
 > Con la Fase 13, lo correcto es lo de al lado: la interfaz sigue sin hablar con
 > Firestore —eso lo verifica `dependencyRules.spec.ts`—, pero la condicion que de
 > verdad protege los datos ya no es *donde* se accede, sino *que* se puede hacer.
+
+> Con la Fase 14 se anade un criterio mas, y es el que explica el coste del modelo:
+> ademas de poder leer una invitacion por identificador y no enumerar la coleccion,
+> hay que poder aceptar que un `get` sobre el codigo de otra persona devuelve sus
+> respuestas. Es una decision consciente, no un descuido, y por eso esta escrita en
+> `docs/SECURITY.md`.

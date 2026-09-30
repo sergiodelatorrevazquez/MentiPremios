@@ -8,8 +8,8 @@ import {
   type InvitationRecord,
 } from '../../../src/features/survey/application/validateInvitation';
 
-const LIBRE: InvitationRecord = { id: 'abc-123', nombre: 'Sergio', usado: false };
-const USADA: InvitationRecord = { id: 'abc-123', nombre: 'Sergio', usado: true };
+const LIBRE: InvitationRecord = { id: 'abc-123', nombre: 'Sergio', haVotado: false };
+const USADA: InvitationRecord = { id: 'abc-123', nombre: 'Sergio', haVotado: true };
 
 describe('invitación inexistente', () => {
   it('lanza InvalidInvitationError cuando elfinder no encuentra nada', async () => {
@@ -35,7 +35,7 @@ describe('invitación utilizada', () => {
   });
 
   it('devuelve el error de invitacion usada aunque el nombre este vacio', async () => {
-    const conNombreVacio: InvitationRecord = { id: 'abc-123', nombre: '', usado: true };
+    const conNombreVacio: InvitationRecord = { id: 'abc-123', nombre: '', haVotado: true };
 
     await expect(validateInvitation('used', async () => conNombreVacio))
       .rejects.toBeInstanceOf(InvitationAlreadyUsedError);

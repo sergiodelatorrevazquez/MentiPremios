@@ -34,13 +34,13 @@ beforeEach(() => {
 
 describe('createAppServices', () => {
   it('devuelve la invitación que encuentra en Firestore, con el secreto normalizado', async () => {
-    const findInvitation = vi.fn().mockResolvedValue({ id: 'secret-1', nombre: 'Sergio', usado: false });
+    const findInvitation = vi.fn().mockResolvedValue({ id: 'secret-1', nombre: 'Sergio', haVotado: false });
     const services = withStore({ findInvitation });
 
     await expect(services.validateInvitation('  SECRET-1  ')).resolves.toEqual({
       id: 'secret-1',
       nombre: 'Sergio',
-      usado: false,
+      haVotado: false,
     });
 
     expect(findInvitation).toHaveBeenCalledWith('secret-1');
@@ -63,7 +63,7 @@ describe('createAppServices', () => {
 
   it('traduce una invitación ya usada al error de respuesta ya realizada', async () => {
     const services = withStore({
-      findInvitation: vi.fn().mockResolvedValue({ id: 'secret-1', nombre: 'Sergio', usado: true }),
+      findInvitation: vi.fn().mockResolvedValue({ id: 'secret-1', nombre: 'Sergio', haVotado: true }),
     });
 
     await expect(services.validateInvitation('secret-1'))
@@ -76,18 +76,15 @@ describe('createAppServices', () => {
 
     await expect(services.submitSurvey({
       invitationId: 'inv-1',
-      participantName: 'Sergio',
       questions: preguntas,
       answers: respuestasCompletas,
     })).resolves.toEqual({
       invitationId: 'inv-1',
-      participantName: 'Sergio',
       answers: respuestasCompletas,
     });
 
     expect(saveSurvey).toHaveBeenCalledWith({
       invitationId: 'inv-1',
-      participantName: 'Sergio',
       answers: respuestasCompletas,
     });
   });
@@ -98,7 +95,6 @@ describe('createAppServices', () => {
 
     await expect(services.submitSurvey({
       invitationId: 'inv-1',
-      participantName: 'Sergio',
       questions: preguntas,
       answers: { tonto: 'tonto-1' },
     })).rejects.toBeInstanceOf(InvalidSubmissionError);
@@ -111,7 +107,6 @@ describe('createAppServices', () => {
 
     await expect(services.submitSurvey({
       invitationId: 'inv-1',
-      participantName: 'Sergio',
       questions: preguntas,
       answers: respuestasCompletas,
     })).rejects.toBeInstanceOf(InvalidInvitationError);
@@ -122,7 +117,6 @@ describe('createAppServices', () => {
 
     await expect(services.submitSurvey({
       invitationId: 'inv-1',
-      participantName: 'Sergio',
       questions: preguntas,
       answers: respuestasCompletas,
     })).rejects.toBeInstanceOf(InvitationAlreadyUsedError);
@@ -136,7 +130,6 @@ describe('createAppServices', () => {
 
     const request = {
       invitationId: 'inv-1',
-      participantName: 'Sergio',
       questions: preguntas,
       answers: respuestasCompletas,
     };
