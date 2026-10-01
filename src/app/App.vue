@@ -33,6 +33,7 @@ const appServices = requireAppServices();
 const palabraSecreta = ref('');
 const codigo = ref<CodigoInvitacionIdentificado | null>(null);
 const loginError = ref<string | null>(null);
+const invitacionUsada = ref(false);
 
 const preguntas = reactive<Pregunta[]>(catalogoPreguntas);
 const {
@@ -123,6 +124,7 @@ async function validarPalabraSecreta() {
   mensaje.value = null;
   error.value = null;
   loginError.value = null;
+  invitacionUsada.value = false;
   errorGala.value = null;
 
   try {
@@ -145,7 +147,7 @@ async function validarPalabraSecreta() {
     cambiarPaso('welcome');
   } catch (e) {
     if (e instanceof InvitationAlreadyUsedError) {
-      loginError.value = 'Ya has respondido a la encuesta de MentiPremios con esta palabra secreta. ¡Gracias de nuevo!';
+      invitacionUsada.value = true;
     } else if (e instanceof InvalidInvitationError) {
       loginError.value = 'La palabra secreta es incorrecta. Revisa lo que te ha llegado en la invitación.';
     } else {
@@ -304,6 +306,7 @@ function volverAtras() {
           <LoginStep
             :model-value="palabraSecreta"
             :login-error="loginError"
+            :invitation-already-used="invitacionUsada"
             :is-submitting="enviando"
             @update:model-value="palabraSecreta = $event"
             @submit="validarPalabraSecreta"

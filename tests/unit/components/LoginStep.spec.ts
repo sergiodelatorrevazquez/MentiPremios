@@ -1,16 +1,18 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import LoginStep from '../../../src/features/survey/presentation/LoginStep.vue';
 
 function mountLoginStep(props: Partial<{
   modelValue: string;
   loginError: string | null;
+  invitationAlreadyUsed: boolean;
   isSubmitting: boolean;
 }> = {}) {
   return mount(LoginStep, {
     props: {
       modelValue: '',
       loginError: null,
+      invitationAlreadyUsed: false,
       isSubmitting: false,
       ...props,
     },
@@ -108,6 +110,29 @@ describe('LoginStep', () => {
       expect(input.attributes('aria-describedby')).toBe('secret-word-error');
       expect(wrapper.find('[role="alert"]').text()).toBe('Invalid secret');
       expect(wrapper.find('[role="alert"]').attributes('aria-live')).toBe('assertive');
+    });
+
+    it('muestra un botón para reproducir compi.ogg cuando la invitación ya se usó', () => {
+      const wrapper = mountLoginStep({ invitationAlreadyUsed: true });
+      const input = wrapper.find('#secret-word');
+
+      expect(wrapper.find('.audio-notice-button').text()).toBe('Pincha aquí, compi');
+      expect(wrapper.find('.field-error').text()).toContain('Pincha aquí, compi');
+      expect(input.attributes('aria-invalid')).toBe('true');
+      expect(input.attributes('aria-describedby')).toBe('secret-word-error');
+      expect(wrapper.find('audio').attributes('src')).toContain('compi');
+      expect(wrapper.find('audio').attributes('autoplay')).toBeUndefined();
+    });
+
+    it('inicia la reproducción solo al pulsar el botón', async () => {
+      const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+      const wrapper = mountLoginStep({ invitationAlreadyUsed: true });
+
+      expect(play).not.toHaveBeenCalled();
+      await wrapper.find('.audio-notice-button').trigger('click');
+
+      expect(play).toHaveBeenCalledOnce();
+      play.mockRestore();
     });
 
     it('mantiene el texto introducido para que el usuario pueda corregirlo', () => {

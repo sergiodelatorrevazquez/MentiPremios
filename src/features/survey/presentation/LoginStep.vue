@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { ref } from 'vue';
+import audioCompi from '../../../assets/compi.ogg';
+
 const props = defineProps<{
   modelValue: string;
   loginError: string | null;
+  invitationAlreadyUsed: boolean;
   isSubmitting: boolean;
 }>();
 
@@ -10,12 +14,27 @@ const emit = defineEmits<{
   (event: 'submit'): void;
 }>();
 
+const audioElement = ref<HTMLAudioElement | null>(null);
+const mostrarControlesAudio = ref(false);
+
 function onInput(value: string) {
   emit('update:modelValue', value);
 }
 
 function onSubmit() {
   emit('submit');
+}
+
+async function reproducirAviso() {
+  const audio = audioElement.value;
+  if (!audio) return;
+
+  audio.currentTime = 0;
+  try {
+    await audio.play();
+  } catch {
+    mostrarControlesAudio.value = true;
+  }
 }
 </script>
 
@@ -44,14 +63,35 @@ function onSubmit() {
         type="text"
         placeholder="Escribe aquí tu palabra secreta..."
         maxlength="50"
-        :aria-invalid="props.loginError ? 'true' : 'false'"
-        :aria-describedby="props.loginError ? 'secret-word-error' : undefined"
+        :aria-invalid="props.loginError || props.invitationAlreadyUsed ? 'true' : 'false'"
+        :aria-describedby="props.loginError || props.invitationAlreadyUsed ? 'secret-word-error' : undefined"
         :aria-busy="props.isSubmitting"
         @input="onInput(($event.target as HTMLInputElement).value)"
         @keyup.enter="onSubmit"
       >
       <div
-        v-if="props.loginError"
+        v-if="props.invitationAlreadyUsed"
+        id="secret-word-error"
+        class="field-error"
+        role="alert"
+        aria-live="assertive"
+      >
+        <button
+          type="button"
+          class="audio-notice-button"
+          @click="reproducirAviso"
+        >
+          Pincha aquí, compi
+        </button>
+        <audio
+          ref="audioElement"
+          :src="audioCompi"
+          :controls="mostrarControlesAudio"
+          preload="auto"
+        />
+      </div>
+      <div
+        v-else-if="props.loginError"
         id="secret-word-error"
         class="field-error"
         role="alert"
@@ -146,6 +186,22 @@ function onSubmit() {
   color: var(--color-error);
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.audio-notice-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.audio-notice-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
 
 .footer {
