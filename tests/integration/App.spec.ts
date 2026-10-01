@@ -77,7 +77,7 @@ describe('App - Login', () => {
     await wrapper.find('button.button-primary').trigger('click');
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.find('.audio-notice-button').text()).toBe('Pincha aquí, compi');
+    expect(wrapper.find('.audio-notice-button').text()).toBe('Pon sonido y pincha aquí compi');
   });
 
   it('muestra estado de comprobación y deshabilita login mientras espera', async () => {
@@ -747,7 +747,7 @@ describe('App - errores de red', () => {
     await wrapper.find('button.button-primary').trigger('click');
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.find('.audio-notice-button').text()).toBe('Pincha aquí, compi');
+    expect(wrapper.find('.audio-notice-button').text()).toBe('Pon sonido y pincha aquí compi');
     expect(wrapper.find('.status--error').exists()).toBe(false);
   });
 });

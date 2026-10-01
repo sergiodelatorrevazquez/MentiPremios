@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import audioCompi from '../../../assets/compi.ogg';
+import audioCompiMp3 from '../../../assets/compi.mp3';
+import audioCompiOgg from '../../../assets/compi.ogg';
 
 const props = defineProps<{
   modelValue: string;
@@ -85,10 +86,18 @@ async function reproducirAviso() {
         </button>
         <audio
           ref="audioElement"
-          :src="audioCompi"
           :controls="mostrarControlesAudio"
           preload="auto"
-        />
+        >
+          <source
+            :src="audioCompiMp3"
+            type="audio/mpeg"
+          >
+          <source
+            :src="audioCompiOgg"
+            type="audio/ogg; codecs=opus"
+          >
+        </audio>
       </div>
       <div
         v-else-if="props.loginError"

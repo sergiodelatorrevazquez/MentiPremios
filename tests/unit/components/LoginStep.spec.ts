@@ -116,11 +116,16 @@ describe('LoginStep', () => {
       const wrapper = mountLoginStep({ invitationAlreadyUsed: true });
       const input = wrapper.find('#secret-word');
 
-      expect(wrapper.find('.audio-notice-button').text()).toBe('Pincha aquí, compi');
-      expect(wrapper.find('.field-error').text()).toContain('Pincha aquí, compi');
+      expect(wrapper.find('.audio-notice-button').text()).toBe('Pon sonido y pincha aquí compi');
+      expect(wrapper.find('.field-error').text()).toContain('Pon sonido y pincha aquí compi');
       expect(input.attributes('aria-invalid')).toBe('true');
       expect(input.attributes('aria-describedby')).toBe('secret-word-error');
-      expect(wrapper.find('audio').attributes('src')).toContain('compi');
+      const sources = wrapper.findAll('audio source');
+
+      expect(sources).toHaveLength(2);
+      expect(sources[0]?.attributes('src')).toContain('compi');
+      expect(sources[0]?.attributes('type')).toBe('audio/mpeg');
+      expect(sources[1]?.attributes('type')).toBe('audio/ogg; codecs=opus');
       expect(wrapper.find('audio').attributes('autoplay')).toBeUndefined();
     });
 
