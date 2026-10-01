@@ -11,6 +11,7 @@ export const METRIC_NAMES = [
   'submission_failed',
   'invitation_used',
   'multimedia_failed',
+  'results_viewed',
 ] as const;
 
 export type MetricName = typeof METRIC_NAMES[number];

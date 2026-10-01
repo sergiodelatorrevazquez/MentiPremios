@@ -15,13 +15,14 @@ function collectingMetrics() {
 }
 
 describe('catálogo de métricas', () => {
-  it('cubre los cinco eventos que hay que medir', () => {
+  it('cubre los seis eventos que hay que medir', () => {
     expect(METRIC_NAMES).toEqual([
       'survey_started',
       'submission_succeeded',
       'submission_failed',
       'invitation_used',
       'multimedia_failed',
+      'results_viewed',
     ]);
   });
 
@@ -46,6 +47,7 @@ describe('conteo', () => {
       submission_failed: 0,
       invitation_used: 0,
       multimedia_failed: 0,
+      results_viewed: 0,
     });
     expect(metrics.total()).toBe(0);
   });

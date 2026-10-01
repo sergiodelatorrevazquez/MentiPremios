@@ -1,10 +1,11 @@
-import { config, mount } from '@vue/test-utils';
+import { config, flushPromises, mount } from '@vue/test-utils';
 import { vi } from 'vitest';
 import App from '../../src/app/App.vue';
 import { APP_SERVICES_KEY, type AppServices } from '../../src/app/bootstrap';
 import { InvitationAlreadyUsedError, InvalidInvitationError } from '../../src/features/survey/application/errors';
 import type { SurveySubmission } from '../../src/features/survey/domain/survey.types';
 import { preguntas } from '../../src/features/survey/domain/questions';
+import { calcularResultadoEncuesta } from '../../src/features/results/domain/results.rules';
 import { logger, type LogEntry } from '../../src/infrastructure/logging/logger';
 import { metrics } from '../../src/infrastructure/metrics/metrics';
 
@@ -16,6 +17,7 @@ const mockAppServices: AppServices = {
     voted: false,
   }),
   submitSurvey: vi.fn().mockResolvedValue({} as SurveySubmission),
+  getResults: vi.fn().mockResolvedValue(null),
 };
 
 config.global.provide = { [APP_SERVICES_KEY]: mockAppServices };
@@ -816,6 +818,203 @@ describe('App - logging controlado', () => {
 
     expect(registro).toBeDefined();
     expect(JSON.stringify(registro)).not.toContain('secreta-123');
+  });
+});
+
+describe('App - la gala de premios', () => {
+  const CONTADORES = { 'tonto-1': 3, 'tonto-2': 1, 'casper-1': 2, 'casper-2': 2 };
+
+  /**
+   * La tarta se sustituye por una marca: aquí se prueba el camino desde la
+   * palabra hasta la pantalla de resultados, y el dibujo tiene su propio spec.
+   */
+  const montarApp = () => mount(App, {
+    global: { stubs: { PieChartCard: { template: '<div class="chart-stub" />' } } },
+  });
+
+  const entrar = async (secreta: string) => {
+    const wrapper = montarApp();
+    await wrapper.find('input.field-input').setValue(secreta);
+    await wrapper.find('button.button-primary').trigger('click');
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    return wrapper;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    metrics.reset();
+    // `clearAllMocks` no vacía la cola de `...Once`, así que lo que un test
+    // deja preparado se lo encontraría el siguiente y mediría otra cosa. Aquí
+    // la gala se deja apagada, que es lo mismo que una invitación normal.
+    vi.mocked(mockAppServices.getResults).mockReset();
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(null);
+  });
+
+  it('abre la gala con la palabra de quien organiza, sin pasar por el cuestionario', async () => {
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(
+      calcularResultadoEncuesta(preguntas, CONTADORES),
+    );
+
+    const wrapper = await entrar('admindltv');
+
+    expect(wrapper.find('.hero-title').text()).toBe('Los premios');
+    expect(wrapper.findAll('.chart-stub')).toHaveLength(preguntas.length);
+    // La palabra es válida, pero quien organiza no vuelve a contestar su propia
+    // encuesta: ya ha votado y su invitación abre la gala.
+    expect(mockAppServices.validateInvitation).not.toHaveBeenCalled();
+    expect(mockAppServices.submitSurvey).not.toHaveBeenCalled();
+  });
+
+  it('sigue el camino normal del login cuando la palabra no es de quien organiza', async () => {
+    // Es el caso de todas las invitaciones: si esto fallara, la fiesta entera
+    // se quedaría en la pantalla de login.
+    const wrapper = await entrar('admindltv');
+
+    expect(mockAppServices.validateInvitation).toHaveBeenCalledWith('admindltv');
+    expect(wrapper.find('.hero-title').text()).not.toBe('Los premios');
+    // La pantalla de bienvenida ha sustituido al formulario de la palabra.
+    expect(wrapper.find('input.field-input').exists()).toBe(false);
+    expect(wrapper.text()).toContain('a salir las preguntas');
+  });
+
+  it('pasa la palabra ya recortada a los resultados y a la validación', async () => {
+    // Normalizar a minúsculas es cosa de cada caso de uso, que la recibe cruda;
+    // aquí solo se recorta para no mandar espacios que no existen en la clave.
+    await entrar('  ADMINDLTV  ');
+
+    expect(mockAppServices.getResults).toHaveBeenCalledWith('ADMINDLTV');
+    expect(mockAppServices.validateInvitation).toHaveBeenCalledWith('ADMINDLTV');
+  });
+
+  it('no deja pasar a la encuesta si los resultados no se pueden leer', async () => {
+    // Un fallo de red al leer la gala no puede dejar entrar al cuestionario:
+    // quien organiza vería un formulario vacío y creería que su palabra se ha
+    // gastado.
+    vi.mocked(mockAppServices.getResults).mockRejectedValue(new TypeError('Failed to fetch'));
+
+    const wrapper = await entrar('admindltv');
+
+    expect(mockAppServices.validateInvitation).not.toHaveBeenCalled();
+    expect(wrapper.findAll('.chart-stub')).toHaveLength(0);
+    expect(wrapper.text()).toContain('conexión');
+  });
+
+  it('vuelve a pedir los contadores al recargar', async () => {
+    // Quien llega tarde a la fiesta necesita ver los votos que se han añadido
+    // desde la última vez que miró.
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(
+      calcularResultadoEncuesta(preguntas, CONTADORES),
+    );
+
+    const wrapper = await entrar('admindltv');
+    expect(wrapper.text()).toContain('votos de 4 personas');
+
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(
+      calcularResultadoEncuesta(preguntas, { ...CONTADORES, 'tonto-1': 9 }),
+    );
+    const [recargar] = wrapper.findAll('.footer-actions button');
+    await recargar!.trigger('click');
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(mockAppServices.getResults).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('votos de 10 personas');
+  });
+
+  it('avisa si al recargar ya no hay resultados con esa palabra', async () => {
+    // El resumen puede desaparecer si el organizador lo limpia entre medias.
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(
+      calcularResultadoEncuesta(preguntas, CONTADORES),
+    );
+
+    const wrapper = await entrar('admindltv');
+
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(null);
+    const [recargar] = wrapper.findAll('.footer-actions button');
+    await recargar!.trigger('click');
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.status--error').text()).toContain('Ya no hay resultados');
+    // Las tarts de antes siguen en pantalla: es mejor un aviso sobre datos
+    // viejos que una pantalla en blanco.
+    expect(wrapper.findAll('.chart-stub')).toHaveLength(preguntas.length);
+  });
+
+  it('mantiene la gala y su error visible si la recarga falla', async () => {
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(
+      calcularResultadoEncuesta(preguntas, CONTADORES),
+    );
+
+    const wrapper = await entrar('admindltv');
+
+    vi.mocked(mockAppServices.getResults).mockRejectedValue(new TypeError('Failed to fetch'));
+    const [recargar] = wrapper.findAll('.footer-actions button');
+    await recargar!.trigger('click');
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.status--error').text()).toContain('conexión');
+    expect(wrapper.findAll('.chart-stub')).toHaveLength(preguntas.length);
+  });
+
+  it('vuelve al login al salir de la gala, sin validar la palabra otra vez', async () => {
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(
+      calcularResultadoEncuesta(preguntas, CONTADORES),
+    );
+
+    const wrapper = await entrar('admindltv');
+    const [, salir] = wrapper.findAll('.footer-actions button');
+    await salir!.trigger('click');
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.hero-title').text()).toContain('Sin Mentirosas');
+    expect(wrapper.findAll('.chart-stub')).toHaveLength(0);
+  });
+
+  it('cuenta cada vez que se enseñan resultados, recargas incluidas', async () => {
+    // Es el número de veces que alguien ha mirado el reparto, no el de sesiones
+    // abiertas: recargar la gala para ver los votos que acaban de caer también
+    // es mirar el reparto, y para el organizador es justo lo que quiere saber.
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(
+      calcularResultadoEncuesta(preguntas, CONTADORES),
+    );
+
+    const wrapper = await entrar('admindltv');
+
+    expect(metrics.value('results_viewed')).toBe(1);
+
+    const [recargar] = wrapper.findAll('.footer-actions button');
+    await recargar!.trigger('click');
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(metrics.value('results_viewed')).toBe(2);
+  });
+
+  it('no cuenta una recarga que falla, porque no se enseñó nada nuevo', async () => {
+    vi.mocked(mockAppServices.getResults).mockResolvedValue(
+      calcularResultadoEncuesta(preguntas, CONTADORES),
+    );
+
+    const wrapper = await entrar('admindltv');
+
+    vi.mocked(mockAppServices.getResults).mockRejectedValue(new TypeError('Failed to fetch'));
+    const [recargar] = wrapper.findAll('.footer-actions button');
+    await recargar!.trigger('click');
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(metrics.value('results_viewed')).toBe(1);
+  });
+
+  it('no cuenta ninguna vista de la gala en una invitación normal', async () => {
+    await entrar('secreta-123');
+
+    expect(metrics.value('results_viewed')).toBe(0);
   });
 });
 

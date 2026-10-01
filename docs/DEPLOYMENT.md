@@ -39,24 +39,73 @@ codes/pitufo {
 Se puede hacer a mano en la consola de Firebase (14 documentos), o de una vez
 desde la consola de administración de GCP > Firestore, o con la API de Firestore.
 Lo importante es que **no quede ningún campo de pregunta ni `voted: true` de la
-gala anterior**, porque el cliente nunca borra nada.
+galería anterior**, porque el cliente nunca borra nada.
 
 Palabras nuevas para una nueva edición: generarlas con entropía suficiente y
 entregarlas por privado. Reutilizar las de la edición anterior permite a quien
 conservó la suya volver a responder.
 
+## Dejar listo el documento de totales
+
+Para la galería hace falta **un documento más**, y las reglas no dejan crearlo
+desde la app. Hay que hacerlo en la consola de Firebase, **una vez**:
+
+```
+votes/actual {
+  // puede empezar vacío
+}
+```
+
+Si ya desplegaste una versión que usaba `resumen/actual`, Firestore no mueve
+ese documento al cambiar la ruta en el código. Copia sus campos a
+`votes/actual` antes de desplegar esta versión y conserva el documento antiguo
+hasta comprobar que la galería lee los datos nuevos. Si preparas una edición
+nueva, crea `votes/actual` vacío y continúa con el reinicio de contadores de
+abajo.
+
+Y hay que **dejar los contadores a cero** de la gala anterior, no solo vaciar
+`voted`. El documento de totales no se reinicia solo: si se queda con los
+números de la edición pasada, la galería los sumará y anunciará como ganador
+quien ya ganó la otra vez. Lo más limpio es borrarlo y volver a crearlo vacío
+desde la consola.
+
+Si falta, **el primer voto de la gala falla entero**: el contador y la respuesta
+se escriben en la misma transacción, así que si el documento no existe no se
+guarda ninguno de los dos. Quien ya había votado antes de crearlo se encuentra
+con «su palabra ya está usada», y lo que hay que hacer es borrar el `voted: true`
+de esa invitación y dejar que vuelva a votar.
+
+Para comprobar que está bien, basta con enviar un voto de prueba y mirar que en
+el documento aparecen los diez contadores con un `1`.
+
+## Marcar la palabra del organizador
+
+La galería se abre con la palabra cuyo documento lleve la marca `admin: true`, y
+esa marca **solo se puede poner desde la consola**, nunca desde la app:
+
+```
+codes/admindltv {
+  voted: false,
+  admin: true
+}
+```
+
+Sin ella, la palabra hace su camino normal y quien la escribe contesta la
+encuesta. Comprobación rápida: entrar con esa palabra y ver que aparecen las
+tartas en lugar del cuestionario.
+
 ## Ver quién ha votado
 
 La consola de Firebase muestra la colección entera, el `voted` de cada quien y
 las respuestas ya guardadas: opera con permisos de administrador y no le afectan
-`firestore.rules`. Está pensado para montar la gala. Ver
+`firestore.rules`. Está pensado para montar la galería. Ver
 [SECURITY.md](SECURITY.md).
 
 Para un volcado a texto, la misma consola permite exportar la colección.
 
 ## Los e2e necesitan librerías del sistema
 
-Los 16 tests de `tests/e2e/` abren Chromium de verdad. Si al lanzarlos falla con
+Los 30 tests de `tests/e2e/` abren Chromium de verdad. Si al lanzarlos falla con
 `libnspr4.so: cannot open shared object file`, no es un fallo del proyecto: a
 Chromium le faltan `libnspr4`, `libnss3` y `libasound2t64`, y esta web **no usa
 ninguna** de las tres. Solo hacen falta para que el navegador arranque.
@@ -81,6 +130,10 @@ Las dos librerías se pueden dejar donde uno quiera con la variable `PWLIBS`.
 | Un error de permisos con `list` | Alguien intentó enumerar la colección. Está prohibido a propósito: el `get` con un ID que ya conoces sí funciona. |
 | El ID correcto no entra | El ID va en minúsculas y sin espacios al final: se normaliza con `trim()` + `toLowerCase()`. `Galaxia-2025` es invisible. Se arregla renombrando el documento. |
 | Una opción con imagen o vídeo sale gris | El asset no está en `src/assets/` con el nombre exacto que espera el catálogo (`foto-3.jpg`, `video-2.webm`…). `import.meta.glob` se resuelve en build: hay que recompilar. |
+| Al entrar da error y no guarda el voto | Falta el documento `votes/actual`. Voto y contadores van en la misma transacción, así que sin ese documento no se guarda ninguno de los dos. Ver [Dejar listo el documento de totales](#dejar-listo-el-documento-de-totales). |
+| La palabra del organizador entra al cuestionario | Su documento no lleva `admin: true`, o las reglas sin desplegar. Ver [Marcar la palabra del organizador](#marcar-la-palabra-del-organizador). |
+| La galería sale vacía aunque haya votos | El documento de totales se creó en otro proyecto. |
+| La galería anuncia un ganador de la edición anterior | Los contadores de `votes/actual` no se pusieron a cero al preparar la gala nueva. |
 
 ## Revertir
 

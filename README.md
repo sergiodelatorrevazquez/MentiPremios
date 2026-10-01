@@ -64,6 +64,29 @@ El **ID del documento es la palabra secreta**, y tiene que ir en minúsculas: ta
 
 > Cada documento guarda también el voto de esa persona: al responder, el mismo documento pasa a `voted: true` y gana un campo por pregunta. No hay una segunda colección de respuestas. El documento no guarda ningún dato sobre la persona aparte del identificador, así que la pantalla de bienvenida muestra el identificador tal cual.
 
+Para la **galería de premios** hacen falta dos cosas más en la consola, y las
+reglas no dejan hacerlas desde la app:
+
+```
+votes/
+  └── actual/            ← documento de totales; puede empezar vacío
+codes/
+  └── admindltv/         ← la palabra de quien organiza
+        ├── voted: false
+        └── admin: true  ← la marca que abre la galería
+```
+
+`votes/actual` guarda un contador por opción y se incrementa en la **misma
+transacción** que el voto, así que no puede quedar el contador subido sin la
+respuesta. Si ese documento no existe, el primer voto falla entero. Es
+imprescindible crearlo antes de la gala. Detalle en
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+Quien escribe `admindltv` ve una tarta por pregunta con el reparto de los votos y
+la ganadora de cada premio, en lugar del cuestionario. La palabra **no está en
+el bundle**: la app comprueba la marca `admin` en el documento, y esa marca no
+la puede poner un cliente.
+
 Y despliega las reglas, que son la barrera real de las palabras secretas:
 
 ```bash
@@ -170,8 +193,8 @@ no tocar la interfaz.
 Las reglas están pensadas para leerse documento a documento, no por colección. Si el error
 menciona `list`, alguien ha intentado enumerar `codes`: eso está prohibido a
 propósito y así debe seguir. Para preparar una prueba, `get` sí funciona con un
-ID que ya conoces. Ojo con la contrapartida de que solo haya una colección: un
-`get` sobre el código de otra persona devuelve también sus respuestas. Para
+ID que ya conoces. Ojo con la contrapartida: un `get` sobre el código de otra
+persona devuelve también sus respuestas. Para
 inspeccionar el estado de `voted` de todos los participantes desde la consola
 de Firebase, se puede: la consola usa permisos de administrador y no le afectan
 estas reglas.

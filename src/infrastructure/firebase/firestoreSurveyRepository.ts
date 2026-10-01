@@ -1,7 +1,16 @@
-import { doc, getDoc, runTransaction, type Firestore } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  runTransaction,
+  type DocumentReference,
+  type Firestore,
+  type Transaction,
+} from 'firebase/firestore';
 import type { CodigoInvitacion } from '../../features/survey/domain/survey.types';
 
 const INVITATIONS_COLLECTION = 'codes';
+const VOTES_COLLECTION = 'votes';
+const VOTES_DOCUMENT = 'actual';
 
 /** Invitación leída de Firestore, ya validada y con su identificador. */
 export type StoredInvitation = CodigoInvitacion & { id: string };
@@ -37,18 +46,38 @@ function parseInvitation(id: string, data: unknown): StoredInvitation | null {
 }
 
 /**
+ * Valor que tendrá el contador de una opción con este voto ya aplicado: el que
+ * había más uno.
+ *
+ * Se calcula en el cliente y se escribe el número final, en vez de usar
+ * `increment()`, porque `firestore.rules` solo puede validar el incremento si ve
+ * la cantidad en `request.resource.data`. Con `increment()` la regla vería un
+ * marcador de operación, no un número, y no podría rechazar un incremento raro.
+ */
+function nextCount(current: unknown): number {
+  const actual = typeof current === 'number' && Number.isFinite(current) && current > 0
+    ? Math.floor(current)
+    : 0;
+
+  return actual + 1;
+}
+
+/**
  * Acceso directo a Firestore desde el navegador.
  *
- * Solo existe una colección, `codes`, con un documento por persona. Su
- * identificador es la palabra secreta y no se guarda ningún otro dato sobre
- * ella. Antes de votar, el documento solo tiene `voted: false`; al votar, se le
- * añade `voted: true` y un campo por pregunta con la opción elegida.
+ * Hay una colección de personas, `codes`, con un documento por invitado cuyo
+ * identificador es la palabra secreta, y un documento de totales,
+ * `votes/actual`, con un contador por opción.
  *
  * La protección de las palabras secretas no está aquí, está en
  * `firestore.rules`: un documento se puede leer solo por identificador (`get`),
  * nunca se puede enumerar la colección (`list` está prohibido). Por eso las
  * reglas permiten estas operaciones y nada más, y por eso este repositorio
  * nunca usa consultas: solo `getDoc` y transacciones.
+ *
+ * El documento de resumen no dice nada de nadie, solo cuánto suma cada opción,
+ * y por eso su lectura no necesita la protección que sí necesitan las
+ * invitaciones.
  */
 export class FirestoreSurveyRepository implements SurveyStore {
   constructor(private readonly db: Firestore) {}
@@ -62,12 +91,21 @@ export class FirestoreSurveyRepository implements SurveyStore {
 
   async saveSurvey(response: SurveyResponseRecord): Promise<SaveSurveyOutcome> {
     const invitationRef = doc(this.db, INVITATIONS_COLLECTION, response.invitationId);
+    const summaryRef = doc(this.db, VOTES_COLLECTION, VOTES_DOCUMENT);
 
     return runTransaction(this.db, async (transaction) => {
-      const snapshot = await transaction.get(invitationRef);
-      if (!snapshot.exists()) return 'not-found';
+      // Las dos lecturas van antes que cualquier escritura. En una transacción
+      // de Firestore no se puede leer después de escribir: el servidor exige
+      // haber leído todo lo que se va a tocar, y si no, la transacción entera
+      // falla y el voto no se guarda.
+      const [invitationSnapshot, summarySnapshot] = await Promise.all([
+        transaction.get(invitationRef),
+        transaction.get(summaryRef),
+      ]);
 
-      const invitation = parseInvitation(response.invitationId, snapshot.data());
+      if (!invitationSnapshot.exists()) return 'not-found';
+
+      const invitation = parseInvitation(response.invitationId, invitationSnapshot.data());
       if (!invitation) return 'not-found';
       if (invitation.voted) return 'already-used';
 
@@ -76,7 +114,45 @@ export class FirestoreSurveyRepository implements SurveyStore {
       // ni un documento aparte, así que no puede quedar medio guardado.
       transaction.update(invitationRef, { voted: true, ...response.answers });
 
+      this.applyAnswerCounts(
+        transaction,
+        summaryRef,
+        summarySnapshot.data() ?? {},
+        response.answers,
+      );
+
       return 'saved';
     });
+  }
+
+  /**
+   * Suma el voto a los contadores de cada pregunta, en la misma transacción
+   * que lo guarda.
+   *
+   * Van juntos a propósito. Si el voto se guardara y el contador no, la gala
+   * mostraría un porcentaje que no cuadra con los votos reales, y no habría
+   * forma de saber cuál de las dos escrituras se ha perdido. Al compartir
+   * transacción el servidor aplica ambas o ninguna, así que no existe el estado
+   * en el que el voto está guardado y el total se ha quedado corto.
+   *
+   * El resumen se ha leído antes de escribir nada, de ahí que llegue como dato
+   * y no vuelva a leerse aquí.
+   */
+  private applyAnswerCounts(
+    transaction: Transaction,
+    summaryRef: DocumentReference,
+    resumen: Readonly<Record<string, unknown>>,
+    answers: Readonly<Record<string, string>>,
+  ): void {
+    const contadores: Record<string, number> = {};
+
+    for (const opcionId of Object.values(answers)) {
+      contadores[opcionId] = nextCount(resumen[opcionId]);
+    }
+
+    // El documento de resumen lo crea el organizador en la consola, una sola
+    // vez. Si faltara, la transacción falla entera y el voto tampoco se guarda:
+    // volver a intentarlo es seguro porque la invitación sigue sin votar.
+    transaction.update(summaryRef, contadores);
   }
 }

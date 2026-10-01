@@ -238,3 +238,75 @@ test.describe('responsive layout', () => {
     await expect(page.locator('.status--success')).toContainText('Respuestas guardadas');
   });
 });
+
+/** La gala se abre con la palabra del organizador y la deja en la pantalla. */
+async function openGala(page: Page, query = '') {
+  await openApp(page, query);
+  await page.locator('#secret-word').fill(SECRET);
+  await page.getByRole('button', { name: /Entrar|Comprobando/ }).click();
+  await expect(page.locator('.hero-title')).toHaveText('Los premios');
+}
+
+test.describe('la gala de premios', () => {
+  test('la palabra del organizador abre las tarts sin pasar por la encuesta', async ({ page }) => {
+    await openGala(page, '?scenario=results');
+
+    await expect(page.locator('.chart-card')).toHaveCount(LAST_QUESTION);
+    await expect(page.locator('input.field-input')).toHaveCount(0);
+  });
+
+  test('cada tarta dibuja su porción y marca a la ganadora', async ({ page }) => {
+    await openGala(page, '?scenario=results');
+
+    const primera = page.locator('.chart-card').first();
+    await expect(primera.locator('canvas')).toBeVisible();
+    // El reparto se lee en la lista, que es texto de verdad y no un color.
+    await expect(primera.locator('.legend-item').first()).toBeVisible();
+    await expect(primera.locator('.legend-value').first()).toContainText('%');
+    expect(await primera.locator('.legend-badge').count()).toBeGreaterThan(0);
+  });
+
+  test('avisa de los premios empatados', async ({ page }) => {
+    // En el escenario de mentira la última pregunta acaba empatada.
+    await openGala(page, '?scenario=results');
+
+    await expect(page.locator('.status--success')).toContainText('Hay empate en');
+  });
+
+  test('avisa de los empates también en la descripción de la tarta', async ({ page }) => {
+    await openGala(page, '?scenario=results');
+
+    await expect(page.locator('.chart-card').last().locator('.legend-badge').first())
+      .toHaveText('Empate');
+  });
+
+  test('se puede recargar y volver al login sin salirse de la pantalla', async ({ page }) => {
+    await openGala(page, '?scenario=results');
+
+    await page.getByRole('button', { name: 'Recargar' }).click();
+    await expect(page.locator('.chart-card')).toHaveCount(LAST_QUESTION);
+    await expectNoHorizontalOverflow(page);
+
+    await page.getByRole('button', { name: 'Salir de la gala' }).click();
+    await expect(page.locator('input.field-input')).toBeVisible();
+  });
+
+  test('si la gala no se puede leer, avisa y no entra en la encuesta', async ({ page }) => {
+    await openApp(page, '?scenario=results-error');
+    await page.locator('#secret-word').fill(SECRET);
+    await page.getByRole('button', { name: /Entrar|Comprobando/ }).click();
+
+    await expect(page.locator('.status--error')).toBeVisible();
+    await expect(page.locator('.chart-card')).toHaveCount(0);
+    await expect(page.locator('input.field-input')).toBeVisible();
+  });
+
+  test('la gala se lee en un móvil estrecho sin salirse de lado', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await openGala(page, '?scenario=results');
+
+    await expectNoHorizontalOverflow(page);
+    await expect(page.locator('.chart-card').first()).toBeVisible();
+    await expect(page.locator('.chart-legend').first()).toBeVisible();
+  });
+});
