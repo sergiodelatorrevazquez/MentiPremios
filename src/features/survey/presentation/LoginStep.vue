@@ -81,7 +81,7 @@ async function reproducirAviso() {
           class="audio-notice-button"
           @click="reproducirAviso"
         >
-          Pincha aquí, compi
+          Pon sonido y pincha aquí compi
         </button>
         <audio
           ref="audioElement"
