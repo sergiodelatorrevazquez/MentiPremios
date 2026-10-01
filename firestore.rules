@@ -57,196 +57,130 @@ service cloud.firestore {
     }
 
     match /votes/{voteId} {
-      // Los totales son la suma de todos los votos y no dicen nada de nadie, así
-      // que se leen sin más condición: el identificador es fijo y está en el
-      // bundle, no hay nada que ocultar detrás de él. Lo que no se puede es
-      // enumerar la colección, aunque solo haya un documento.
-            allow get: if voteId == 'actual';
+      function isCounterIncrementValid(changedKeys, optionId) {
+        return !changedKeys.hasAny([optionId])
+          || request.resource.data.get(optionId, 0) == resource.data.get(optionId, 0) + 1;
+      }
+
+      function isVoteUpdateValid(id) {
+        let changedKeys = changed();
+        return id == 'actual'
+          && changedKeys.size() == 10
+          && changedKeys.hasOnly([
+            'tonto-1',
+            'tonto-2',
+            'tonto-3',
+            'tonto-4',
+            'casper-1',
+            'casper-2',
+            'casper-3',
+            'casper-4',
+            'casper-5',
+            'casper-6',
+            'comefeas-1',
+            'comefeas-2',
+            'comefeas-3',
+            'comefeas-4',
+            'soltero-1',
+            'soltero-2',
+            'soltero-3',
+            'soltero-4',
+            'anecdota-1',
+            'anecdota-2',
+            'anecdota-3',
+            'anecdota-4',
+            'anecdota-5',
+            'anecdota-6',
+            'meme-1',
+            'meme-2',
+            'meme-3',
+            'meme-4',
+            'meme-5',
+            'meme-6',
+            'meme-7',
+            'meme-8',
+            'mensaje-1',
+            'mensaje-2',
+            'mensaje-3',
+            'mensaje-4',
+            'foto-1',
+            'foto-2',
+            'foto-3',
+            'foto-4',
+            'video-1',
+            'video-2',
+            'video-3',
+            'video-4',
+            'correa-1',
+            'correa-2',
+            'correa-3',
+            'correa-4',
+          ])
+          && changedKeys.hasAny(['tonto-1', 'tonto-2', 'tonto-3', 'tonto-4'])
+          && changedKeys.hasAny(['casper-1', 'casper-2', 'casper-3', 'casper-4', 'casper-5', 'casper-6'])
+          && changedKeys.hasAny(['comefeas-1', 'comefeas-2', 'comefeas-3', 'comefeas-4'])
+          && changedKeys.hasAny(['soltero-1', 'soltero-2', 'soltero-3', 'soltero-4'])
+          && changedKeys.hasAny(['anecdota-1', 'anecdota-2', 'anecdota-3', 'anecdota-4', 'anecdota-5', 'anecdota-6'])
+          && changedKeys.hasAny(['meme-1', 'meme-2', 'meme-3', 'meme-4', 'meme-5', 'meme-6', 'meme-7', 'meme-8'])
+          && changedKeys.hasAny(['mensaje-1', 'mensaje-2', 'mensaje-3', 'mensaje-4'])
+          && changedKeys.hasAny(['foto-1', 'foto-2', 'foto-3', 'foto-4'])
+          && changedKeys.hasAny(['video-1', 'video-2', 'video-3', 'video-4'])
+          && changedKeys.hasAny(['correa-1', 'correa-2', 'correa-3', 'correa-4'])
+          && isCounterIncrementValid(changedKeys, 'tonto-1')
+          && isCounterIncrementValid(changedKeys, 'tonto-2')
+          && isCounterIncrementValid(changedKeys, 'tonto-3')
+          && isCounterIncrementValid(changedKeys, 'tonto-4')
+          && isCounterIncrementValid(changedKeys, 'casper-1')
+          && isCounterIncrementValid(changedKeys, 'casper-2')
+          && isCounterIncrementValid(changedKeys, 'casper-3')
+          && isCounterIncrementValid(changedKeys, 'casper-4')
+          && isCounterIncrementValid(changedKeys, 'casper-5')
+          && isCounterIncrementValid(changedKeys, 'casper-6')
+          && isCounterIncrementValid(changedKeys, 'comefeas-1')
+          && isCounterIncrementValid(changedKeys, 'comefeas-2')
+          && isCounterIncrementValid(changedKeys, 'comefeas-3')
+          && isCounterIncrementValid(changedKeys, 'comefeas-4')
+          && isCounterIncrementValid(changedKeys, 'soltero-1')
+          && isCounterIncrementValid(changedKeys, 'soltero-2')
+          && isCounterIncrementValid(changedKeys, 'soltero-3')
+          && isCounterIncrementValid(changedKeys, 'soltero-4')
+          && isCounterIncrementValid(changedKeys, 'anecdota-1')
+          && isCounterIncrementValid(changedKeys, 'anecdota-2')
+          && isCounterIncrementValid(changedKeys, 'anecdota-3')
+          && isCounterIncrementValid(changedKeys, 'anecdota-4')
+          && isCounterIncrementValid(changedKeys, 'anecdota-5')
+          && isCounterIncrementValid(changedKeys, 'anecdota-6')
+          && isCounterIncrementValid(changedKeys, 'meme-1')
+          && isCounterIncrementValid(changedKeys, 'meme-2')
+          && isCounterIncrementValid(changedKeys, 'meme-3')
+          && isCounterIncrementValid(changedKeys, 'meme-4')
+          && isCounterIncrementValid(changedKeys, 'meme-5')
+          && isCounterIncrementValid(changedKeys, 'meme-6')
+          && isCounterIncrementValid(changedKeys, 'meme-7')
+          && isCounterIncrementValid(changedKeys, 'meme-8')
+          && isCounterIncrementValid(changedKeys, 'mensaje-1')
+          && isCounterIncrementValid(changedKeys, 'mensaje-2')
+          && isCounterIncrementValid(changedKeys, 'mensaje-3')
+          && isCounterIncrementValid(changedKeys, 'mensaje-4')
+          && isCounterIncrementValid(changedKeys, 'foto-1')
+          && isCounterIncrementValid(changedKeys, 'foto-2')
+          && isCounterIncrementValid(changedKeys, 'foto-3')
+          && isCounterIncrementValid(changedKeys, 'foto-4')
+          && isCounterIncrementValid(changedKeys, 'video-1')
+          && isCounterIncrementValid(changedKeys, 'video-2')
+          && isCounterIncrementValid(changedKeys, 'video-3')
+          && isCounterIncrementValid(changedKeys, 'video-4')
+          && isCounterIncrementValid(changedKeys, 'correa-1')
+          && isCounterIncrementValid(changedKeys, 'correa-2')
+          && isCounterIncrementValid(changedKeys, 'correa-3')
+          && isCounterIncrementValid(changedKeys, 'correa-4');
+      }
+
+      // Los totales son agregados, así que se lee solo el documento fijo.
+      allow get: if voteId == 'actual';
       allow list: if false;
-
-      // El documento lo crea el organizador desde la consola, una sola vez, con
-      // los contadores a cero. Si el cliente pudiera crearlo, el primer voto
-      // podría escribir unos contadores que no son los suyos.
       allow create, delete: if false;
-
-      // Un voto solo puede sumar contadores, nunca reescribirlos. La condición
-      // entera se apoya en un único dato, `changed`, que es el conjunto de campos
-      // que este voto toca, y de ahí sale todo lo demás:
-      //
-      //   1. Toca diez campos, los mismos diez de siempre: uno por pregunta.
-      //   2. Cada uno es un contador real del catálogo, ni uno más ni uno menos.
-      //   3. De cada pregunta toca exactamente una opción.
-      //   4. Cada contador que toca vale su valor anterior más uno.
-      //
-      // Con eso la gala no se puede amañar: no se puede poner a alguien en 999
-      // votos, ni borrar los votos que ya tenía, ni sumar este voto solo a las
-      // preguntas que le convienen. Tampoco se pueden inventar contadores de
-      // preguntas que no existen.
-      //
-      // Los puntos 2 y 4 salen de listas y comparaciones explícitas porque el
-      // lenguaje de reglas no tiene bucles ni sumas: son cuarenta y ocho
-      // líneas, una por opción. Las dos listas las comprueba
-      // `tests/unit/contracts/firestoreRules.spec.ts` contra el catálogo, así que
-      // añadir una pregunta o una opción sin tocar este fichero es un test rojo.
-            allow update: if voteId == 'actual'
-        && changed().size() == 10
-        && changed().hasOnly([
-          'tonto-1',
-          'tonto-2',
-          'tonto-3',
-          'tonto-4',
-          'casper-1',
-          'casper-2',
-          'casper-3',
-          'casper-4',
-          'casper-5',
-          'casper-6',
-          'comefeas-1',
-          'comefeas-2',
-          'comefeas-3',
-          'comefeas-4',
-          'soltero-1',
-          'soltero-2',
-          'soltero-3',
-          'soltero-4',
-          'anecdota-1',
-          'anecdota-2',
-          'anecdota-3',
-          'anecdota-4',
-          'anecdota-5',
-          'anecdota-6',
-          'meme-1',
-          'meme-2',
-          'meme-3',
-          'meme-4',
-          'meme-5',
-          'meme-6',
-          'meme-7',
-          'meme-8',
-          'mensaje-1',
-          'mensaje-2',
-          'mensaje-3',
-          'mensaje-4',
-          'foto-1',
-          'foto-2',
-          'foto-3',
-          'foto-4',
-          'video-1',
-          'video-2',
-          'video-3',
-          'video-4',
-          'correa-1',
-          'correa-2',
-          'correa-3',
-          'correa-4',
-        ])
-        && changed.hasAny(['tonto-1', 'tonto-2', 'tonto-3', 'tonto-4'])
-        && changed.hasAny(['casper-1', 'casper-2', 'casper-3', 'casper-4', 'casper-5', 'casper-6'])
-        && changed.hasAny(['comefeas-1', 'comefeas-2', 'comefeas-3', 'comefeas-4'])
-        && changed.hasAny(['soltero-1', 'soltero-2', 'soltero-3', 'soltero-4'])
-        && changed.hasAny(['anecdota-1', 'anecdota-2', 'anecdota-3', 'anecdota-4', 'anecdota-5', 'anecdota-6'])
-        && changed.hasAny(['meme-1', 'meme-2', 'meme-3', 'meme-4', 'meme-5', 'meme-6', 'meme-7', 'meme-8'])
-        && changed.hasAny(['mensaje-1', 'mensaje-2', 'mensaje-3', 'mensaje-4'])
-        && changed.hasAny(['foto-1', 'foto-2', 'foto-3', 'foto-4'])
-        && changed.hasAny(['video-1', 'video-2', 'video-3', 'video-4'])
-        && changed.hasAny(['correa-1', 'correa-2', 'correa-3', 'correa-4'])
-        && ((!changed.has('tonto-1')
-            || request.resource.data.get('tonto-1', 0) == resource.data.get('tonto-1', 0) + 1)
-        || (!changed.has('tonto-2')
-            || request.resource.data.get('tonto-2', 0) == resource.data.get('tonto-2', 0) + 1)
-        || (!changed.has('tonto-3')
-            || request.resource.data.get('tonto-3', 0) == resource.data.get('tonto-3', 0) + 1)
-        || (!changed.has('tonto-4')
-            || request.resource.data.get('tonto-4', 0) == resource.data.get('tonto-4', 0) + 1)
-        || (!changed.has('casper-1')
-            || request.resource.data.get('casper-1', 0) == resource.data.get('casper-1', 0) + 1)
-        || (!changed.has('casper-2')
-            || request.resource.data.get('casper-2', 0) == resource.data.get('casper-2', 0) + 1)
-        || (!changed.has('casper-3')
-            || request.resource.data.get('casper-3', 0) == resource.data.get('casper-3', 0) + 1)
-        || (!changed.has('casper-4')
-            || request.resource.data.get('casper-4', 0) == resource.data.get('casper-4', 0) + 1)
-        || (!changed.has('casper-5')
-            || request.resource.data.get('casper-5', 0) == resource.data.get('casper-5', 0) + 1)
-        || (!changed.has('casper-6')
-            || request.resource.data.get('casper-6', 0) == resource.data.get('casper-6', 0) + 1)
-        || (!changed.has('comefeas-1')
-            || request.resource.data.get('comefeas-1', 0) == resource.data.get('comefeas-1', 0) + 1)
-        || (!changed.has('comefeas-2')
-            || request.resource.data.get('comefeas-2', 0) == resource.data.get('comefeas-2', 0) + 1)
-        || (!changed.has('comefeas-3')
-            || request.resource.data.get('comefeas-3', 0) == resource.data.get('comefeas-3', 0) + 1)
-        || (!changed.has('comefeas-4')
-            || request.resource.data.get('comefeas-4', 0) == resource.data.get('comefeas-4', 0) + 1)
-        || (!changed.has('soltero-1')
-            || request.resource.data.get('soltero-1', 0) == resource.data.get('soltero-1', 0) + 1)
-        || (!changed.has('soltero-2')
-            || request.resource.data.get('soltero-2', 0) == resource.data.get('soltero-2', 0) + 1)
-        || (!changed.has('soltero-3')
-            || request.resource.data.get('soltero-3', 0) == resource.data.get('soltero-3', 0) + 1)
-        || (!changed.has('soltero-4')
-            || request.resource.data.get('soltero-4', 0) == resource.data.get('soltero-4', 0) + 1)
-        || (!changed.has('anecdota-1')
-            || request.resource.data.get('anecdota-1', 0) == resource.data.get('anecdota-1', 0) + 1)
-        || (!changed.has('anecdota-2')
-            || request.resource.data.get('anecdota-2', 0) == resource.data.get('anecdota-2', 0) + 1)
-        || (!changed.has('anecdota-3')
-            || request.resource.data.get('anecdota-3', 0) == resource.data.get('anecdota-3', 0) + 1)
-        || (!changed.has('anecdota-4')
-            || request.resource.data.get('anecdota-4', 0) == resource.data.get('anecdota-4', 0) + 1)
-        || (!changed.has('anecdota-5')
-            || request.resource.data.get('anecdota-5', 0) == resource.data.get('anecdota-5', 0) + 1)
-        || (!changed.has('anecdota-6')
-            || request.resource.data.get('anecdota-6', 0) == resource.data.get('anecdota-6', 0) + 1)
-        || (!changed.has('meme-1')
-            || request.resource.data.get('meme-1', 0) == resource.data.get('meme-1', 0) + 1)
-        || (!changed.has('meme-2')
-            || request.resource.data.get('meme-2', 0) == resource.data.get('meme-2', 0) + 1)
-        || (!changed.has('meme-3')
-            || request.resource.data.get('meme-3', 0) == resource.data.get('meme-3', 0) + 1)
-        || (!changed.has('meme-4')
-            || request.resource.data.get('meme-4', 0) == resource.data.get('meme-4', 0) + 1)
-        || (!changed.has('meme-5')
-            || request.resource.data.get('meme-5', 0) == resource.data.get('meme-5', 0) + 1)
-        || (!changed.has('meme-6')
-            || request.resource.data.get('meme-6', 0) == resource.data.get('meme-6', 0) + 1)
-        || (!changed.has('meme-7')
-            || request.resource.data.get('meme-7', 0) == resource.data.get('meme-7', 0) + 1)
-        || (!changed.has('meme-8')
-            || request.resource.data.get('meme-8', 0) == resource.data.get('meme-8', 0) + 1)
-        || (!changed.has('mensaje-1')
-            || request.resource.data.get('mensaje-1', 0) == resource.data.get('mensaje-1', 0) + 1)
-        || (!changed.has('mensaje-2')
-            || request.resource.data.get('mensaje-2', 0) == resource.data.get('mensaje-2', 0) + 1)
-        || (!changed.has('mensaje-3')
-            || request.resource.data.get('mensaje-3', 0) == resource.data.get('mensaje-3', 0) + 1)
-        || (!changed.has('mensaje-4')
-            || request.resource.data.get('mensaje-4', 0) == resource.data.get('mensaje-4', 0) + 1)
-        || (!changed.has('foto-1')
-            || request.resource.data.get('foto-1', 0) == resource.data.get('foto-1', 0) + 1)
-        || (!changed.has('foto-2')
-            || request.resource.data.get('foto-2', 0) == resource.data.get('foto-2', 0) + 1)
-        || (!changed.has('foto-3')
-            || request.resource.data.get('foto-3', 0) == resource.data.get('foto-3', 0) + 1)
-        || (!changed.has('foto-4')
-            || request.resource.data.get('foto-4', 0) == resource.data.get('foto-4', 0) + 1)
-        || (!changed.has('video-1')
-            || request.resource.data.get('video-1', 0) == resource.data.get('video-1', 0) + 1)
-        || (!changed.has('video-2')
-            || request.resource.data.get('video-2', 0) == resource.data.get('video-2', 0) + 1)
-        || (!changed.has('video-3')
-            || request.resource.data.get('video-3', 0) == resource.data.get('video-3', 0) + 1)
-        || (!changed.has('video-4')
-            || request.resource.data.get('video-4', 0) == resource.data.get('video-4', 0) + 1)
-        || (!changed.has('correa-1')
-            || request.resource.data.get('correa-1', 0) == resource.data.get('correa-1', 0) + 1)
-        || (!changed.has('correa-2')
-            || request.resource.data.get('correa-2', 0) == resource.data.get('correa-2', 0) + 1)
-        || (!changed.has('correa-3')
-            || request.resource.data.get('correa-3', 0) == resource.data.get('correa-3', 0) + 1)
-        || (!changed.has('correa-4')
-            || request.resource.data.get('correa-4', 0) == resource.data.get('correa-4', 0) + 1)
-        );
+      allow update: if isVoteUpdateValid(voteId);
     }
 
     match /palabrasClave/{entryId} {

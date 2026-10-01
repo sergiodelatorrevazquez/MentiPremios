@@ -122,15 +122,16 @@ describe('los totales de la gala', () => {
     // que le convienen y dejar el resto sin contar.
     const resumen = block('votes/{voteId}');
 
-    expect(resumen).toMatch(/changed\(\)\.size\(\) == \d+/);
-    expect(Number(/changed\(\)\.size\(\) == (\d+)/.exec(resumen)?.[1])).toBe(preguntas.length);
+    expect(resumen).toMatch(/let changedKeys = changed\(\);/);
+    expect(resumen).toMatch(/changedKeys\.size\(\) == \d+/);
+    expect(Number(/changedKeys\.size\(\) == (\d+)/.exec(resumen)?.[1])).toBe(preguntas.length);
   });
 
   it('la lista blanca de contadores coincide con las opciones del catálogo', () => {
     // Si se añade una opción y no se añade aquí, su voto se guardaría en el
     // cliente y lo rechazaría la regla. Este test es el que avisa.
     const [, lista] = block('votes/{voteId}')
-      .match(/changed\(\)\.hasOnly\(\[([\s\S]*?)\]\)/) ?? [];
+      .match(/changedKeys\.hasOnly\(\[([\s\S]*?)\]\)/) ?? [];
 
     const permitidos = (lista ?? '').match(/'([^']+)'/g)?.map((c) => c.slice(1, -1)) ?? [];
 
@@ -141,33 +142,36 @@ describe('los totales de la gala', () => {
     // La lista por pregunta es lo que garantiza que un voto no se concentre en
     // dos opciones del mismo premio.
     const resumen = block('votes/{voteId}');
-    const encontradas = [...resumen.matchAll(/changed\.hasAny\(\[([^\]]*)\]\)/g)]
+    const encontradas = [...resumen.matchAll(/changedKeys\.hasAny\(\[([^\]]*)\]\)/g)]
       .map(([, lista]) => (lista.match(/'([^']+)'/g) ?? []).map((c) => c.slice(1, -1)));
 
-    expect(encontradas).toEqual(preguntas.map((pregunta) => pregunta.opciones.map((opcion) => opcion.id)));
+    expect(encontradas.filter((lista) => lista.length > 1))
+      .toEqual(preguntas.map((pregunta) => pregunta.opciones.map((opcion) => opcion.id)));
   });
 
   it('comprueba que cada contador que toca el voto valga su valor anterior más uno', () => {
     const resumen = block('votes/{voteId}');
 
-    for (const opcionId of opciones) {
-      const comprobacion = new RegExp(
-        `!changed\\.has\\('${opcionId}'\\)\\s*\\n?\\s*\\|\\| request\\.resource\\.data\\.get\\('${opcionId}', 0\\) == resource\\.data\\.get\\('${opcionId}', 0\\) \\+ 1`,
-      );
+    expect(resumen).toMatch(/function isCounterIncrementValid\(changedKeys, optionId\)/);
+    expect(resumen).toContain('!changedKeys.hasAny([optionId])');
+    expect(resumen).toContain('request.resource.data.get(optionId, 0) == resource.data.get(optionId, 0) + 1');
 
-      expect(resumen, `falta la comprobación de ${opcionId}`).toMatch(comprobacion);
+    for (const opcionId of opciones) {
+      expect(resumen, `falta la comprobación de ${opcionId}`)
+        .toContain(`isCounterIncrementValid(changedKeys, '${opcionId}')`);
     }
   });
 
-  it('agrupa las comprobaciones en paréntesis', () => {
-    // Sin el paréntesis, `a && b || c || d` se lee como `((a && b) || c) || d`:
-    // como casi todas las comprobaciones son ciertas, el `||` final dejaría
-    // pasar la escritura entera y la regla no comprobaría nada. Este test
-    // existe porque esa regla ya falló una vez al escribirse.
+  it('exige que pasen todas las comprobaciones de incremento', () => {
+    // Cada campo cambiado debe subir exactamente en uno. Un `||` entre
+    // comprobaciones dejaría que un campo sin cambios aprobara toda la regla.
     const resumen = block('votes/{voteId}');
 
-    expect(resumen).toMatch(/&&\s*\(\(!changed\.has\(/);
-    expect(resumen).toMatch(/\+ 1\)\n\s*\);/);
+    const incrementos = [...resumen.matchAll(/&& isCounterIncrementValid\(changedKeys, '([^']+)'\)/g)]
+      .map(([, opcionId]) => opcionId);
+
+    expect(incrementos).toEqual(opciones);
+    expect(resumen).not.toMatch(/\|\|\s*isCounterIncrementValid\(/);
   });
 
   it('no toca nada fuera del documento que escribe el voto', () => {

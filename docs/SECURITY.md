@@ -41,23 +41,24 @@ que coincidir con `QUESTION_IDS` de
 escribir un campo inventado, y la razón de que añadir una pregunta al catálogo
 exija tocar también `firestore.rules`.
 
-Las de `resumen` son más estrictas, porque los contadores los van a escribir
+Las de `votes` son más estrictas, porque los contadores los van a escribir
 clientes y de ellos sale lo que se anuncia como ganador:
 
-- `changed().size() == 10` y `changed().hasOnly([...48 opciones del catálogo])`
+- `changedKeys.size() == 10` y `changedKeys.hasOnly([...48 opciones del catálogo])`
   impiden añadir campos o tocar contadores de la nada.
-- Diez cláusulas `changed().hasAny([...opciones de esa pregunta])` obligan a que
+- Diez cláusulas `changedKeys.hasAny([...opciones de esa pregunta])` obligan a que
   cada voto toque **exactamente una** opción de cada premio. Sin ellas, un
   cliente podría sumar su voto solo a los premios que le convienen.
-- Cuarenta y ocho cláusulas `!changed.has(id) || request... == resource... + 1`
-  obligan a que cada contador que toque suba **de uno en uno**. Por eso el
-  cliente escribe el número final y no usa `increment()`: la regla solo puede
-  comprobar un incremento si ve la cantidad en `request.resource.data`.
+- `changed()` se calcula una sola vez y se guarda como `changedKeys`; las 48
+  llamadas a `isCounterIncrementValid(changedKeys, id)` obligan a que cada
+  contador modificado suba **exactamente uno**. Dentro de esa función, el `||`
+  significa "si no se tocó esta opción, no hace falta comprobarla; si se tocó,
+  debe valer el número anterior más uno". Las 48 llamadas están unidas con `&&`,
+  así que tienen que pasar todas. Cachear el diff evita superar el límite de
+  expresiones evaluadas por Firestore Rules.
 
-El paréntesis que abre esa disyunción y el que la cierra son obligatorios. Sin
-él, `a && b || c || d` se lee como `((a && b) || c) || d`, y como casi todas las
-condiciones son ciertas el `||` final dejaría pasar la escritura entera: la
-regla comprobaría nada. Hay un test que fija la forma exacta.
+El cliente escribe el número final y no usa `increment()`: la regla solo puede
+comprobar el incremento si ve el valor en `request.resource.data`.
 
 ## Por qué aguanta
 
@@ -158,9 +159,9 @@ de que la gala no funcione.
 `codes` tiene `get` y no `list`, que `create` y `delete` están negadas, que
 `update` exige `false → true` con `diff(...).hasOnly([...])`, que esa lista
 coincide con `QUESTION_IDS` y que el comodín lo deniega todo. Para la galería
-añade que `resumen` solo deja leer el documento `actual`, que su lista blanca y
+añade que `votes` solo deja leer el documento `actual`, que su lista blanca y
 sus diez listas por pregunta **se generan del catálogo real de preguntas** y que
-las 48 comprobaciones de incremento están presentes y agrupadas en paréntesis.
+las 48 comprobaciones de incremento usan el helper y están unidas con `&&`.
 Si alguien añade una opción al catálogo y olvida las reglas, el test se pone
 rojo antes de que nadie vote.
 
@@ -175,8 +176,8 @@ uno, o que rompa el orden de la transacción es un test rojo antes de llegar a
 producción: este proyecto no tiene un servidor al que culpar si las reglas se
 aflojan.
 
-**Lo que no está verificado:** las reglas no se han compilado con el emulador de
-Firestore, porque este entorno no tiene Java instalado. Los tests comprueban el
-texto, no que el emulador lo acepte. Antes de dar la gala por buena, hay que
-desplegar las reglas y comprobar en la consola que un voto suma y que una
-escritura amañada se rechaza.
+Las reglas se compilaron y probaron con el emulador de Firestore, incluida una
+transacción de voto con `votes/actual` parcialmente inicializado. Los tests de
+contrato además comparan las listas blancas con el catálogo completo. Antes de
+una nueva edición, hay que desplegar las reglas y comprobar que un voto válido
+suma y que una escritura amañada se rechaza.
