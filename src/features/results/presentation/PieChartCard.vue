@@ -20,6 +20,11 @@ let grafico: InstanciaChart<'doughnut'> | null = null;
 const votos = computed(() => props.resultado.opciones.map((opcion) => opcion.votos));
 const etiquetas = computed(() => props.resultado.opciones.map((opcion) => opcion.opcion.texto));
 const colores = computed(() => chartColors(props.resultado.opciones.length));
+const multimediaGanadora = computed(() => props.resultado.opciones.flatMap((opcion) => (
+  opcion.ganadora && opcion.opcion.multimedia
+    ? [{ opcion: opcion.opcion, multimedia: opcion.opcion.multimedia }]
+    : []
+)));
 
 /** Lectura de la tarta para quien no ve el color. */
 const descripcion = computed(() => {
@@ -147,6 +152,41 @@ watch(() => props.resultado, pintar, { deep: true });
         </li>
       </ul>
     </div>
+
+    <div
+      v-if="multimediaGanadora.length > 0"
+      class="winner-media-list"
+    >
+      <figure
+        v-for="item in multimediaGanadora"
+        :key="item.opcion.id"
+        class="winner-media-figure"
+      >
+        <img
+          v-if="item.multimedia.unavailable || item.multimedia.tipo === 'imagen'"
+          class="winner-media-image"
+          :src="item.multimedia.src"
+          :alt="item.multimedia.alt ?? item.opcion.texto"
+          decoding="async"
+        >
+        <video
+          v-else
+          class="winner-media-video"
+          :aria-label="item.multimedia.alt ?? item.opcion.texto"
+          controls
+          playsinline
+          preload="metadata"
+          poster="/media-unavailable.svg"
+        >
+          <source
+            v-for="source in item.multimedia.sources"
+            :key="source.src"
+            :src="source.src"
+            :type="source.type"
+          >
+        </video>
+      </figure>
+    </div>
   </article>
 </template>
 
@@ -235,6 +275,29 @@ watch(() => props.resultado, pintar, { deep: true });
   background: var(--color-primary);
   border-radius: var(--radius-full);
   padding: 2px var(--space-2);
+}
+
+.winner-media-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.winner-media-figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.winner-media-image,
+.winner-media-video {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 @media (max-width: 640px) {

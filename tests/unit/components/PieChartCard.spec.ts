@@ -136,6 +136,69 @@ describe('tarjeta de un premio', () => {
   });
 });
 
+describe('multimedia de opciones ganadoras', () => {
+  const preguntaConImagen = preguntas.find((pregunta) => pregunta.opciones.some(
+    (opcion) => opcion.multimedia?.tipo === 'imagen',
+  ))!;
+  const imagenes = preguntaConImagen.opciones.filter((opcion) => opcion.multimedia?.tipo === 'imagen');
+  const preguntaConVideo = preguntas.find((pregunta) => pregunta.opciones.some(
+    (opcion) => opcion.multimedia?.tipo === 'video',
+  ))!;
+  const videos = preguntaConVideo.opciones.filter((opcion) => opcion.multimedia?.tipo === 'video');
+
+  it('muestra la imagen de la ganadora y deja solo el título en las perdedoras', () => {
+    const [ganadora, perdedora] = imagenes;
+    const resultado = calcularResultadoPregunta(preguntaConImagen, {
+      [ganadora!.id]: 3,
+      [perdedora!.id]: 1,
+    });
+    const wrapper = mount(PieChartCard, { props: { resultado } });
+
+    expect(wrapper.findAll('.winner-media-image')).toHaveLength(1);
+    expect(wrapper.findAll('.winner-media-video')).toHaveLength(0);
+    expect(wrapper.find('.winner-media-caption').exists()).toBe(false);
+    expect(wrapper.findAll('.legend-item')).toHaveLength(preguntaConImagen.opciones.length);
+  });
+
+  it('muestra un reproductor para el vídeo ganador', () => {
+    const opcionesConVideo = preguntaConVideo.opciones.map((opcion) => (
+      opcion.multimedia
+        ? {
+          ...opcion,
+          multimedia: {
+            ...opcion.multimedia,
+            unavailable: false,
+            sources: [{ src: '/video-prueba.mp4', type: 'video/mp4' as const }],
+          },
+        }
+        : opcion
+    ));
+    const [ganadora] = opcionesConVideo;
+    const resultado = calcularResultadoPregunta(
+      { ...preguntaConVideo, opciones: opcionesConVideo },
+      { [ganadora!.id]: 1 },
+    );
+    const wrapper = mount(PieChartCard, { props: { resultado } });
+
+    expect(wrapper.findAll('.winner-media-video')).toHaveLength(1);
+    expect(wrapper.find('.winner-media-video').attributes('controls')).toBeDefined();
+    expect(wrapper.findAll('.winner-media-video source').length).toBeGreaterThan(0);
+  });
+
+  it('muestra el multimedia de todas las ganadoras en caso de empate', () => {
+    const [primera, segunda] = imagenes;
+    const resultado = calcularResultadoPregunta(preguntaConImagen, {
+      [primera!.id]: 2,
+      [segunda!.id]: 2,
+    });
+    const wrapper = mount(PieChartCard, { props: { resultado } });
+
+    expect(wrapper.findAll('.winner-media-image')).toHaveLength(2);
+    expect(wrapper.findAll('.legend-badge').map((badge) => badge.text()))
+      .toEqual(['Empate', 'Empate']);
+  });
+});
+
 describe('lectura de la tarta sin ver el color', () => {
   it('describe el reparto y la ganadora en el aria-label', () => {
     const resultado = conVotos({ 'tonto-1': 3, 'tonto-2': 1 });
