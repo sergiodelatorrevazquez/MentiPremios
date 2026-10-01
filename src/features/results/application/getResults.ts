@@ -9,8 +9,8 @@ import { PersistenceError } from './errors';
  * voto, dentro de la misma transacción.
  */
 export interface ResultsStore {
-  /** `true` si el documento de la invitación lleva la marca de organización. */
-  isAdminInvitation(id: string): Promise<boolean>;
+  /** `true` si la invitación es de organización y ya se ha usado para votar. */
+  canAccessResults(id: string): Promise<boolean>;
   /** Contadores acumulados, o `null` si todavía no ha votado nadie. */
   findSummary(): Promise<ResumenVotos | null>;
 }
@@ -43,7 +43,7 @@ export async function getResults(
   let resumen: ResumenVotos | null;
 
   try {
-    if (!(await store.isAdminInvitation(codigo))) return null;
+    if (!(await store.canAccessResults(codigo))) return null;
 
     resumen = await store.findSummary();
   } catch (error) {

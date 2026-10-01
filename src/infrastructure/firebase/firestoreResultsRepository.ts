@@ -5,6 +5,7 @@ const INVITATIONS_COLLECTION = 'codes';
 const SUMMARY_COLLECTION = 'resumen';
 const SUMMARY_DOCUMENT = 'actual';
 const ADMIN_FIELD = 'admin';
+const VOTED_FIELD = 'voted';
 
 /**
  * Lectura de los datos de la gala. Solo `get`: ni una consulta, ni un `list`.
@@ -16,14 +17,17 @@ const ADMIN_FIELD = 'admin';
 export class FirestoreResultsRepository {
   constructor(private readonly db: Firestore) {}
 
-  /** `true` si la invitación lleva la marca que pone el organizador. */
-  async isAdminInvitation(id: string): Promise<boolean> {
+  /** Solo la invitación de organización ya usada para votar puede ver la gala. */
+  async canAccessResults(id: string): Promise<boolean> {
     const snapshot = await getDoc(doc(this.db, INVITATIONS_COLLECTION, id));
     if (!snapshot.exists()) return false;
 
     const data = snapshot.data();
 
-    return typeof data === 'object' && data !== null && (data as Record<string, unknown>)[ADMIN_FIELD] === true;
+    if (typeof data !== 'object' || data === null) return false;
+
+    const invitation = data as Record<string, unknown>;
+    return invitation[ADMIN_FIELD] === true && invitation[VOTED_FIELD] === true;
   }
 
   /** Contadores guardados, o `null` si el documento todavía no tiene nada. */

@@ -28,30 +28,42 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('la marca de quien organiza', () => {
+describe('el acceso de quien organiza a la gala', () => {
   it('lee la invitación por identificador, en la colección de códigos', async () => {
     // Se lee el documento cuya clave es la palabra, no se busca en la
     // colección: `list` está prohibido en las reglas y aquí no se usa.
     respondeCon({ '/codes/admindltv': { voted: true, admin: true } });
 
-    await expect(repository().isAdminInvitation('admindltv')).resolves.toBe(true);
+    await expect(repository().canAccessResults('admindltv')).resolves.toBe(true);
     expect(getDoc).toHaveBeenCalledWith('/codes/admindltv');
   });
 
-  it('da la gala solo con la marca puesta a `true`', async () => {
-    // Con la marca a `false`, o como texto `"true"`, la invitación es normal.
+  it('no da la gala si la invitación no es de organización', async () => {
     respondeCon({ '/codes/admindltv': { voted: true, admin: false } });
-    await expect(repository().isAdminInvitation('admindltv')).resolves.toBe(false);
+    await expect(repository().canAccessResults('admindltv')).resolves.toBe(false);
 
     respondeCon({ '/codes/admindltv': { voted: true, admin: 'true' } });
-    await expect(repository().isAdminInvitation('admindltv')).resolves.toBe(false);
+    await expect(repository().canAccessResults('admindltv')).resolves.toBe(false);
+  });
+
+  it('no da la gala a organización hasta que haya votado', async () => {
+    respondeCon({ '/codes/admindltv': { voted: false, admin: true } });
+    await expect(repository().canAccessResults('admindltv')).resolves.toBe(false);
+
+    respondeCon({ '/codes/admindltv': { voted: 'true', admin: true } });
+    await expect(repository().canAccessResults('admindltv')).resolves.toBe(false);
+  });
+
+  it('no da la gala a una invitación votada que no sea de organización', async () => {
+    respondeCon({ '/codes/invitado': { voted: true, admin: false } });
+    await expect(repository().canAccessResults('invitado')).resolves.toBe(false);
   });
 
   it('trata como normal una invitación que no existe', async () => {
     // Que no exista no es un error de permisos: es que la palabra no vale.
     respondeCon({});
 
-    await expect(repository().isAdminInvitation('nada')).resolves.toBe(false);
+    await expect(repository().canAccessResults('nada')).resolves.toBe(false);
   });
 });
 

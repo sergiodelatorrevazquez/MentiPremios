@@ -3,17 +3,17 @@ import { getResults, type ResultsStore } from '../../../src/features/results/app
 import { PersistenceError } from '../../../src/features/results/application/errors';
 import { preguntas } from '../../../src/features/survey/domain/questions';
 
-/** Almacén de mentira: marca de organizador y contadores, sin Firestore. */
+/** Almacén de mentira: acceso autorizado y contadores, sin Firestore. */
 function almacen(overrides: Partial<ResultsStore> = {}): ResultsStore {
   return {
-    isAdminInvitation: vi.fn().mockResolvedValue(false),
+    canAccessResults: vi.fn().mockResolvedValue(false),
     findSummary: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
 }
 
 const deOrganizador = (resumen: Record<string, number> | null) => almacen({
-  isAdminInvitation: vi.fn().mockResolvedValue(true),
+  canAccessResults: vi.fn().mockResolvedValue(true),
   findSummary: vi.fn().mockResolvedValue(resumen),
 });
 
@@ -33,7 +33,7 @@ describe('palabra que no es de quien organiza', () => {
     // Leer el resumen de cualquiera que entre sería trabajo de sobra, y la
     // consulta a Firestore también sale cara.
     const store = deOrganizador(CON_VOTOS);
-    (store.isAdminInvitation as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+    (store.canAccessResults as ReturnType<typeof vi.fn>).mockResolvedValue(false);
 
     await expect(getResults({ secret: 'otra', questions: preguntas }, store)).resolves.toBeNull();
     expect(store.findSummary).not.toHaveBeenCalled();
@@ -43,7 +43,7 @@ describe('palabra que no es de quien organiza', () => {
     const store = deOrganizador(CON_VOTOS);
 
     await expect(getResults({ secret: '   ', questions: preguntas }, store)).resolves.toBeNull();
-    expect(store.isAdminInvitation).not.toHaveBeenCalled();
+    expect(store.canAccessResults).not.toHaveBeenCalled();
   });
 });
 
@@ -63,7 +63,7 @@ describe('la palabra del organizador', () => {
 
     await getResults({ secret: '  AdminDLTV  ', questions: preguntas }, store);
 
-    expect(store.isAdminInvitation).toHaveBeenCalledWith('admindltv');
+    expect(store.canAccessResults).toHaveBeenCalledWith('admindltv');
   });
 
   it('devuelve null si el documento de totales todavía no existe', async () => {
@@ -92,7 +92,7 @@ describe('la palabra del organizador', () => {
 describe('fallo al leer los resultados', () => {
   it('envuelve el fallo de la marca de organizador', async () => {
     const store = almacen({
-      isAdminInvitation: vi.fn().mockRejectedValue(new Error('offline')),
+      canAccessResults: vi.fn().mockRejectedValue(new Error('offline')),
     });
 
     await expect(getResults({ secret: 'admindltv', questions: preguntas }, store))
@@ -101,7 +101,7 @@ describe('fallo al leer los resultados', () => {
 
   it('envuelve el fallo de la lectura de contadores', async () => {
     const store = almacen({
-      isAdminInvitation: vi.fn().mockResolvedValue(true),
+      canAccessResults: vi.fn().mockResolvedValue(true),
       findSummary: vi.fn().mockRejectedValue(new Error('offline')),
     });
 
@@ -115,7 +115,7 @@ describe('fallo al leer los resultados', () => {
     // ido mal" en lugar de "sin conexión".
     const original = Object.assign(new Error('offline'), { code: 'unavailable' });
     const store = almacen({
-      isAdminInvitation: vi.fn().mockResolvedValue(true),
+      canAccessResults: vi.fn().mockResolvedValue(true),
       findSummary: vi.fn().mockRejectedValue(original),
     });
 

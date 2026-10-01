@@ -99,12 +99,12 @@ de ser cierto, el sitio es volver a dos colecciones o mover el voto al servidor.
 ## Quién abre la gala
 
 La palabra del organizador no está escrita en el bundle. La app no la compara con
-una constante: al escribir una palabra pregunta primero si el documento
-`codes/{esa palabra}` lleva `admin: true`, y solo entonces lee los totales. Esa
-marca **no la puede poner un cliente**, porque la lista blanca de `update` en
-`codes` no la incluye; solo la consola del proyecto puede añadirla. Un
-visitante que se inventase su propia invitación con `admin: true` vería la
-escritura rechazada por las reglas.
+una constante: al escribir una palabra comprueba que el documento
+`codes/{esa palabra}` lleva `admin: true` **y** `voted: true`, y solo entonces
+lee los totales. La marca `admin` **no la puede poner un cliente**, porque la
+lista blanca de `update` en `codes` no la incluye; solo la consola del proyecto
+puede añadirla. Un visitante que se inventase su propia invitación con
+`admin: true` vería la escritura rechazada por las reglas.
 
 El número de lecturas es mínimo: un `get` de la invitación, un `get` de
 `resumen/actual` y nada más. No hay `list` en ninguna de las dos rutas.

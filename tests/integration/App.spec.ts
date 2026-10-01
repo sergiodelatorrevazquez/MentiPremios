@@ -862,7 +862,7 @@ describe('App - la gala de premios', () => {
     expect(wrapper.find('.hero-title').text()).toBe('Los premios');
     expect(wrapper.findAll('.chart-stub')).toHaveLength(preguntas.length);
     // La palabra es válida, pero quien organiza no vuelve a contestar su propia
-    // encuesta: ya está voted por la gala.
+    // encuesta: ya ha votado y su invitación abre la gala.
     expect(mockAppServices.validateInvitation).not.toHaveBeenCalled();
     expect(mockAppServices.submitSurvey).not.toHaveBeenCalled();
   });
