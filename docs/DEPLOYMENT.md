@@ -6,6 +6,8 @@ gala nueva.
 ## Desplegar la web
 
 El flujo normal es un `git push` a `main`: Vercel construye y publica solo.
+Por defecto, también despliega commits que solo cambian documentación; un
+`Ignored Build Step` configurado en Vercel puede omitirlos.
 
 ```bash
 npm run typecheck && npm run lint && npm test -- --run
