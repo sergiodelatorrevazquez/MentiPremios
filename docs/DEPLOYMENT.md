@@ -51,10 +51,17 @@ Para la galería hace falta **un documento más**, y las reglas no dejan crearlo
 desde la app. Hay que hacerlo en la consola de Firebase, **una vez**:
 
 ```
-resumen/actual {
+votes/actual {
   // puede empezar vacío
 }
 ```
+
+Si ya desplegaste una versión que usaba `resumen/actual`, Firestore no mueve
+ese documento al cambiar la ruta en el código. Copia sus campos a
+`votes/actual` antes de desplegar esta versión y conserva el documento antiguo
+hasta comprobar que la galería lee los datos nuevos. Si preparas una edición
+nueva, crea `votes/actual` vacío y continúa con el reinicio de contadores de
+abajo.
 
 Y hay que **dejar los contadores a cero** de la gala anterior, no solo vaciar
 `voted`. El documento de totales no se reinicia solo: si se queda con los
@@ -123,10 +130,10 @@ Las dos librerías se pueden dejar donde uno quiera con la variable `PWLIBS`.
 | Un error de permisos con `list` | Alguien intentó enumerar la colección. Está prohibido a propósito: el `get` con un ID que ya conoces sí funciona. |
 | El ID correcto no entra | El ID va en minúsculas y sin espacios al final: se normaliza con `trim()` + `toLowerCase()`. `Galaxia-2025` es invisible. Se arregla renombrando el documento. |
 | Una opción con imagen o vídeo sale gris | El asset no está en `src/assets/` con el nombre exacto que espera el catálogo (`foto-3.jpg`, `video-2.webm`…). `import.meta.glob` se resuelve en build: hay que recompilar. |
-| Al entrar da error y no guarda el voto | Falta el documento `resumen/actual`. Voto y contadores van en la misma transacción, así que sin ese documento no se guarda ninguno de los dos. Ver [Dejar listo el documento de totales](#dejar-listo-el-documento-de-totales). |
+| Al entrar da error y no guarda el voto | Falta el documento `votes/actual`. Voto y contadores van en la misma transacción, así que sin ese documento no se guarda ninguno de los dos. Ver [Dejar listo el documento de totales](#dejar-listo-el-documento-de-totales). |
 | La palabra del organizador entra al cuestionario | Su documento no lleva `admin: true`, o las reglas sin desplegar. Ver [Marcar la palabra del organizador](#marcar-la-palabra-del-organizador). |
 | La galería sale vacía aunque haya votos | El documento de totales se creó en otro proyecto. |
-| La galería anuncia un ganador de la edición anterior | Los contadores de `resumen/actual` no se pusieron a cero al preparar la gala nueva. |
+| La galería anuncia un ganador de la edición anterior | Los contadores de `votes/actual` no se pusieron a cero al preparar la gala nueva. |
 
 ## Revertir
 

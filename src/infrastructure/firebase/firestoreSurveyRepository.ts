@@ -9,8 +9,8 @@ import {
 import type { CodigoInvitacion } from '../../features/survey/domain/survey.types';
 
 const INVITATIONS_COLLECTION = 'codes';
-const SUMMARY_COLLECTION = 'resumen';
-const SUMMARY_DOCUMENT = 'actual';
+const VOTES_COLLECTION = 'votes';
+const VOTES_DOCUMENT = 'actual';
 
 /** Invitación leída de Firestore, ya validada y con su identificador. */
 export type StoredInvitation = CodigoInvitacion & { id: string };
@@ -67,7 +67,7 @@ function nextCount(current: unknown): number {
  *
  * Hay una colección de personas, `codes`, con un documento por invitado cuyo
  * identificador es la palabra secreta, y un documento de totales,
- * `resumen/actual`, con un contador por opción.
+ * `votes/actual`, con un contador por opción.
  *
  * La protección de las palabras secretas no está aquí, está en
  * `firestore.rules`: un documento se puede leer solo por identificador (`get`),
@@ -91,7 +91,7 @@ export class FirestoreSurveyRepository implements SurveyStore {
 
   async saveSurvey(response: SurveyResponseRecord): Promise<SaveSurveyOutcome> {
     const invitationRef = doc(this.db, INVITATIONS_COLLECTION, response.invitationId);
-    const summaryRef = doc(this.db, SUMMARY_COLLECTION, SUMMARY_DOCUMENT);
+    const summaryRef = doc(this.db, VOTES_COLLECTION, VOTES_DOCUMENT);
 
     return runTransaction(this.db, async (transaction) => {
       // Las dos lecturas van antes que cualquier escritura. En una transacción

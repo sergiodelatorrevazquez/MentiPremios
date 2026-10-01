@@ -2,8 +2,8 @@ import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import type { ResumenVotos } from '../../features/results/domain/results.types';
 
 const INVITATIONS_COLLECTION = 'codes';
-const SUMMARY_COLLECTION = 'resumen';
-const SUMMARY_DOCUMENT = 'actual';
+const VOTES_COLLECTION = 'votes';
+const VOTES_DOCUMENT = 'actual';
 const ADMIN_FIELD = 'admin';
 const VOTED_FIELD = 'voted';
 
@@ -32,7 +32,7 @@ export class FirestoreResultsRepository {
 
   /** Contadores guardados, o `null` si el documento todavía no tiene nada. */
   async findSummary(): Promise<ResumenVotos | null> {
-    const snapshot = await getDoc(doc(this.db, SUMMARY_COLLECTION, SUMMARY_DOCUMENT));
+    const snapshot = await getDoc(doc(this.db, VOTES_COLLECTION, VOTES_DOCUMENT));
     if (!snapshot.exists()) return null;
 
     return parseSummary(snapshot.data());

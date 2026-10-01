@@ -134,7 +134,7 @@ describe('adaptador de la encuesta', () => {
     const colecciones = (repositorySource.match(/_COLLECTION = '([^']+)'/g) ?? [])
       .map((consta) => consta.match(/'([^']+)'/)?.[1]);
 
-    expect(colecciones).toEqual(['codes', 'resumen']);
+    expect(colecciones).toEqual(['codes', 'votes']);
   });
 });
 

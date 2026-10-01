@@ -68,7 +68,7 @@ Para la **galería de premios** hacen falta dos cosas más en la consola, y las
 reglas no dejan hacerlas desde la app:
 
 ```
-resumen/
+votes/
   └── actual/            ← documento de totales; puede empezar vacío
 codes/
   └── admindltv/         ← la palabra de quien organiza
@@ -76,7 +76,7 @@ codes/
         └── admin: true  ← la marca que abre la galería
 ```
 
-`resumen/actual` guarda un contador por opción y se incrementa en la **misma
+`votes/actual` guarda un contador por opción y se incrementa en la **misma
 transacción** que el voto, así que no puede quedar el contador subido sin la
 respuesta. Si ese documento no existe, el primer voto falla entero. Es
 imprescindible crearlo antes de la gala. Detalle en

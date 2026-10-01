@@ -2,7 +2,7 @@ rules_version = '2';
 
 // Sin servidor intermedio: el navegador lee y escribe directamente. Hay una
 // colección de personas, `codes`, con un documento por invitado, y un documento
-// de totales, `resumen/actual`, con un contador por opción.
+// de totales, `votes/actual`, con un contador por opción.
 //
 // La seguridad se apoya en una sola idea: se puede leer un documento concreto si
 // ya se conoce su identificador (la palabra secreta), pero nunca se puede
@@ -56,12 +56,12 @@ service cloud.firestore {
         ]);
     }
 
-    match /resumen/{resumenId} {
+    match /votes/{voteId} {
       // Los totales son la suma de todos los votos y no dicen nada de nadie, así
       // que se leen sin más condición: el identificador es fijo y está en el
       // bundle, no hay nada que ocultar detrás de él. Lo que no se puede es
       // enumerar la colección, aunque solo haya un documento.
-      allow get: if resumenId == 'actual';
+            allow get: if voteId == 'actual';
       allow list: if false;
 
       // El documento lo crea el organizador desde la consola, una sola vez, con
@@ -88,7 +88,7 @@ service cloud.firestore {
       // líneas, una por opción. Las dos listas las comprueba
       // `tests/unit/contracts/firestoreRules.spec.ts` contra el catálogo, así que
       // añadir una pregunta o una opción sin tocar este fichero es un test rojo.
-      allow update: if resumenId == 'actual'
+            allow update: if voteId == 'actual'
         && changed().size() == 10
         && changed().hasOnly([
           'tonto-1',

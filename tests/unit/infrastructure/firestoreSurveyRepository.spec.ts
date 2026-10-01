@@ -43,7 +43,7 @@ function instalar(estado: Estado): void {
   }) as never);
 }
 
-const RESUMEN_VACIO = '/resumen/actual';
+const RESUMEN_VACIO = '/votes/actual';
 
 /** Voto completo y válido, con la primera opción de cada pregunta. */
 function votoCompleto(invitacionId = 'admindltv') {

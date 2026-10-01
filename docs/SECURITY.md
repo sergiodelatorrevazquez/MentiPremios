@@ -19,7 +19,7 @@ de votar es literalmente un campo, `voted: false`. Al votar se le añade
 dato de la persona** —ni nombre, ni horas, ni versión—, porque el identificador
 ya la identifica. No hay documento de voto aparte.
 
-Y hay un **único documento de totales**, `resumen/actual`, con un contador por
+Y hay un **único documento de totales**, `votes/actual`, con un contador por
 opción de la galería. No es una colección de personas: es un contador agregado,
 y su identificador está escrito en el bundle. Las reglas no permiten crearlo ni
 borrarlo desde un cliente, así que ese documento lo crea el organizador a mano,
@@ -30,7 +30,7 @@ una vez, en la consola.
 | Ruta | Permitido |
 |---|---|
 | `codes/{id}` | `get`. `update` solo en el sentido `false → true` de `voted`, y solo los once campos de la lista blanca: `voted` y las diez preguntas. `list`, `create` y `delete` prohibidos. |
-| `resumen/actual` | Solo `get`. `update` únicamente con los diez contadores, uno por pregunta, cada uno exactamente `+ 1`. `list`, `create` y `delete` prohibidos. |
+| `votes/actual` | Solo `get`. `update` únicamente con los diez contadores, uno por pregunta, cada uno exactamente `+ 1`. `list`, `create` y `delete` prohibidos. |
 | `palabrasClave/{id}` | Solo `create`. |
 | `/{document=**}` | Nada. Red de seguridad para lo que no se declare. |
 
@@ -107,11 +107,11 @@ puede añadirla. Un visitante que se inventase su propia invitación con
 `admin: true` vería la escritura rechazada por las reglas.
 
 El número de lecturas es mínimo: un `get` de la invitación, un `get` de
-`resumen/actual` y nada más. No hay `list` en ninguna de las dos rutas.
+`votes/actual` y nada más. No hay `list` en ninguna de las dos rutas.
 
 ## El coste: los totales son públicos para quien tenga la app
 
-`resumen/actual` se puede leer sin presentar ninguna palabra. No es un descuido:
+`votes/actual` se puede leer sin presentar ninguna palabra. No es un descuido:
 su ruta está en el bundle y `get` no admite condiciones sin credenciales, porque
 no hay ninguna. Quien abra las herramientas de desarrollo de la web y pegue
 cinco líneas verá **el reparto completo de los votos**.

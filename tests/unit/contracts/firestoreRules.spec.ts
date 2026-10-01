@@ -99,28 +99,28 @@ describe('los totales de la gala', () => {
     expect(antesDelPrimerMatch).toMatch(/function changed\(\)/);
     expect(antesDelPrimerMatch).toMatch(/return request\.resource\.data\.diff\(resource\.data\)\.affectedKeys\(\)/);
 
-    const resumen = block('resumen/{resumenId}');
+    const resumen = block('votes/{voteId}');
     expect(resumen).not.toMatch(/function changed\(\)/);
   });
 
   it('deja leer el documento de totales y no enumerar la colección', () => {
-    const resumen = block('resumen/{resumenId}');
+    const resumen = block('votes/{voteId}');
 
-    expect(resumen).toMatch(/allow get:\s*if resumenId == 'actual'/);
+    expect(resumen).toMatch(/allow get:\s*if voteId == 'actual'/);
     expect(resumen).toMatch(/allow list:\s*if false/);
   });
 
   it('no deja crearlo ni borrarlo desde el cliente', () => {
     // Crear el documento con contadores inventados amañaría la gala de salida,
     // así que solo el organizador, desde la consola, puede crearlo.
-    expect(block('resumen/{resumenId}')).toMatch(/allow create, delete:\s*if false/);
+    expect(block('votes/{voteId}')).toMatch(/allow create, delete:\s*if false/);
   });
 
   it('exige que cada voto toque una sola opción por pregunta', () => {
     // Diez contadores, uno por pregunta: es lo que produce una encuesta
     // validada. Sin esto, un cliente podría sumar su voto solo a las preguntas
     // que le convienen y dejar el resto sin contar.
-    const resumen = block('resumen/{resumenId}');
+    const resumen = block('votes/{voteId}');
 
     expect(resumen).toMatch(/changed\(\)\.size\(\) == \d+/);
     expect(Number(/changed\(\)\.size\(\) == (\d+)/.exec(resumen)?.[1])).toBe(preguntas.length);
@@ -129,7 +129,7 @@ describe('los totales de la gala', () => {
   it('la lista blanca de contadores coincide con las opciones del catálogo', () => {
     // Si se añade una opción y no se añade aquí, su voto se guardaría en el
     // cliente y lo rechazaría la regla. Este test es el que avisa.
-    const [, lista] = block('resumen/{resumenId}')
+    const [, lista] = block('votes/{voteId}')
       .match(/changed\(\)\.hasOnly\(\[([\s\S]*?)\]\)/) ?? [];
 
     const permitidos = (lista ?? '').match(/'([^']+)'/g)?.map((c) => c.slice(1, -1)) ?? [];
@@ -140,7 +140,7 @@ describe('los totales de la gala', () => {
   it('cada pregunta tiene su propia lista, y son las opciones de esa pregunta', () => {
     // La lista por pregunta es lo que garantiza que un voto no se concentre en
     // dos opciones del mismo premio.
-    const resumen = block('resumen/{resumenId}');
+    const resumen = block('votes/{voteId}');
     const encontradas = [...resumen.matchAll(/changed\.hasAny\(\[([^\]]*)\]\)/g)]
       .map(([, lista]) => (lista.match(/'([^']+)'/g) ?? []).map((c) => c.slice(1, -1)));
 
@@ -148,7 +148,7 @@ describe('los totales de la gala', () => {
   });
 
   it('comprueba que cada contador que toca el voto valga su valor anterior más uno', () => {
-    const resumen = block('resumen/{resumenId}');
+    const resumen = block('votes/{voteId}');
 
     for (const opcionId of opciones) {
       const comprobacion = new RegExp(
@@ -164,7 +164,7 @@ describe('los totales de la gala', () => {
     // como casi todas las comprobaciones son ciertas, el `||` final dejaría
     // pasar la escritura entera y la regla no comprobaría nada. Este test
     // existe porque esa regla ya falló una vez al escribirse.
-    const resumen = block('resumen/{resumenId}');
+    const resumen = block('votes/{voteId}');
 
     expect(resumen).toMatch(/&&\s*\(\(!changed\.has\(/);
     expect(resumen).toMatch(/\+ 1\)\n\s*\);/);
@@ -173,7 +173,7 @@ describe('los totales de la gala', () => {
   it('no toca nada fuera del documento que escribe el voto', () => {
     // La condición entera tiene que cerrar el `allow`, sin comas sueltas ni
     // condiciones que se escapen al bloque de reglas siguiente.
-    const resumen = block('resumen/{resumenId}');
+    const resumen = block('votes/{voteId}');
     const abre = (resumen.match(/\(/g) ?? []).length;
     const cierra = (resumen.match(/\)/g) ?? []).length;
 

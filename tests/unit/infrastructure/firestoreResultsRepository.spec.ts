@@ -69,10 +69,10 @@ describe('el acceso de quien organiza a la gala', () => {
 
 describe('el documento de totales', () => {
   it('lee el documento fijo de resumen, sin enumerar nada', async () => {
-    respondeCon({ '/resumen/actual': { 'tonto-1': 3 } });
+    respondeCon({ '/votes/actual': { 'tonto-1': 3 } });
 
     await expect(repository().findSummary()).resolves.toEqual({ 'tonto-1': 3 });
-    expect(getDoc).toHaveBeenCalledWith('/resumen/actual');
+    expect(getDoc).toHaveBeenCalledWith('/votes/actual');
   });
 
   it('devuelve null si el documento todavía no existe', async () => {
@@ -84,7 +84,7 @@ describe('el documento de totales', () => {
   });
 
   it('devuelve null si el documento existe pero está vacío', async () => {
-    respondeCon({ '/resumen/actual': {} });
+    respondeCon({ '/votes/actual': {} });
 
     await expect(repository().findSummary()).resolves.toBeNull();
   });
@@ -93,7 +93,7 @@ describe('el documento de totales', () => {
     // Lo raro que se cuele en el documento no puede acabar en un `NaN` dentro
     // de la tarta.
     respondeCon({
-      '/resumen/actual': {
+      '/votes/actual': {
         'tonto-1': 3,
         'tonto-2': 'muchos',
         'tonto-3': null,
@@ -110,7 +110,7 @@ describe('el documento de totales', () => {
   it('devuelve null si todos los contadores eran inservibles', async () => {
     // Un documento lleno de basura no es un resultado: es mejor no pintar nada
     // que pintar una tarta a cero.
-    respondeCon({ '/resumen/actual': { 'tonto-1': 'x', 'tonto-2': -1 } });
+    respondeCon({ '/votes/actual': { 'tonto-1': 'x', 'tonto-2': -1 } });
 
     await expect(repository().findSummary()).resolves.toBeNull();
   });
@@ -118,7 +118,7 @@ describe('el documento de totales', () => {
   it('deja pasar los contadores tal cual, sin inventar un total', async () => {
     // El total se deduce en el dominio sumando los votos; guardarlo aquí
     // duplicaría la fuente de verdad y podría desincronizarse.
-    respondeCon({ '/resumen/actual': { 'tonto-1': 4, 'tonto-2': 1 } });
+    respondeCon({ '/votes/actual': { 'tonto-1': 4, 'tonto-2': 1 } });
 
     const resumen = await repository().findSummary();
 
